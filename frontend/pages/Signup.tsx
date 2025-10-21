@@ -10,6 +10,7 @@ import { useState } from 'react'
 const BASE_URL = '나중에 받을 주소';
 
 const Signup = () => {
+  const [username, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [ID, setID] = useState('');
   const [PW, setPW] = useState(''); 
@@ -67,6 +68,7 @@ const Signup = () => {
                 <Logo />
             </View>
             <View style={styles.input_container}>
+                <Input value={username} setValue={setUserName} placeholder={'이름'} />
                 <Input value={email} setValue={setEmail} placeholder={'이메일'} />
                 <Input value={ID} setValue={setID} placeholder={'아이디'} />
                 <Input value={PW} setValue={setPW} placeholder={'비밀번호'}  secureTextEntry error={pwError} />
