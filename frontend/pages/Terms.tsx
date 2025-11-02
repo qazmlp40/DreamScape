@@ -9,17 +9,11 @@ const Terms = () => {
     const route = useRoute();
 
     const handleConfirm = () => {
-        console.log('[Terms] confirm pressed');            // 🐛 DEBUG
+        console.log('[Terms] confirm pressed');            
         const onAccept = (route.params as any)?.onAccept;
-        console.log('[Terms] has onAccept?', !!onAccept);  // 🐛 DEBUG
-    
-        // ✅ 콜백 실행 후 기존 Signup으로 복귀
+        console.log('[Terms] has onAccept?', !!onAccept);  
         onAccept?.();
         navigation.goBack();
-    
-        // 🔁 (대안) params+merge 방식:
-        // navigation.navigate({ name: 'Signup', params: { termsAccepted: true }, merge: true } as never);
-        // navigation.goBack();
       };
 
   return (
@@ -60,7 +54,8 @@ export default Terms
 
 const styles = StyleSheet.create({
     header: {
-        paddingVertical: 16,
+        paddingBottom: 16,
+        paddingTop: 44,
         paddingLeft: 10,
         flexDirection: "row",
         alignItems: "center",
@@ -82,7 +77,7 @@ const styles = StyleSheet.create({
     content: {
         fontSize: 14,
         fontFamily: "Roboto-Medium",
-        color: "#282828",
+        color: "#000000",
         textAlign: "left",
         fontWeight: 500
     },

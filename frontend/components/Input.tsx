@@ -39,7 +39,6 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     boxShadow: "0px 0px 1.5px rgba(0, 0, 0, 0.25)",
-    elevation: 2,
     
     flexDirection: "row",
     alignItems: "center",

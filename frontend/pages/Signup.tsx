@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, Keyboard } from 'react-native'
 import React from 'react'
-import Logo from '../components/Logo'
+import Logo from '../images/logo'
 import Input from '../components/Input'
 import CheckBtn from '../components/CheckBtn'
 import CompleteBtn from '../components/CompleteBtn'
@@ -8,17 +8,15 @@ import Right_Arrow from '../images/right_arrow'
 import { useState, useEffect } from 'react'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
+import useSignupForm from '../hooks/useSignupForm'
 
 const BASE_URL = '나중에 받을 주소';
 const Signup = () => {
   const navigation = useNavigation();
   const route = useRoute();
 
-  const [username, setUserName] = useState('');
-  const [email, setEmail] = useState('');
-  const [ID, setID] = useState('');
-  const [PW, setPW] = useState(''); 
-  const [checkPW, setCheckPW] = useState('');
+  const { username, setUsername, email, setEmail, ID, setID, PW, setPW, checkPW, setCheckPW } = useSignupForm();
+
   const [termChecked, setTermChecked] = useState(false);
 
   const [pwError, setPwError] = useState(false);
@@ -87,7 +85,7 @@ const Signup = () => {
         <View style={styles.container}>
           <KeyboardAwareScrollView 
             style={styles.scroll}
-            scrollEnabled={scrollEnabled}   // 키보드 상태에 따라 스크롤 제어
+            scrollEnabled={scrollEnabled}  
             enableOnAndroid={true}
             extraScrollHeight={20}
           >
@@ -95,7 +93,7 @@ const Signup = () => {
                 <Logo />
             </View>
             <View style={styles.input_container}>
-                <Input value={username} setValue={setUserName} placeholder={'이름'} />
+                <Input value={username} setValue={setUsername} placeholder={'이름'} />
                 <Input value={email} setValue={setEmail} placeholder={'이메일'} />
                 <Input value={ID} setValue={setID} placeholder={'아이디'} />
                 <Input value={PW} setValue={setPW} placeholder={'비밀번호'}  secureTextEntry error={pwError} />
@@ -114,16 +112,12 @@ const Signup = () => {
                 <Text style={styles.detail_text}>이용약관 확인하기</Text>
                 <TouchableOpacity
                   onPress={() =>
-                    // 콜백 방식(현 구조 유지): 기존 Signup 인스턴스 유지 + goBack으로 복귀
                     navigation.navigate('Terms', {
                       onAccept: () => {
-                        console.log('[Signup] onAccept fired'); // 🐛 DEBUG
+                        console.log('[Signup] onAccept fired'); 
                         setTermChecked(true);
                       },
                     } as any)
-
-                    // (대안) params+merge 방식:
-                    // navigation.navigate({ name: 'Terms' } as never);
                   }
                 >
                   <Right_Arrow />
@@ -148,8 +142,7 @@ const styles = StyleSheet.create({
       logo_container: {
         width: "100%",
         alignItems: "center",
-        marginTop: 116,
-        marginBottom: 32
+        marginTop: 68
       },
       input_container: {
         marginHorizontal: 32,
@@ -188,7 +181,7 @@ const styles = StyleSheet.create({
       },
       button_container: {
         position: 'absolute',
-        bottom: 23, // 화면 하단에서 23px 위로 띄움
+        bottom: 23, 
         left: 16,
         right: 16,
       },

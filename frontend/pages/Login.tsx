@@ -1,18 +1,18 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
-import { CommonActions, useNavigation } from '@react-navigation/native'
+import { useNavigation } from '@react-navigation/native'
 import { useState } from 'react'
 import React from 'react'
-import Logo from '../components/Logo'
+import Logo from '../images/logo'
 import Input from '../components/Input'
 import CompleteBtn from '../components/CompleteBtn'
+import useLoginForm from '../hooks/useLoginForm';
 
  const BASE_URL = '나중에 받을 주소';
 
 const Login = () => {
   const navigation = useNavigation();
 
-  const [userID, setuserID] = useState('');
-  const [userPW, setuserPW] = useState('');
+  const { userID, setUserID, userPW, setUserPW, reset } = useLoginForm();
 
   const [pwError, setPwError] = useState(false); 
   const [globalErr, setGlobalErr] = useState(''); 
@@ -66,9 +66,9 @@ const Login = () => {
         <Logo/>
       </View>
       <View style={styles.input_container}>
-        <Input value={userID} setValue={setuserID} placeholder='아이디'/>
+        <Input value={userID} setValue={setUserID} placeholder='아이디'/>
         <View style={{ height: 32 }} />
-        <Input value={userPW} setValue={setuserPW} placeholder='비밀번호' secureTextEntry error={pwError} />
+        <Input value={userPW} setValue={setUserPW} placeholder='비밀번호' secureTextEntry error={pwError} />
         {!!globalErr && <Text style={styles.error_text}>{globalErr}</Text>}
       </View>
       <View style={styles.link_container}>
@@ -96,7 +96,6 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     marginTop: 164,
-    marginBottom: 64
   },
   input_container: {
     marginHorizontal: 32
