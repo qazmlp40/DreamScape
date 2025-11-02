@@ -78,7 +78,7 @@ const Login = () => {
         </TouchableOpacity>
       </View>
       <View style={styles.button_container}>
-        <CompleteBtn onPress={handleLogin} disabled={isDisabled} />
+        <CompleteBtn onPress={handleLogin} disabled={isDisabled} title={"완료"} />
       </View>
     </View>
   )

@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     width: "100%",
     boxShadow: "0px 0px 1.5px rgba(0, 0, 0, 0.25)",
     elevation: 2,
-    height: 60,
+    
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,

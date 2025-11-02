@@ -7,7 +7,7 @@ interface Props {
   title?: string;         
 }
 
-const CompleteBtn = ({onPress, disabled = false}) => {
+const CompleteBtn = ({onPress, disabled = false, title}) => {
   return (
     <View>
       <TouchableOpacity
@@ -15,7 +15,7 @@ const CompleteBtn = ({onPress, disabled = false}) => {
         style={[styles.button, disabled ? styles.button_disabled : styles.button_active]}
         onPress={disabled ? undefined : onPress}  
       >
-        <Text style={styles.text}>완료</Text>
+        <Text style={styles.text}>{title}</Text>
       </TouchableOpacity>
     </View>
   )
