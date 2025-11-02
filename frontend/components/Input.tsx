@@ -33,7 +33,7 @@ const Input = ({value, setValue, placeholder, secureTextEntry, error }) => {
   )
 }
 
-export default Input
+export default React.memo(Input);
 
 const styles = StyleSheet.create({
   input: {

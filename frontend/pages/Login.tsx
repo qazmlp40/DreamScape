@@ -1,13 +1,12 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
-import { useState } from 'react'
-import React from 'react'
+import React, { useState, useCallback } from 'react'
 import Logo from '../images/logo'
 import Input from '../components/Input'
 import CompleteBtn from '../components/CompleteBtn'
 import useLoginForm from '../hooks/useLoginForm';
 
- const BASE_URL = '나중에 받을 주소';
+const BASE_URL = '나중에 받을 주소';
 
 const Login = () => {
   const navigation = useNavigation();
@@ -19,45 +18,35 @@ const Login = () => {
 
   const isDisabled = userID.trim() == '' || userPW.trim() == '';
 
-  const handleLogin = async () => {
+  const handleLogin = useCallback(async () => {
     setPwError(false);
     setGlobalErr('');
-
-    if (isDisabled) { 
+  
+    if (isDisabled) {
       setPwError(true);
-      setGlobalErr('아이디(로그인 전화번호, 로그인 전용 아이디) 또는 비밀번호가 잘못되었습니다. 아이디와 비밀번호를 정확히 입력해 주세요.'); 
+      setGlobalErr('아이디(로그인 전화번호, 로그인 전용 아이디) 또는 비밀번호가 잘못되었습니다. 아이디와 비밀번호를 정확히 입력해 주세요.');
       return;
     }
-
+  
     try {
-      // fetch 요청
       const res = await fetch(`${BASE_URL}/user/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userID.trim(),  
-          password: userPW
-        })
+        body: JSON.stringify({ email: userID.trim(), password: userPW }),
       });
-
       const data = await res.json();
-      console.log('서버 응답:', data);
-
-      // 응답 결과 처리
+  
       if (res.ok && data?.message?.includes('성공')) {
-        // alert('로그인 성공!');
-        // 홈 화면으로 이동
+        // TODO: 홈 이동
       } else {
         setPwError(true);
-        setGlobalErr(data?.message || '아이디(로그인 전화번호, 로그인 전용 아이디) 또는 비밀번호가 잘못되었습니다. 아이디와 비밀번호를 정확히 입력해 주세요.');
+        setGlobalErr(data?.message || '아이디(로그인 전화번호, 로그인 전용 아이디) 또는 비밀번호가 잘못되었습니다.');
       }
-
-    } catch (error) {
-      console.error('로그인 오류:', error);
+    } catch (e) {
       setPwError(true);
       setGlobalErr('서버에 연결할 수 없습니다.');
     }
- };
+  }, [userID, userPW, isDisabled]); 
 
 
   return (

@@ -1,11 +1,10 @@
 import { StyleSheet, Text, View, TouchableOpacity, Keyboard } from 'react-native'
-import React from 'react'
 import Logo from '../images/logo'
 import Input from '../components/Input'
 import CheckBtn from '../components/CheckBtn'
 import CompleteBtn from '../components/CompleteBtn'
 import Right_Arrow from '../images/right_arrow'
-import { useState, useEffect } from 'react'
+import React,{ useState, useEffect, useCallback } from 'react'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import useSignupForm from '../hooks/useSignupForm'
@@ -42,43 +41,49 @@ const Signup = () => {
   // 입력창 공백 상태
   const isDisabled = ID.trim() == '' || PW.trim() == '' || email.trim() == '' || checkPW.trim() == '' || termChecked == false; 
 
-  const handleSignup = async () => {
-    setPwError(false);
+  const toggleTerms = useCallback(() => {
+    setTermChecked(prev => !prev);
+  }, []);
+  
+  const handleSignup = useCallback(async () => {
     setGlobalErr('');
-
+    setPwError(false);
+  
+    const isDisabled =
+      !termChecked ||
+      username.trim() === '' ||
+      email.trim() === '' ||
+      ID.trim() === '' ||
+      PW.trim() === '' ||
+      checkPW.trim() === '';
+  
     if (PW !== checkPW) {
-    setPwError(true);
-    setGlobalErr('비밀번호를 잘못 입력하였습니다');
-    return;
+      setPwError(true);
+      setGlobalErr('비밀번호를 잘못 입력하였습니다');
+      return;
     }
-
-     // 2) 서버 요청
-     try {
-      const payload = {
-        name: ID.trim(),                      // ← 백엔드 DTO: name
-        email: email.trim().toLowerCase(),    // ← 백엔드 DTO: email
-        password: PW                          // ← 백엔드 DTO: password
-      };
-
+    if (isDisabled) {
+      setGlobalErr('입력값을 확인하고 약관에 동의해 주세요.');
+      return;
+    }
+  
+    try {
+      const payload = { name: ID.trim(), email: email.trim().toLowerCase(), password: PW };
       const res = await fetch(`${BASE_URL}/user/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
-
       const data = await res.json();
-      console.log('회원가입 응답:', data);
-
+  
       if (res.ok && data?.message?.includes('성공')) {
-        // TODO: navigation.navigate('Login');  // 로그인 화면으로 이동 
+        // TODO: navigation.navigate('Login' as never);
+        // reset(); setTermChecked(false);
       } else {
-        setGlobalErr(data?.message || '회원가입에 실패했습니다.'); 
+        setGlobalErr(data?.message || '회원가입에 실패했습니다.');
       }
-    } catch (err) {
-      console.error('회원가입 오류:', err);
+    } catch (e) {
       setGlobalErr('서버에 연결할 수 없습니다.');
     }
-  };
+  }, [termChecked, username, email, ID, PW, checkPW]);
     
   
     return (
@@ -104,7 +109,7 @@ const Signup = () => {
             </View>
             <View style={styles.terms_container}>
                 <View style={styles.checkbox_container}>
-                    <CheckBtn checked={termChecked} setChecked={setTermChecked}/>
+                    <CheckBtn checked={termChecked} setChecked={toggleTerms} />
                     <Text style={styles.terms_text}>회원가입 및 이용약관에 동의하겠습니까?</Text>
                 </View>
             </View>

@@ -21,7 +21,7 @@ const CompleteBtn = ({onPress, disabled = false, title}) => {
   )
 }
 
-export default CompleteBtn
+export default React.memo(CompleteBtn);
 
 const styles = StyleSheet.create({
     button: { 

@@ -15,7 +15,7 @@ const CheckBtn = ({checked, setChecked}) => {
     )
     }
 
-    export default CheckBtn
+export default React.memo(CheckBtn);
 
     const styles = StyleSheet.create({
         circle: {
