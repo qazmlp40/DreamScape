@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 18,
 
     fontSize: 14,
     fontFamily: "Roboto-Regular",
@@ -57,8 +57,6 @@ const styles = StyleSheet.create({
       borderColor: "#FF3D3D",
       borderWidth: 1,  
       boxShadow: "0px 0px 1.5px rgba(0, 0, 0, 0.25)",
-      elevation: 2,
-      height: 60,
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 16,
