@@ -53,11 +53,11 @@ const Signup = () => {
     setGlobalErr('');
     setPwError(false);
   
-    const isDisabled =
+    const disabled =
       !termChecked ||
-      username.trim() === '' ||
+      username.trim() === '' ||      
       email.trim() === '' ||
-      ID.trim() === '' ||
+      ID.trim() === '' ||            
       PW.trim() === '' ||
       checkPW.trim() === '';
   
@@ -66,28 +66,46 @@ const Signup = () => {
       setGlobalErr('비밀번호를 잘못 입력하였습니다');
       return;
     }
-    if (isDisabled) {
+    if (disabled) {
       setGlobalErr('입력값을 확인하고 약관에 동의해 주세요.');
       return;
     }
   
     try {
-      const payload = { name: ID.trim(), email: email.trim().toLowerCase(), password: PW };
+      const payload = {
+        userNickName: ID.trim(),            
+        name: username.trim(),              
+        email: email.trim().toLowerCase(),
+        password: PW,
+      };
+      
       const res = await fetch(`${BASE_URL}/user/signup`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-      const data = await res.json();
   
-      if (res.ok && data?.message?.includes('성공')) {
-        // TODO: navigation.navigate('Login' as never);
-        // reset(); setTermChecked(false);
-      } else {
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
+  
+      if (!res.ok) {
         setGlobalErr(data?.message || '회원가입에 실패했습니다.');
+        return;
       }
+
+      const ok = data?.message?.includes('성공') || res.status === 200 || res.status === 201;
+      if (ok) {
+        navigation.navigate('Login' as never);
+        // reset(); setTermChecked(false);
+        return;
+      }
+  
+      setGlobalErr(data?.message || '회원가입에 실패했습니다.');
     } catch (e) {
       setGlobalErr('서버에 연결할 수 없습니다.');
     }
   }, [termChecked, username, email, ID, PW, checkPW]);
+  
     
     return (
       <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }} >
