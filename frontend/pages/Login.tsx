@@ -5,10 +5,14 @@ import Logo from '../images/logo'
 import Input from '../components/Input'
 import CompleteBtn from '../components/CompleteBtn'
 import useLoginForm from '../hooks/useLoginForm';
+import useScale from '../hooks/useScale'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 const BASE_URL = '나중에 받을 주소';
 
 const Login = () => {
+  const { s } = useScale();
+
   const navigation = useNavigation();
 
   const { userID, setUserID, userPW, setUserPW, reset } = useLoginForm();
@@ -50,26 +54,28 @@ const Login = () => {
 
 
   return (
-    <View style={styles.container}>
-      <View style={styles.logo_container}>
-        <Logo/>
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }} >
+      <View style={styles.container}>
+        <View style={[styles.logo_container, {marginTop: s(116), marginBottom: s(32)} ] }> 
+          <Logo/>
+        </View>
+        <View style={[styles.input_container, {marginTop: s(32), marginHorizontal: s(32)}]}>
+          <Input value={userID} setValue={setUserID} placeholder='아이디'/>
+          <View style={{ height: 32 }} />
+          <Input value={userPW} setValue={setUserPW} placeholder='비밀번호' secureTextEntry error={pwError} />
+          {!!globalErr && <Text style={[styles.error_text, {marginTop: s(8)}]}>{globalErr}</Text>}
+        </View>
+        <View style={[styles.link_container, {marginTop: s(16), marginHorizontal: s(32)}]}>
+          <Text style={styles.link}>아이디, 비밀번호 찾기 |</Text>
+          <TouchableOpacity onPress={()=>navigation.navigate('Signup')}>
+            <Text style={styles.link}> 회원가입하기</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.button_container, {position: "absolute", left: s(16), right: s(16), bottom: s(23) }]}>
+          <CompleteBtn onPress={handleLogin} disabled={isDisabled} title={"완료"} />
+        </View>
       </View>
-      <View style={styles.input_container}>
-        <Input value={userID} setValue={setUserID} placeholder='아이디'/>
-        <View style={{ height: 32 }} />
-        <Input value={userPW} setValue={setUserPW} placeholder='비밀번호' secureTextEntry error={pwError} />
-        {!!globalErr && <Text style={styles.error_text}>{globalErr}</Text>}
-      </View>
-      <View style={styles.link_container}>
-        <Text style={styles.link}>아이디, 비밀번호 찾기 |</Text>
-        <TouchableOpacity onPress={()=>navigation.navigate('Signup')}>
-          <Text style={styles.link}> 회원가입하기</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.button_container}>
-        <CompleteBtn onPress={handleLogin} disabled={isDisabled} title={"완료"} />
-      </View>
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -84,24 +90,25 @@ const styles = StyleSheet.create({
   logo_container: {
     width: "100%",
     alignItems: "center",
-    marginTop: 164,
+    // marginTop: 116
+    // marginBottom: 64
   },
   input_container: {
-    marginHorizontal: 32
+    // marginHorizontal: 32
   },
   link_container: {
-    marginHorizontal: 32,
+    // marginHorizontal: 32,
     alignItems: "flex-end",
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 16
+    // marginTop: 16
   },
   link: {
     fontSize: 14,
     fontFamily: "Roboto-Regular",
     color: "#999",
     textAlign: "left",
-    fontWeight: 400,
+    fontWeight: '400',
   },
   divider_container: {
     flexDirection: 'row',
@@ -120,20 +127,20 @@ const styles = StyleSheet.create({
     fontFamily: "Roboto-Regular",
     color: "#474747",
     textAlign: "left",
-    fontWeight: 400,
+    fontWeight: '400',
   },
   button_container: {
-    position: 'absolute',
-    bottom: 23, 
-    left: 16,
-    right: 16,
+    // position: 'absolute',
+    // bottom: 23, 
+    // left: 16,
+    // right: 16,
   }, 
   error_text: {
-    marginTop: 8,
+    // marginTop: 8,
     color: "#FF3D3D",
     fontSize: 12,
     fontFamily: "Roboto-Regular",
     textAlign: "left",
-    fontWeight: 400
+    fontWeight: '400'
   }
 })
