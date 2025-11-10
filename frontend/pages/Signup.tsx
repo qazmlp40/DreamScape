@@ -11,7 +11,8 @@ import useSignupForm from '../hooks/useSignupForm'
 import useScale from '../hooks/useScale'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-const BASE_URL = '나중에 받을 주소';
+const BASE_URL = 'http://10.0.2.2:8080';
+
 const Signup = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -73,13 +74,15 @@ const Signup = () => {
   
     try {
       const payload = {
-        userNickName: ID.trim(),            
-        name: username.trim(),              
+        userNickName: ID.trim(), // 아이디           
+        name: username.trim(), // 이름  
         email: email.trim().toLowerCase(),
         password: PW,
+        profileImage: "https://picsum.photos/200/200", // 기본 프로필 이미지
+        socialProvider: "local" // 기본 가입 방식
       };
       
-      const res = await fetch(`${BASE_URL}/user/signup`, {
+      const res = await fetch(`${BASE_URL}/t_user/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

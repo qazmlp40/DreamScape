@@ -8,7 +8,8 @@ import useLoginForm from '../hooks/useLoginForm';
 import useScale from '../hooks/useScale'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-const BASE_URL = '나중에 받을 주소';
+
+const BASE_URL = 'http://10.0.2.2:8080';
 
 const Login = () => {
   const { s } = useScale();
@@ -22,7 +23,10 @@ const Login = () => {
 
   const isDisabled = userID.trim() == '' || userPW.trim() == '';
 
+  const [loading, setLoading] = useState(false); 
+
   const handleLogin = useCallback(async () => {
+    if (loading) return; // 중복 클릭 방지 로딩 
     setPwError(false);
     setGlobalErr('');
   
@@ -33,24 +37,32 @@ const Login = () => {
     }
   
     try {
-      const res = await fetch(`${BASE_URL}/user/login`, {
+      const res = await fetch(`${BASE_URL}/t_user/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userID.trim(), password: userPW }),
+        body: JSON.stringify({ email: userID.trim(), password: userPW }), 
       });
       const data = await res.json();
-  
-      if (res.ok && data?.message?.includes('성공')) {
-        // TODO: 홈 이동
-      } else {
-        setPwError(true);
-        setGlobalErr(data?.message || '아이디(로그인 전화번호, 로그인 전용 아이디) 또는 비밀번호가 잘못되었습니다.');
+
+      //  성공 판정: token 유무로 체크
+      if (res.ok && data?.token) {
+        const token = data.token;
+
+        console.log('로그인 성공 토큰:', data.token);
+        // TODO: 메인 페이지로 이동
+        return;
+      
       }
+
+      // 실패 처리
+      setPwError(true);
+      setGlobalErr(data?.message || '아이디(로그인 전화번호, 로그인 전용 아이디) 또는 비밀번호가 잘못되었습니다.');
     } catch (e) {
       setPwError(true);
       setGlobalErr('서버에 연결할 수 없습니다.');
     }
-  }, [userID, userPW, isDisabled]); 
+  }, [userID, userPW, isDisabled, navigation]); 
+
 
 
   return (
