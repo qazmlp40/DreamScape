@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native'
 import React from 'react'
+import useScale from '../hooks/useScale'
 
 type error = {
   width: "100%",
@@ -20,10 +21,12 @@ type error = {
 }
 
 const Input = ({value, setValue, placeholder, secureTextEntry, error }) => {
+  const { s } = useScale();
+
   return (
     <View>
       <TextInput 
-      style={[styles.input, error && styles.input_error]}
+      style={[styles.input, error && styles.input_error, {paddingHorizontal: s(16), paddingVertical: s(20)}]}
       onChangeText={setValue}
       value={value}
       placeholder={placeholder}
@@ -39,17 +42,16 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     boxShadow: "0px 0px 1.5px rgba(0, 0, 0, 0.25)",
-    
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 18,
+    // paddingHorizontal: 16,
+    // paddingVertical: 18,
 
     fontSize: 14,
-    fontFamily: "Roboto-Regular",
+    fontFamily: "Roboto-Nomal",
     color: "#999",
     textAlign: "left",
-    fontWeight: 400,
+    fontWeight: '400',
     borderRadius: 8
     }, 
     input_error: {
