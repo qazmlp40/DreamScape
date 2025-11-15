@@ -21,4 +21,6 @@ public class UserResponseDTO {
     private String socialProvider;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String accessToken;   // JWT 토큰 필드 추가
+
 }

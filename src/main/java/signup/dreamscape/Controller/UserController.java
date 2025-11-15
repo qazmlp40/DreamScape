@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import signup.dreamscape.DTO.UserLoginRequestDTO;
 import signup.dreamscape.DTO.UserRequestDTO;
 import signup.dreamscape.DTO.UserResponseDTO;
 import signup.dreamscape.Service.UserService;
@@ -32,9 +33,8 @@ public class UserController {
         return userService.signup(requestDTO);
     }
 
-    // 로그인
     @PostMapping("/login")
-    public UserResponseDTO login(@RequestBody UserRequestDTO requestDTO) {
+    public UserResponseDTO login(@RequestBody UserLoginRequestDTO requestDTO) {
         return userService.login(requestDTO.getEmail(), requestDTO.getPassword());
     }
 
