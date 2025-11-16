@@ -17,7 +17,7 @@ const RecordVoice = () => {
         <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#EBEBEB' }}>
             <View style={styles.container}>
             <View style={[styles.icon_wrapper, { marginTop: s(268), marginBottom: s(44) }]}>
-  <View style={[styles.icon_glow, { width: s(180), height: s(180), borderRadius: s(90) }]} />
+  <View style={[styles.icon_glow, { width: s(150), height: s(150), borderRadius: s(90) }]} />
   <View style={[styles.icon_container, { width: s(140), height: s(140), borderRadius: s(70) }]}>
     <Record_Voice_Icon />
   </View>
@@ -42,47 +42,39 @@ const styles = StyleSheet.create({
         backgroundColor: '#EBEBEB',
         alignItems: "center"
     },
-    // icon_container: {
-    //     // width: 140,
-    //     // height: 140,
-    //     backgroundColor: "#BB7CFF",
-    //     borderRadius: 70,
-    //     // marginBottom: 44,
-    //     justifyContent: "center",
-    //     alignItems: "center",
-    //     shadowColor: '#BB7CFF',
-    //     shadowOffset: { width: 0, height: 0 },
-    //     shadowOpacity: 0.85,     
-    //     shadowRadius: 28,        
 
-    //     elevation: 55,           
-    // },
-    icon_wrapper: {
-        justifyContent: 'center',
-        alignItems: 'center',
-      },
-      
-      // 뒤에 깔리는 "빛 번짐" 레이어
-      icon_glow: {
-        position: 'absolute',
-        backgroundColor: 'rgba(187, 124, 255, 0.35)', // 보라 + 투명
-      },
-      
-      // 실제 버튼
-      icon_container: {
+    // 실제 버튼
+    icon_container: {
         backgroundColor: '#BB7CFF',
         justifyContent: 'center',
         alignItems: 'center',
-      
-        // iOS용 살짝 입체감
+        
+        // iOS shadow
         shadowColor: '#BB7CFF',
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 20,
+        shadowOpacity: 0.5,     
+        shadowRadius: 16,        
+        
+        // Android elevation (색은 적용 안 됨)
+        elevation: 16,
+    },
+
+    icon_wrapper: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
       
-        // Android 입체감 (색은 안 먹음)
-        elevation: 12,
-      },      
+    // 뒤에 깔리는 "빛 번짐" 레이어
+    icon_glow: {
+        position: 'absolute',
+        width: 100,
+        height: 100,
+        borderRadius: 150,
+        backgroundColor: '#BB7CFF',
+        opacity: 0.7,
+        filter: 'blur(15px)', // ← 웹에서는 가능하지만 RN 안드로이드에서는 X
+    },
+    
     voice_record_text: {
         color: "#BB7CFF",
         fontSize: 24,
