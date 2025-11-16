@@ -12,7 +12,6 @@ const CompleteBtn = ({onPress, disabled = false, title}) => {
   const { s } = useScale();
 
   return (
-    <View>
       <TouchableOpacity
         activeOpacity={disabled ? 1 : 0.8}        
         style={[styles.button, disabled ? styles.button_disabled : styles.button_active, {height: s(60)}]}
@@ -20,7 +19,6 @@ const CompleteBtn = ({onPress, disabled = false, title}) => {
       >
         <Text style={styles.text}>{title}</Text>
       </TouchableOpacity>
-    </View>
   )
 }
 

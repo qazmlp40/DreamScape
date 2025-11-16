@@ -81,25 +81,35 @@ const Signup = () => {
         profileImage: "https://picsum.photos/200/200", // 기본 프로필 이미지
         socialProvider: "local" // 기본 가입 방식
       };
+
+    console.log("요청 payload:", payload);
       
-      const res = await fetch(`${BASE_URL}/t_user/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-  
-      const text = await res.text();
-      const data = text ? JSON.parse(text) : {};
+    const res = await fetch(`${BASE_URL}/t_user/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    
+    const text = await res.text();
+    console.log('응답 상태:', res.status);
+    console.log('응답 텍스트:', text);
+    
+    let data: { message?: string } = {};
+
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.log('JSON 파싱 실패:', text);
+    }
   
       if (!res.ok) {
         setGlobalErr(data?.message || '회원가입에 실패했습니다.');
         return;
       }
 
-      const ok = data?.message?.includes('성공') || res.status === 200 || res.status === 201;
-      if (ok) {
-        navigation.navigate('Login' as never);
-        // reset(); setTermChecked(false);
+      if (res.ok) {
+        console.log("회원가입 성공");
+        navigation.navigate('Login');
         return;
       }
   
