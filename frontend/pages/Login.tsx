@@ -50,6 +50,13 @@ const Login = () => {
 
       // 토큰 저장
       await AsyncStorage.setItem('accessToken', token);
+
+      // userId 저장
+      if (data.userId) {
+        await AsyncStorage.setItem('userId', String(data.userId));
+        console.log('userId 저장 완료:', data.userId);
+      }
+
       console.log('로그인 성공, 토큰 저장 완료:', token);
 
       // 다음 화면으로 이동 (구현해야함)

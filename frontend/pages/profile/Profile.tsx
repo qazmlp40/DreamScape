@@ -1,5 +1,5 @@
 // 프로필 페이지
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View, Alert } from 'react-native'
 import React from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import useScale from '../../hooks/useScale'
@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native'
 import { useState } from 'react'
 import CompleteBtn from '../../components/CompleteBtn'
 import Profile_CancleBtn from '../../components/Profile/Profile_CancleBtn'
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = 'http://10.0.2.2:8080';
 
@@ -27,16 +28,78 @@ const Profile = () => {
   const showWithdrawPopup = () => {
     setWithdrawPopupVisible(true);
   }
-  
-  const handleLogout = () => {
-    // 로그아웃 로직
-    // navigation.navigate('Login');
-  }
 
-  const handleWithdraw = () => {
-    // 회원 탈퇴 로직
-    // navigation.navigate('Login');
-  }
+  const handleLogout = async () => {
+    try {
+      // 로컬에 저장된 인증 정보 삭제
+      await AsyncStorage.removeItem('accessToken');
+      await AsyncStorage.removeItem('userId');
+  
+      console.log('로그아웃 - 토큰 및 유저 정보 삭제 완료');
+
+      setLogoutPopupVisible(false);
+
+      // 스택 초기화
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      console.error('로그아웃 처리 오류:', error);
+    }
+  };
+  
+
+  const handleWithdraw = async () => {
+    try {
+      // 저장된 userId 가져오기
+      const userId = await AsyncStorage.getItem('userId');
+  
+      if (!userId) {
+        console.warn('회원탈퇴 실패: userId 없음');
+        
+        Alert.alert('오류', '회원 정보를 찾을 수 없습니다. 다시 로그인 해주세요.');
+        return;
+      }
+  
+      // 회원탈퇴 API 호출
+      const res = await fetch(`${BASE_URL}/t_user/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          // 나중에 JWT 인증 붙으면 여기에 Authorization 헤더 추가:
+          // Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      console.log('탈퇴 userId:', userId);
+      console.log('요청 URL:', `${BASE_URL}/t_user/${Number(userId)}`);
+      
+  
+      if (!res.ok) {
+        console.error('회원탈퇴 요청 실패:', res.status);
+        return;
+      }
+  
+      console.log('회원탈퇴 성공');
+  
+      // 로컬 인증 정보 삭제
+      await AsyncStorage.removeItem('accessToken');
+      await AsyncStorage.removeItem('userId');
+  
+      setWithdrawPopupVisible(false);
+  
+      // 스택 리셋
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (error) {
+      console.error('회원탈퇴 처리 중 오류:', error);
+    }
+  };
+  
+  
 
   const { s } = useScale();
   return (
