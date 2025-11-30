@@ -8,5 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
+
+    // 이메일 중복 체크 및 로그인용
     Optional<UserEntity> findByEmail(String email);
 }

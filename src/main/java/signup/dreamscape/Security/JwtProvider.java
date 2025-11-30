@@ -11,7 +11,7 @@ import java.util.Date;
 @Component
 public class JwtProvider {
 
-    // HS256 비밀키 (실제 환경에선 외부 설정 파일에서 관리 권장)
+    // HS256 비밀키
     private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
     private final long validityInMillis = 3600000; // 1시간
