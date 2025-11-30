@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TextInput, View } from 'react-native'
-import React from 'react'
+import React, { useState } from 'react'
 import useScale from '../hooks/useScale'
 
 type error = {
