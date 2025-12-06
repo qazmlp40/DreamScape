@@ -17,7 +17,7 @@ const RecordVoice = () => {
         <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#EBEBEB' }}>
             <View style={styles.container}>
             <View style={[styles.icon_wrapper, { marginTop: s(268), marginBottom: s(44) }]}>
-  <View style={[styles.icon_glow, { width: s(150), height: s(150), borderRadius: s(90) }]} />
+  {/* <View style={[styles.icon_glow, { width: s(150), height: s(150), borderRadius: s(90) }]} /> */}
   <View style={[styles.icon_container, { width: s(140), height: s(140), borderRadius: s(70) }]}>
     <Record_Voice_Icon />
   </View>
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
         // iOS shadow
         shadowColor: '#BB7CFF',
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,     
+        shadowOpacity: 0.9,     
         shadowRadius: 16,        
         
         // Android elevation (색은 적용 안 됨)
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
         borderRadius: 150,
         backgroundColor: '#BB7CFF',
         opacity: 0.7,
-        filter: 'blur(15px)', // ← 웹에서는 가능하지만 RN 안드로이드에서는 X
+        // filter: 'blur(15px)', // ← 웹에서는 가능하지만 RN 안드로이드에서는 X
     },
     
     voice_record_text: {
