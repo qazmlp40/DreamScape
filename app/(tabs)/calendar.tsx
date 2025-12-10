@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import Svg, { Path } from 'react-native-svg';
-const BASE_URL = 'http://192.168.45.38:8080';
+
 
 // 🇰🇷 한글 로케일 설정
 LocaleConfig.locales['ko'] = {
@@ -88,7 +88,9 @@ const formatDateToString = (d: Date) => {
     return `${yyyy}-${mm}-${dd}`;
 };
 
-const INITIAL_SELECTED_DATE = formatDateToString(new Date());
+// 오늘 날짜를 기본값으로 설정
+const today = new Date();
+const INITIAL_SELECTED_DATE = formatDateToString(today);
 
 const moodIcons: { [key: string]: any } = {
     happy: require('../../assets/images/happy_icon.png'),
@@ -99,13 +101,15 @@ const moodIcons: { [key: string]: any } = {
     surprised: require('../../assets/images/Scared_icon.png'),
 };
 
-// 더미 데이터
+// 더미 데이터 - 2025년 12월
 const dummyDreams = [
-    { date: '2025-11-05', emotion: 'happy', summary: '하늘을 나는 꿈을 꿨어요', keywords: ['비행', '자유', '하늘'] },
-    { date: '2025-11-12', emotion: 'sad', summary: '친구와 헤어지는 꿈', keywords: ['이별', '슬픔'] },
-    { date: '2025-11-18', emotion: 'excited', summary: '콘서트에서 신나게 놀았어요', keywords: ['음악', '축제'] },
-    { date: '2025-11-25', emotion: 'impressed', summary: '아름다운 풍경을 봤어요', keywords: ['자연', '감동'] },
-    { date: '2025-11-30', emotion: 'surprised', summary: '갑자기 괴물이 나타났어요', keywords: ['공포', '놀람'] },
+    { date: '2025-12-01', emotion: 'happy', summary: '바다에서 돌고래와 함께 수영하는 꿈', keywords: ['바다', '돌고래', '자유'] },
+    { date: '2025-12-03', emotion: 'excited', summary: '놀이공원에서 롤러코스터를 타는 꿈', keywords: ['놀이공원', '스릴', '재미'] },
+    { date: '2025-12-05', emotion: 'impressed', summary: '우주에서 지구를 내려다보는 꿈', keywords: ['우주', '지구', '경이로움'] },
+    { date: '2025-12-07', emotion: 'sad', summary: '어릴 적 살던 집이 사라지는 꿈', keywords: ['추억', '상실', '그리움'] },
+    { date: '2025-12-09', emotion: 'surprised', summary: '갑자기 하늘에서 눈이 내리는 꿈', keywords: ['눈', '겨울', '놀라움'] },
+    { date: '2025-12-15', emotion: 'happy', summary: '친구들과 함께 파티하는 꿈', keywords: ['친구', '파티', '즐거움'] },
+    { date: '2025-12-20', emotion: 'excited', summary: '새로운 도시를 탐험하는 꿈', keywords: ['모험', '탐험', '새로움'] },
 ];
 
 // ✏️ 편집 아이콘 컴포넌트
@@ -182,7 +186,7 @@ const CustomDay: React.FC<CustomDayProps> = ({ date, state, marking, onPress }) 
 export default function CalendarScreen() {
     const router = useRouter();
     const [selectedDate, setSelectedDate] = useState<string>(INITIAL_SELECTED_DATE);
-    const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+    const [currentMonth, setCurrentMonth] = useState<Date>(new Date()); // 오늘 날짜로 설정
 
     const handleEditPress = () => {
         router.push(`/dream-edit?date=${selectedDate}`);
@@ -191,6 +195,11 @@ export default function CalendarScreen() {
     // 꿈 기록하기 버튼 → record/step1.tsx로 이동
     const handleRecordPress = () => {
         router.push('/record/step1');
+    };
+
+    // 꿈 영상 보기 버튼 → record/step4.tsx로 이동
+    const handleVideoPress = () => {
+        router.push('/record/step4');
     };
 
     const getDreamByDate = (date: string) => {
@@ -263,12 +272,18 @@ export default function CalendarScreen() {
                 <View style={styles.topHeader}>
                     <Text style={styles.headerTitle}>꿈 캘린더</Text>
                     
-                    <TouchableOpacity 
-                        style={styles.editButton}
-                        onPress={handleEditPress}
-                    >
-                        <EditIcon size={scale(24)} color="#000000" />
-                    </TouchableOpacity>
+                    {hasDreamRecord && (
+                        <TouchableOpacity 
+                            style={styles.editButton}
+                            onPress={handleEditPress}
+                        >
+                            <EditIcon size={scale(24)} color="#000000" />
+                        </TouchableOpacity>
+                    )}
+                    
+                    {!hasDreamRecord && (
+                        <View style={styles.editButton} />
+                    )}
                 </View>
                 
                 <ScrollView 
@@ -389,7 +404,11 @@ export default function CalendarScreen() {
                             </View>
 
                             {/* CTA 버튼 */}
-                            <TouchableOpacity style={styles.ctaBtn} activeOpacity={0.8}>
+                            <TouchableOpacity 
+                                style={styles.ctaBtn} 
+                                activeOpacity={0.8}
+                                onPress={handleVideoPress}
+                            >
                                 <Text style={styles.ctaBtnText}>꿈 영상 보기</Text>
                             </TouchableOpacity>
                         </>

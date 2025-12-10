@@ -24,7 +24,7 @@ const colors = {
 
 const FIXED_BUTTON_HEIGHT = 56;
 
-export default function RecordStep5Screen() {
+export default function RecordStep4Screen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
@@ -44,7 +44,7 @@ export default function RecordStep5Screen() {
     };
 
     const handleNext = () => {
-        router.push('/(tabs)' as any);
+        router.push('/record/step5' as any);
     };
 
     return (

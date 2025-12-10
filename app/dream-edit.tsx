@@ -15,7 +15,7 @@ import {
     View
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-const BASE_URL = 'http://192.168.45.38:8080';
+
 
 // 📐 반응형 유틸리티
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -49,11 +49,11 @@ const moodIcons: { [key: string]: any } = {
 
 // 🔥 더미 데이터
 const dummyDreams = [
-    { id: '1', date: '2025-11-05', emotion: 'happy', content: '하늘을 나는 꿈을 꿨어요. 구름 위를 자유롭게 날아다니며 아래로 펼쳐진 도시의 불빛들을 바라봤습니다. 바람이 얼굴을 스치는 느낌이 너무 생생했어요.', keywords: ['비행', '자유', '하늘'] },
-    { id: '2', date: '2025-11-12', emotion: 'sad', content: '친구와 헤어지는 꿈을 꿨습니다. 기차역에서 손을 흔들며 멀어지는 친구를 바라보는데 눈물이 났어요.', keywords: ['이별', '슬픔'] },
-    { id: '3', date: '2025-11-18', emotion: 'excited', content: '콘서트에서 신나게 놀았어요! 좋아하는 가수가 무대에서 노래하고 있었고, 함께 떼창을 했습니다.', keywords: ['음악', '축제'] },
-    { id: '4', date: '2025-11-25', emotion: 'impressed', content: '아름다운 풍경을 봤어요. 노을 지는 바다가 황금빛으로 물들어 있었고, 파도 소리가 귓가에 맴돌았습니다.', keywords: ['자연', '감동'] },
-    { id: '5', date: '2025-11-30', emotion: 'surprised', content: '갑자기 괴물이 나타났어요! 어두운 골목에서 거대한 그림자가 다가오는데 심장이 멎는 줄 알았습니다.', keywords: ['공포', '놀람'] },
+    { id: '1', date: '2025-12-01', emotion: 'happy', content: '바다에서 돌고래와 함께 수영하는 꿈을 꿨어요. 푸른 바다 속에서 돌고래들과 자유롭게 헤엄치며 놀았습니다.', keywords: ['바다', '돌고래', '자유'] },
+    { id: '2', date: '2025-12-03', emotion: 'excited', content: '놀이공원에서 롤러코스터를 타는 꿈을 꿨어요. 빠른 속도로 날아다니며 스릴을 느꼈습니다.', keywords: ['놀이공원', '스릴', '재미'] },
+    { id: '3', date: '2025-12-05', emotion: 'impressed', content: '우주에서 지구를 내려다보는 꿈을 꿨어요. 푸른 지구가 우주 속에서 빛나고 있었고, 그 아름다움에 감동했습니다.', keywords: ['우주', '지구', '경이로움'] },
+    { id: '4', date: '2025-12-07', emotion: 'sad', content: '어릴 적 살던 집이 사라지는 꿈을 꿨어요. 추억이 담긴 집이 허물어지는 모습을 보며 슬퍼졌습니다.', keywords: ['추억', '상실', '그리움'] },
+    { id: '5', date: '2025-12-09', emotion: 'surprised', content: '갑자기 하늘에서 눈이 내리는 꿈을 꿨어요. 여름인데 갑자기 하얀 눈이 내려서 놀랐습니다.', keywords: ['눈', '겨울', '놀라움'] },
 ];
 
 // 🔥 뒤로가기 아이콘
@@ -144,6 +144,18 @@ export default function DreamEditScreen() {
         }
     }, [dreamDate, dreamId]);
 
+    // 음성 텍스트가 전달되면 dreamText에 설정
+    useEffect(() => {
+        if (params.voiceText && typeof params.voiceText === 'string') {
+            setDreamText(params.voiceText);
+            setIsModified(true);
+            // 음성 텍스트가 있어도 dreamData가 없으면 기본 데이터 생성
+            if (!dreamData && dreamDate) {
+                setDreamData({ id: '', date: dreamDate, emotion: 'happy', content: '', keywords: [] });
+            }
+        }
+    }, [params.voiceText, dreamData, dreamDate]);
+
     // 🔥 키보드 이벤트 리스너
     useEffect(() => {
         const keyboardWillShow = Keyboard.addListener(
@@ -204,8 +216,7 @@ export default function DreamEditScreen() {
     };
 
     const handleMicPress = () => {
-        console.log('음성인식 시작');
-        Alert.alert('음성인식', '음성인식 기능은 준비 중입니다.');
+        router.push('/voice-record');
     };
 
     const handleComplete = () => {

@@ -67,7 +67,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chart"
         options={{
-          title: '분석',
+          title: '차트',
           tabBarIcon: ({ focused }) => (
             <Image
               source={tapIcon}
@@ -83,7 +83,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: '마이',
+          title: '프로필',
           tabBarIcon: ({ focused }) => (
             <Image
               source={tapIcon}

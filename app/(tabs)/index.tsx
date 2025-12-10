@@ -80,7 +80,11 @@ export default function HomeScreen() {
         <View style={styles.contentContainer}>
           
           {/* --- 0. 헤더 타이틀 --- */}
-          <Text style={styles.headerTitle}>오늘의 꿈은?</Text>
+          <Link href="/main2" asChild>
+            <Pressable>
+              <Text style={styles.headerTitle}>오늘의 꿈은?</Text>
+            </Pressable>
+          </Link>
 
           {/* --- 1. 꿈 상징 캐릭터 박스 --- */}
           <View style={styles.characterSection}>

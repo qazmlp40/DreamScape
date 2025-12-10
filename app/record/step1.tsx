@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import React, { useState, useEffect } from 'react';
 import {
     Dimensions,
     ImageSourcePropType,
@@ -18,7 +18,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import IMAGES from '../assets/images';
 import { clamp } from '../utils/responsive';
-const BASE_URL = 'http://192.168.45.38:8080';
+
 
 // 화면 크기
 const { width: screenWidth } = Dimensions.get('window');
@@ -90,7 +90,7 @@ const CustomRecordHeader = ({ title, onMicPress }: { title: string; onMicPress?:
             <Text
                 numberOfLines={1}
                 ellipsizeMode="tail"
-                style={[headerStyles.headerTitle, { color: HEADER_TEXT_COLOR }]}
+                style={[headerStyles.headerTitle, { color: '#282828', marginLeft: 4 }]}
             >
                 {title}
             </Text>
@@ -122,10 +122,11 @@ const headerStyles = StyleSheet.create({
         zIndex: 2,
     },
     headerTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        letterSpacing: -0.3,
-        textAlign: 'center',
+        fontSize: 18,
+        fontWeight: '700',
+        letterSpacing: -0.36,
+        textAlign: 'left',
+        color: '#282828',
         flex: 1,
         zIndex: 1,
     },
@@ -142,28 +143,30 @@ export default function RecordStep1Screen() {
     const [dreamContent, setDreamContent] = useState('');
     const [isListening, setIsListening] = useState(false);
     const router = useRouter();
+    const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
     const scrollViewRef = React.useRef<KeyboardAwareScrollView>(null);
 
+    // 음성 텍스트가 전달되면 dreamContent에 설정
+    useEffect(() => {
+        if (params.voiceText && typeof params.voiceText === 'string') {
+            setDreamContent(params.voiceText);
+        }
+    }, [params.voiceText]);
+
+
+
     const handleNext = () => {
-        if (selectedMood) {
+        if (selectedMood && dreamContent.trim()) {
             router.push('/record/step2' as any);
         } else {
-            console.log("오늘의 감정을 선택해주세요.");
+            console.log("감정과 꿈 내용을 모두 입력해주세요.");
         }
     };
 
     const handleMicPress = async () => {
-        // 음성인식 기능은 나중에 Expo Voice / Web Speech API로 구현
-        // 현재는 테스트용 placeholder
-        setIsListening(!isListening);
-        if (!isListening) {
-            console.log("🎙️ 음성 인식 시작...");
-            // 실제 음성인식 로직은 여기에 추가
-        } else {
-            console.log("🎙️ 음성 인식 중지...");
-        }
+        router.push('/voice-record');
     };
 
     return (
@@ -261,9 +264,9 @@ export default function RecordStep1Screen() {
                     onPress={handleNext}
                     style={[
                         styles.nextButton,
-                        { opacity: selectedMood ? 1 : 0.5 }
+                        { opacity: (selectedMood && dreamContent.trim()) ? 1 : 0.5 }
                     ]}
-                    disabled={!selectedMood}
+                    disabled={!(selectedMood && dreamContent.trim())}
                 >
                     <Text style={styles.nextButtonText}>완료</Text>
                 </Pressable>
@@ -317,8 +320,8 @@ const styles = StyleSheet.create({
     characterBox: {
         width: 142,
         height: 142,
-        paddingVertical: 76,
-        paddingHorizontal: 57,
+        paddingVertical: 16,
+        paddingHorizontal: 16,
         backgroundColor: colors.cardBackground,
         borderRadius: 12,
         borderWidth: 1,
@@ -335,7 +338,7 @@ const styles = StyleSheet.create({
     characterSubText: {
         fontSize: 12,
         color: colors.inactive,
-        marginTop: 0,
+        marginTop: -12,
     },
 
     // 오늘의 감정

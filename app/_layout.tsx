@@ -25,6 +25,12 @@ export default function RootLayout() {
         <Stack.Screen name="record/step2" options={{ headerShown: false }} />
         <Stack.Screen name="record/step3" options={{ headerShown: false }} /> 
         <Stack.Screen name="record/step4" options={{ headerShown: false }} />
+        <Stack.Screen name="record/step5" options={{ headerShown: false }} />
+        <Stack.Screen name="setting" options={{ headerShown: false }} />
+        <Stack.Screen name="inquiry" options={{ headerShown: false }} />
+        <Stack.Screen name="dream-edit" options={{ headerShown: false }} />
+        <Stack.Screen name="voice-record" options={{ headerShown: false }} />
+        <Stack.Screen name="main2" options={{ headerShown: false }} />
        
 
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
