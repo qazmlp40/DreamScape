@@ -81,7 +81,7 @@ public class UserService {
         return userRepository.findByEmail(email)
                 .filter(user -> {
                     boolean matches = passwordEncoder.matches(password, user.getPassword());
-                    System.out.println("비밀번호가 일치합니까?? " + matches);
+                    System.out.println("비밀번호가 일치합니까? " + matches);
                     return matches;
                 })
                 .map(user -> {
@@ -114,7 +114,7 @@ public class UserService {
                 });
     }
 
-    // 3️⃣ 전체 회원 조회
+    // 3 전체 회원 조회
     public List<UserResponseDTO> getAllUsers() {
         List<UserEntity> users = userRepository.findAll();
 
@@ -134,7 +134,7 @@ public class UserService {
                 .collect(Collectors.toList());
     }
 
-    // 4️⃣ userId로 단일 회원 조회
+    // 4️userId로 단일 회원 조회
     public UserResponseDTO getUserById(Long userId) {
         Optional<UserEntity> optionalUser = userRepository.findById(userId);
 
@@ -161,7 +161,7 @@ public class UserService {
                         .build());
     }
 
-    // 5️⃣ 회원 탈퇴 (단일 삭제)
+    // 회원 탈퇴 (단일 삭제)
     @Transactional
     public UserResponseDTO deleteUserById(Long userId) {
         Optional<UserEntity> optionalUser = userRepository.findById(userId);
@@ -190,7 +190,7 @@ public class UserService {
                 .build();
     }
 
-    // 6️⃣ 전체 회원 삭제 (관리자용)
+    // 전체 회원 삭제 (관리자용)
     @Transactional
     public String deleteAllUsers() {
         userRepository.deleteAll();

@@ -41,21 +41,21 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    // ✅ 단일 회원 조회 (userId로 조회)
+    //  단일 회원 조회 (userId로 조회)
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long userId) {
         UserResponseDTO response = userService.getUserById(userId);
         return ResponseEntity.ok(response);
     }
 
-    // ✅ 회원 탈퇴 (단일 삭제)
+    //  회원 탈퇴 (단일 삭제)
     @DeleteMapping("/{userId}")
     public ResponseEntity<UserResponseDTO> deleteUserById(@PathVariable Long userId) {
         UserResponseDTO response = userService.deleteUserById(userId);
         return ResponseEntity.ok(response);
     }
 
-    // ✅ 전체 회원 삭제 (관리자용)
+    //  전체 회원 삭제 (관리자용)
     @DeleteMapping("/all")
     public ResponseEntity<String> deleteAllUsers() {
         String result = userService.deleteAllUsers();
