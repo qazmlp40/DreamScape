@@ -1,5 +1,5 @@
 import * as MediaLibrary from 'expo-media-library';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   Alert,
@@ -46,6 +46,7 @@ const FIXED_BUTTON_HEIGHT = 56;
 export default function RecordStep5Screen() {
   const { currentRecord, saveRecord, resetCurrent } = useDreamRecord();
   const router = useRouter();
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const BOTTOM_INSET = insets.bottom || 20;
   const [isSaved, setIsSaved] = useState(false);
@@ -73,14 +74,16 @@ export default function RecordStep5Screen() {
 
   const handleNext = () => {
     console.log('💾 step5 저장 시작:', currentRecord);
-    saveRecord();     // ✅ 전체 데이터 저장 (날짜 자동 생성)
+    const selectedDate = params.selectedDate as string;
+    saveRecord(selectedDate);     // ✅ 선택된 날짜로 저장
     console.log('💾 step5 저장 완료');
     resetCurrent();   // ✅ 현재 데이터 초기화
     router.replace('/(tabs)' as any); // 캘린더로 이동
   };
 
   const handleFinish = () => {
-    saveRecord();     // ✅ 메모리에 저장
+    const selectedDate = params.selectedDate as string;
+    saveRecord(selectedDate);     // ✅ 선택된 날짜로 저장
     resetCurrent();   // 선택: 현재 작성 중이던 값 초기화
     router.replace('/(tabs)'); // 홈으로 이동
   };

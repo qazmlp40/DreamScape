@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import {
     ActivityIndicator,
@@ -21,16 +21,18 @@ const colors = {
 
 export default function RecordStep2Screen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
 
     // 3초 후 자동으로 다음 화면으로 이동
     useEffect(() => {
         const timer = setTimeout(() => {
-            router.push('/record/step3' as any);
+            const selectedDate = params.selectedDate as string;
+            router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, []);
+    }, [params.selectedDate]);
 
     return (
         <View style={styles.container}>

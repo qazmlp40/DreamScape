@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
@@ -149,8 +149,8 @@ const Login: React.FC = () => {
 
         console.log('로그인 성공, 토큰 저장 완료:', token);
 
-        // 로그인 성공 -> 페이지 이동동
-        // router.replace('');
+        // 로그인 성공 -> 페이지 이동
+        router.replace('/(tabs)');
         setLoading(false);
         return;
       }
@@ -172,6 +172,7 @@ const Login: React.FC = () => {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
         <View style={[styles.logo_container, { marginTop: s(116), marginBottom: s(32) }]}>
           <Logo />
@@ -205,7 +206,7 @@ const Login: React.FC = () => {
             { position: 'absolute', left: s(16), right: s(16), bottom: s(23) },
           ]}
         >
-          <CompleteBtn onPress={()=> {router.replace('/(tabs)');}} disabled={isDisabled || loading} title="완료" />
+          <CompleteBtn onPress={handleLogin} disabled={isDisabled || loading} title="완료" />
         </View>
       </View>
     </SafeAreaView>

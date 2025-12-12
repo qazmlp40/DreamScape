@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
+import { useDreamRecord } from '../../contexts/DreamRecordContext';
 
 /* ----------------------- Types ----------------------- */
 type EmotionKey = 'happy' | 'sad' | 'anger' | 'fear' | 'mixed' | 'touched' | 'excited';
@@ -312,9 +313,10 @@ interface EmotionBarChartProps {
   emotions: EmotionMeta[]; // EMOTIONS 배열 그대로
   data: Record<string, number>; // currentEmotionData 그대로
   highlightedKey: string | null; // 최다 감정 key (없으면 null)
+  onEmotionPress?: (emotionKey: string) => void; // 감정 클릭 핸들러
 }
 
-const EmotionBarChart = ({ emotions, data, highlightedKey }: EmotionBarChartProps) => {
+const EmotionBarChart = ({ emotions, data, highlightedKey, onEmotionPress }: EmotionBarChartProps) => {
   const { s } = useScale();
   const [activeKey, setActiveKey] = useState<string | null>(null); // 꾹 눌러서 개수 보여줄 대상
 
@@ -351,6 +353,9 @@ const EmotionBarChart = ({ emotions, data, highlightedKey }: EmotionBarChartProp
             <Pressable
               key={emotion.key}
               style={{ alignItems: 'center', flex: 1 }}
+              onPress={() => {
+                onEmotionPress?.(emotion.key);
+              }}
               onLongPress={() => {
                 // 🔹 최다 감정(highlightedKey)은 이미 항상 표시되므로 LongPress 동작 제외
                 if (!isMax) {
@@ -442,11 +447,14 @@ const EmotionBarChart = ({ emotions, data, highlightedKey }: EmotionBarChartProp
 
 /* --------------------------- Chart 본문 --------------------------- */
 
-// 날짜 휠 데이터 - 12월로 통일
-const MONTH_KEYS = ['2025-12']; // 12월 데이터만
+// 날짜 휠 데이터 - 현재 달
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth() + 1;
+const MONTH_KEYS = [`${currentYear}-${currentMonth.toString().padStart(2, '0')}`];
 
 // 2) 휠에 보여줄 라벨
-const MONTHS = ['12월']; // 12월만
+const MONTHS = [`${currentMonth}월`];
 
 // 감정 메타 정보 (라벨, 색, 아이콘 등)
 const EMOTIONS: {
@@ -468,9 +476,12 @@ const EMOTIONS: {
 const Chart = () => {
   const { s } = useScale();
   const ITEM_HEIGHT = 32;
+  const { savedRecords } = useDreamRecord();
 
   // 주간/ 월간 모드 토글 (false - 월간, true - 주간)
   const [isWeekly, setISWeekly] = useState(false);
+  // 선택된 감정 상태
+  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null);
 
   // 날짜 선택 휠 - 인덱스
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
@@ -497,8 +508,8 @@ const Chart = () => {
 
   // 해당 주차 기간 렌더링
   const getWeekRange = (year: number, monthIndex: number, weekIndex: number) => {
-    // 1주차 = 1~7, 2주차 = 8~14, 3주차 = 15~21, 4주차 = 22~28, 5주차 = 29~말일
-    const firstDay = 1 + weekIndex * 7;
+    // weekIndex는 1부터 시작 (1주차, 2주차...)
+    const firstDay = 1 + (weekIndex - 1) * 7;
     const lastDayInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
     const startDay = Math.min(firstDay, lastDayInMonth);
@@ -514,7 +525,8 @@ const Chart = () => {
   const monthIndexForRange = Number(monthStr) - 1; // getWeekRange 에서 사용
 
   // 현재 선택된 달에 해당하는 주차 key들만 추출
-  const WEEK_KEYS_FOR_MONTH = ['2025-12-1']; // 12월 1주차만
+  const currentWeek = Math.ceil(now.getDate() / 7);
+  const WEEK_KEYS_FOR_MONTH = [`${currentYear}-${currentMonth.toString().padStart(2, '0')}-${currentWeek}`];
 
   // 휠에 보여줄 주차 라벨
   const WEEKS = WEEK_KEYS_FOR_MONTH.map((key) => {
@@ -533,8 +545,8 @@ const Chart = () => {
   const selectedMonth = MONTHS[selectedMonthIndex];
   const selectedWeek = WEEKS[safeWeekIndex];
 
-  // 해당 주차 기간 계산
-  const { startDay, endDay } = getWeekRange(year, monthIndexForRange, selectedWeekIndex);
+  // 해당 주차 기간 계산 (현재 주차 번호 사용)
+  const { startDay, endDay } = getWeekRange(year, monthIndexForRange, currentWeek);
 
   // 감정 기본값(없을 때 0으로 채우기용)
   const emptyEmotionData: Record<EmotionKey, number> = {
@@ -547,23 +559,73 @@ const Chart = () => {
     excited: 0,
   };
 
-  // 월간/주간 데이터 중 현재 선택된 기간에 해당하는 것만 가져오기
-  const monthlyRaw = MOCK_MONTHLY_DATA[monthKey] ?? {};
-  const weeklyRaw = MOCK_WEEKLY_DATA[weekKey] ?? {};
+  // 실제 데이터에서 감정 통계 계산
+  const calculateEmotionData = () => {
+    const emotionCounts = { ...emptyEmotionData };
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    
+    savedRecords.forEach(record => {
+      const recordDate = new Date(record.date);
+      
+      if (recordDate.getFullYear() === currentYear && recordDate.getMonth() + 1 === currentMonth) {
+        // mood를 EmotionKey로 매핑
+        const moodToEmotion: Record<string, EmotionKey> = {
+          '1': 'happy',
+          '2': 'sad', 
+          '3': 'anger',
+          '4': 'excited',
+          '5': 'touched',
+          '6': 'fear',
+          '7': 'mixed'
+        };
+        
+        const emotionKey = moodToEmotion[record.mood];
+        if (emotionKey) {
+          emotionCounts[emotionKey]++;
+        }
+      }
+    });
+    
+    return emotionCounts;
+  };
 
-  const currentEmotionData: Record<EmotionKey, number> = isWeekly
-    ? { ...emptyEmotionData, ...weeklyRaw }
-    : { ...emptyEmotionData, ...monthlyRaw };
+  const currentEmotionData = calculateEmotionData();
 
   // 최다 감정 계산
   const values = EMOTIONS.map((e) => currentEmotionData[e.key]);
   const maxValue = Math.max(...values, 0);
 
   const maxEmotion = EMOTIONS.find((e) => currentEmotionData[e.key] === maxValue) ?? EMOTIONS[0];
+  
+  // 표시할 감정: 선택된 것 또는 최다 감정
+  const displayEmotion = selectedEmotion 
+    ? EMOTIONS.find(e => e.key === selectedEmotion) ?? maxEmotion
+    : maxEmotion;
+  const displayValue = selectedEmotion 
+    ? currentEmotionData[selectedEmotion] || 0
+    : maxValue;
 
-  // 꿈 키워드 데이터
-  const monthlyItems = MOCK_MONTHLY_KEYWORDS[monthKey] ?? [];
-  const weeklyItems = MOCK_WEEKLY_KEYWORDS[weekKey] ?? [];
+  // 실제 꿈 데이터에서 키워드 생성
+  const generateKeywordItems = (): DreamKeywordItem[] => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    
+    return savedRecords
+      .filter(record => {
+        const recordDate = new Date(record.date);
+        return recordDate.getFullYear() === currentYear && recordDate.getMonth() + 1 === currentMonth;
+      })
+      .slice(0, 3)
+      .map(record => ({
+        dreamSummary: record.title || '꿈 기록',
+        interpretation: record.analysis?.interpretation || '해석 정보가 없습니다.'
+      }));
+  };
+
+  const keywordItems = generateKeywordItems();
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -584,7 +646,7 @@ const Chart = () => {
           <View>
             {/* 주간 모드 */}
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={[styles.date_text, { fontSize: s(28) }]}>2025년 {selectedMonth} </Text>
+              <Text style={[styles.date_text, { fontSize: s(28) }]}>{currentYear}년 {selectedMonth} </Text>
               <Text style={[styles.date_text, { fontSize: s(28) }]}>{selectedWeek}</Text>
               <View style={{ width: s(8) }} />
               <TouchableOpacity onPress={() => setIsWeekWheelVisible((prev) => !prev)}>
@@ -605,7 +667,7 @@ const Chart = () => {
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {/* 월간 모드 */}
-            <Text style={[styles.date_text, { fontSize: s(28) }]}>2025년 </Text>
+            <Text style={[styles.date_text, { fontSize: s(28) }]}>{currentYear}년 </Text>
             <Text style={[styles.date_text, { fontSize: s(28) }]}>{selectedMonth}</Text>
             <View style={{ width: s(8) }} />
             <TouchableOpacity onPress={() => setIsMonthWheelVisible((prev) => !prev)}>
@@ -752,13 +814,13 @@ const Chart = () => {
 
       {/* 상단 타이틀 */}
       <View style={{ position: 'absolute', paddingHorizontal: s(16), marginTop: s(183) }}>
-        {maxValue > 0 && (
+        {displayValue > 0 && (
           <ChartTitle
             mode={isWeekly ? 'week' : 'month'}
-            count={maxValue}
-            verb={maxEmotion.verb}
-            color={maxEmotion.color}
-            Icon={maxEmotion.Icon}
+            count={displayValue}
+            verb={displayEmotion.verb}
+            color={displayEmotion.color}
+            Icon={displayEmotion.Icon}
           />
         )}
       </View>
@@ -768,7 +830,10 @@ const Chart = () => {
         <EmotionBarChart
           emotions={EMOTIONS}
           data={currentEmotionData}
-          highlightedKey={maxValue > 0 ? maxEmotion.key : null}
+          highlightedKey={selectedEmotion || (maxValue > 0 ? maxEmotion.key : null)}
+          onEmotionPress={(emotionKey) => {
+            setSelectedEmotion(emotionKey === selectedEmotion ? null : emotionKey);
+          }}
         />
 
         <View style={{ width: '100%', height: s(8), backgroundColor: '#EEE', marginTop: s(32) }} />
@@ -780,7 +845,7 @@ const Chart = () => {
               ? '이번 주 가장 많이 나온 꿈 키워드 TOP3'
               : '이번 달 가장 많이 나온 꿈 키워드 TOP3'
           }
-          items={isWeekly ? weeklyItems : monthlyItems}
+          items={keywordItems}
         />
       </View>
 

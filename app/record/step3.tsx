@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
     Dimensions,
@@ -18,11 +18,13 @@ const colors = {
 
 export default function RecordStep4Screen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
 
     // 캐릭터 박스 클릭 시 다음 페이지로 이동
     const handleCharacterClick = () => {
-        router.push('/record/step4' as any);
+        const selectedDate = params.selectedDate as string;
+        router.push(`/record/step4${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
     };
 
     return (

@@ -285,7 +285,7 @@ const Profile = () => {
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('userId');
       setLogoutPopupVisible(false);
-      router.replace('/');
+      router.replace('/(auth)/login');
     } catch (error) {
       console.error('로그아웃 처리 오류:', error);
     }
@@ -312,7 +312,7 @@ const Profile = () => {
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('userId');
       setWithdrawPopupVisible(false);
-      router.replace('/');
+      router.replace('/(auth)/login');
     } catch (error) {
       console.error('회원탈퇴 처리 중 오류:', error);
     }

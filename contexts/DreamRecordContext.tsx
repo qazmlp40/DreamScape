@@ -38,7 +38,7 @@ interface DreamRecordContextType {
   setAnalysis: (analysis: DreamRecord['analysis']) => void;
   setVideoUrl: (url: string) => void;
   
-  saveRecord: () => void;
+  saveRecord: (selectedDate?: string) => void;
   resetCurrent: () => void;
   
   getRecordByDate: (date: string) => DreamRecord | undefined;
@@ -62,7 +62,7 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
     return new Date().toISOString().split('T')[0];
   };
 
-  const saveRecord = () => {
+  const saveRecord = (selectedDate?: string) => {
     if (!currentMood || !currentDreamText) {
       console.warn('기분과 꿈 내용이 필요합니다.');
       return;
@@ -70,7 +70,7 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
 
     const newRecord: DreamRecord = {
       id: Date.now().toString(),
-      date: getTodayDate(),
+      date: selectedDate || getTodayDate(),
       title: currentTitle || '꿈 제목',
       mood: currentMood,
       dreamText: currentDreamText,

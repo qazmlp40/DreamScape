@@ -162,7 +162,8 @@ export default function RecordStep1Screen() {
         if (selectedMood && dreamContent.trim()) {
             setMood(selectedMood);
             setDreamText(dreamContent.trim());
-            router.push('/record/step2' as any);
+            const selectedDate = params.selectedDate as string;
+            router.push(`/record/step2${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
         } else {
             console.log("감정과 꿈 내용을 모두 입력해주세요.");
         }

@@ -1,4 +1,4 @@
-import { useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import {
     Dimensions,
@@ -26,6 +26,7 @@ const FIXED_BUTTON_HEIGHT = 56;
 
 export default function RecordStep4Screen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
 
@@ -44,7 +45,8 @@ export default function RecordStep4Screen() {
     };
 
     const handleNext = () => {
-        router.push('/record/step5' as any);
+        const selectedDate = params.selectedDate as string;
+        router.push(`/record/step5${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
     };
 
     return (

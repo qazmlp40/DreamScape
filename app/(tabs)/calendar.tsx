@@ -198,7 +198,7 @@ export default function CalendarScreen() {
 
     // 꿈 기록하기 버튼 → record/step1.tsx로 이동
     const handleRecordPress = () => {
-        router.push('/record/step1');
+        router.push(`/record/step1?selectedDate=${selectedDate}`);
     };
 
     // 꿈 영상 보기 버튼 → record/step4.tsx로 이동
