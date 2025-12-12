@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Animated,
@@ -102,6 +102,8 @@ const headerStyles = StyleSheet.create({
 
 export default function VoiceRecordScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
+    const returnPath = params.returnPath as string;
     const [isRecording, setIsRecording] = useState(false);
     const [recordedText, setRecordedText] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -203,14 +205,13 @@ export default function VoiceRecordScreen() {
 
     const handleConfirm = () => {
         if (recordedText.trim()) {
-            // 이전 페이지가 dream-edit인지 step1인지 판단
-            const canGoBack = router.canGoBack();
-            if (canGoBack) {
-                router.replace({
-                    pathname: '/dream-edit',
-                    params: { voiceText: recordedText }
-                });
+            if (returnPath) {
+                // returnPath가 있으면 해당 경로로 이동
+                const url = new URL(returnPath, 'http://localhost');
+                url.searchParams.set('voiceText', recordedText);
+                router.push(url.pathname + url.search as any);
             } else {
+                // 기본적으로 step1로 이동
                 router.push({
                     pathname: '/record/step1',
                     params: { voiceText: recordedText }
@@ -284,29 +285,7 @@ export default function VoiceRecordScreen() {
                 )}
                 
                 <Pressable
-                    onPress={isRecording ? () => {
-                        // 녹음 종료 시 이전 페이지로 이동
-                        timeoutsRef.current.forEach(timeout => clearTimeout(timeout));
-                        timeoutsRef.current = [];
-                        setIsRecording(false);
-                        setHasStopped(true);
-                        
-                        if (recordedText.trim()) {
-                            // 이전 페이지가 dream-edit인지 step1인지 판단
-                            const canGoBack = router.canGoBack();
-                            if (canGoBack) {
-                                router.replace({
-                                    pathname: '/dream-edit',
-                                    params: { voiceText: recordedText }
-                                });
-                            } else {
-                                router.push({
-                                    pathname: '/record/step1',
-                                    params: { voiceText: recordedText }
-                                });
-                            }
-                        }
-                    } : hasStopped ? handleStartRecording : handleStartRecording}
+                    onPress={isRecording ? handleConfirm : hasStopped ? handleStartRecording : handleStartRecording}
                     style={styles.recordButton}
                 >
                     <Text style={styles.recordButtonText}>

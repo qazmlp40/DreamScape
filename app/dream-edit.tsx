@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -14,7 +15,9 @@ import {
     TouchableWithoutFeedback,
     View
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDreamRecord } from '../contexts/DreamRecordContext';
+import IMAGES from './assets/images';
 
 
 // 📐 반응형 유틸리티
@@ -30,8 +33,13 @@ const colors = {
     placeholder: '#9CA3AF',
 };
 
+// 디자인 상수
+const HEADER_BG_COLOR = '#FFFFFF';
+const HEADER_TEXT_COLOR = '#1F2937';
+
 // 🔥 레이아웃 상수
-const HEADER_HEIGHT = scale(64) + scale(24); // 상단 여백 + 헤더
+const HEADER_CONTENT_HEIGHT = 56;
+const HEADER_HEIGHT = HEADER_CONTENT_HEIGHT; // 상단 여백 + 헤더
 const BOTTOM_PADDING = 24; // 하단 버튼 화면 끝에서 24px
 const BUTTON_HEIGHT = 60;
 const TEXTBOX_BUTTON_GAP = 20; // 텍스트박스와 버튼 사이 20px
@@ -39,12 +47,13 @@ const KEYBOARD_TEXTBOX_TOP = 16; // 키보드 올라왔을 때 헤더에서 16px
 
 // 🔥 감정 이모지 아이콘
 const moodIcons: { [key: string]: any } = {
-    happy: require('../assets/images/happy_icon.png'),
-    sad: require('../assets/images/Sad_icon.png'),
-    angry: require('../assets/images/anger_icon.png'),
-    excited: require('../assets/images/Excitement_icon.png'),
-    impressed: require('../assets/images/Impressed_icon.png'),
-    surprised: require('../assets/images/Scared_icon.png'),
+    '1': IMAGES.happy_icon,
+    '2': IMAGES.sad_icon,
+    '3': IMAGES.anger_icon,
+    '4': IMAGES.excitement_icon,
+    '5': IMAGES.impressed_icon,
+    '6': IMAGES.scared_icon,
+    '7': IMAGES.ambiguous_icon,
 };
 
 // 🔥 더미 데이터
@@ -56,61 +65,96 @@ const dummyDreams = [
     { id: '5', date: '2025-12-09', emotion: 'surprised', content: '갑자기 하늘에서 눈이 내리는 꿈을 꿨어요. 여름인데 갑자기 하얀 눈이 내려서 놀랐습니다.', keywords: ['눈', '겨울', '놀라움'] },
 ];
 
-// 🔥 뒤로가기 아이콘
-const BackIcon = ({ size = 24, color = '#000000' }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <Path
-            d="M15 18L9 12L15 6"
-            stroke={color}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </Svg>
-);
+/**
+ * 커스텀 헤더 (흰색 + 마이크 음성인식)
+ */
+const CustomRecordHeader = ({ title, onMicPress, onBackPress }: { title: string; onMicPress?: () => void; onBackPress?: () => void }) => {
+    const insets = useSafeAreaInsets();
 
-// 🔥 음성인식 아이콘 (마이크)
-const MicIcon = ({ size = 24, color = '#000000' }) => (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-        <Path
-            d="M12 1C10.34 1 9 2.34 9 4V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V4C15 2.34 13.66 1 12 1Z"
-            stroke={color}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-        <Path
-            d="M19 10V12C19 15.866 15.866 19 12 19C8.13401 19 5 15.866 5 12V10"
-            stroke={color}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-        <Path
-            d="M12 19V23"
-            stroke={color}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-        <Path
-            d="M8 23H16"
-            stroke={color}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        />
-    </Svg>
-);
+    return (
+        <View
+            style={[
+                headerStyles.headerContainer,
+                {
+                    height: HEADER_CONTENT_HEIGHT + insets.top,
+                    paddingTop: insets.top,
+                    backgroundColor: HEADER_BG_COLOR,
+                    borderBottomWidth: 0,
+                }
+            ]}
+        >
+            {/* 뒤로가기 버튼 */}
+            <TouchableOpacity
+                onPress={onBackPress}
+                style={headerStyles.headerLeft}
+                accessibilityRole="button"
+                accessibilityLabel="뒤로가기"
+            >
+                <Ionicons name="chevron-back" size={24} color={HEADER_TEXT_COLOR} />
+            </TouchableOpacity>
+
+            {/* 제목: 한 줄로 제한 (넘치면 ...으로) */}
+            <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[headerStyles.headerTitle, { color: '#282828', marginLeft: 4 }]}
+            >
+                {title}
+            </Text>
+
+            {/* 음성인식(마이크) 아이콘 */}
+            <TouchableOpacity
+                onPress={onMicPress}
+                style={headerStyles.headerRight}
+                accessibilityRole="button"
+                accessibilityLabel="음성으로 입력"
+            >
+                <Ionicons name="mic-outline" size={24} color={HEADER_TEXT_COLOR} />
+            </TouchableOpacity>
+        </View>
+    );
+};
+
+const headerStyles = StyleSheet.create({
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 8,
+    },
+    headerLeft: {
+        width: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        letterSpacing: -0.36,
+        textAlign: 'left',
+        color: '#282828',
+        flex: 1,
+        zIndex: 1,
+    },
+    headerRight: {
+        width: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 2,
+    },
+});
 
 export default function DreamEditScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const insets = useSafeAreaInsets();
+    const { getRecordByDate, getRecordById, updateRecord } = useDreamRecord();
     
     const dreamDate = params.date as string;
     const dreamId = params.id as string;
     
-    const [dreamData, setDreamData] = useState<typeof dummyDreams[0] | null>(null);
+    const [dreamData, setDreamData] = useState<any>(null);
     const [dreamText, setDreamText] = useState('');
     const [isModified, setIsModified] = useState(false);
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -123,26 +167,26 @@ export default function DreamEditScreen() {
         
         let foundDream = null;
         if (dreamId) {
-            foundDream = dummyDreams.find(dream => dream.id === dreamId);
+            foundDream = getRecordById(dreamId);
             console.log('Found dream by ID:', foundDream);
         } else if (dreamDate) {
-            foundDream = dummyDreams.find(dream => dream.date === dreamDate);
+            foundDream = getRecordByDate(dreamDate);
             console.log('Found dream by date:', foundDream);
         }
         
         if (foundDream) {
             console.log('Setting dream data:', foundDream);
             setDreamData(foundDream);
-            setDreamText(foundDream.content);
+            setDreamText(foundDream.dreamText);
             setIsModified(false);
         } else if (dreamDate) {
             // 선택한 날짜에 꿈 기록이 없는 경우
             console.log('No dream found for date, creating empty data');
-            setDreamData({ id: '', date: dreamDate, emotion: '', content: '', keywords: [] });
+            setDreamData({ id: '', date: dreamDate, mood: '1', dreamText: '', analysis: null });
             setDreamText('');
             setIsModified(false);
         }
-    }, [dreamDate, dreamId]);
+    }, [dreamDate, dreamId, getRecordByDate, getRecordById]);
 
     // 음성 텍스트가 전달되면 dreamText에 설정
     useEffect(() => {
@@ -151,7 +195,7 @@ export default function DreamEditScreen() {
             setIsModified(true);
             // 음성 텍스트가 있어도 dreamData가 없으면 기본 데이터 생성
             if (!dreamData && dreamDate) {
-                setDreamData({ id: '', date: dreamDate, emotion: 'happy', content: '', keywords: [] });
+                setDreamData({ id: '', date: dreamDate, mood: '1', dreamText: '', analysis: null });
             }
         }
     }, [params.voiceText, dreamData, dreamDate]);
@@ -196,7 +240,7 @@ export default function DreamEditScreen() {
     const handleTextChange = (text: string) => {
         setDreamText(text);
         if (dreamData) {
-            setIsModified(text !== dreamData.content);
+            setIsModified(text !== dreamData.dreamText);
         }
     };
 
@@ -216,7 +260,8 @@ export default function DreamEditScreen() {
     };
 
     const handleMicPress = () => {
-        router.push('/voice-record');
+        const returnPath = `/dream-edit?date=${dreamDate}${dreamId ? `&id=${dreamId}` : ''}`;
+        router.push(`/voice-record?returnPath=${encodeURIComponent(returnPath)}`);
     };
 
     const handleComplete = () => {
@@ -225,24 +270,21 @@ export default function DreamEditScreen() {
             return;
         }
 
-        console.log('꿈 수정 완료:', {
-            id: dreamData?.id,
-            date: dreamData?.date,
-            emotion: dreamData?.emotion,
-            content: dreamText,
-            updatedAt: new Date().toISOString(),
-        });
+        if (dreamData?.id) {
+            // 기존 레코드 업데이트
+            updateRecord(dreamData.id, { dreamText: dreamText });
+        }
 
         Alert.alert(
             '수정 완료',
             '꿈 내용이 수정되었습니다.',
-            [{ text: '확인', onPress: () => router.back() }]
+            [{ text: '확인', onPress: () => router.push('/(tabs)/calendar') }]
         );
     };
 
     const getEmotionIcon = () => {
-        if (dreamData?.emotion && moodIcons[dreamData.emotion]) {
-            return moodIcons[dreamData.emotion];
+        if (dreamData?.mood && moodIcons[dreamData.mood]) {
+            return moodIcons[dreamData.mood];
         }
         return null;
     };
@@ -277,7 +319,7 @@ export default function DreamEditScreen() {
     // 키보드: 헤더에서 16px 아래
     const textBoxTop = contentAnimation.interpolate({
         inputRange: [0, 1],
-        outputRange: [scale(372), HEADER_HEIGHT + KEYBOARD_TEXTBOX_TOP],
+        outputRange: [scale(372), (HEADER_HEIGHT + insets.top) + KEYBOARD_TEXTBOX_TOP],
     });
     
     // 🔥 텍스트박스 높이 계산
@@ -286,8 +328,8 @@ export default function DreamEditScreen() {
     const textBoxHeight = contentAnimation.interpolate({
         inputRange: [0, 1],
         outputRange: [
-            SCREEN_HEIGHT - scale(372) - BOTTOM_PADDING - 60 - scale(24) - (Platform.OS === 'ios' ? 34 : 0),
-            SCREEN_HEIGHT - HEADER_HEIGHT - KEYBOARD_TEXTBOX_TOP - BOTTOM_PADDING - BUTTON_HEIGHT - scale(24) - (Platform.OS === 'ios' ? 34 : 0)
+            SCREEN_HEIGHT - scale(372) - BOTTOM_PADDING - 60 - scale(24) - insets.bottom,
+            SCREEN_HEIGHT - (HEADER_HEIGHT + insets.top) - KEYBOARD_TEXTBOX_TOP - BOTTOM_PADDING - BUTTON_HEIGHT - scale(24) - insets.bottom
         ],
     });
 
@@ -296,27 +338,12 @@ export default function DreamEditScreen() {
             <View style={styles.mainContainer}>
                 <Stack.Screen options={{ headerShown: false }} />
                 
-                {/* Status Bar 영역 */}
-                <View style={styles.statusBarArea} />
-                
-                {/* 🔥 상단 헤더 */}
-                <View style={styles.header}>
-                    <TouchableOpacity 
-                        style={styles.headerBtn}
-                        onPress={handleBack}
-                    >
-                        <BackIcon size={scale(24)} color="#000000" />
-                    </TouchableOpacity>
-                    
-                    <Text style={styles.headerTitle}>꿈 수정하기</Text>
-                    
-                    <TouchableOpacity 
-                        style={styles.headerBtn}
-                        onPress={handleMicPress}
-                    >
-                        <MicIcon size={scale(24)} color="#000000" />
-                    </TouchableOpacity>
-                </View>
+                {/* 헤더 */}
+                <CustomRecordHeader 
+                    title="꿈 수정하기" 
+                    onMicPress={handleMicPress} 
+                    onBackPress={handleBack}
+                />
                 
                 {/* 🔥 이미지 영역 - 키보드 올라오면 사라짐 */}
                 <Animated.View style={[
@@ -344,7 +371,6 @@ export default function DreamEditScreen() {
                 ]}>
                     {formatDate()}
                 </Animated.Text>
-                
                 {/* 🔥 텍스트 입력 박스 - 애니메이션 적용 */}
                 <Animated.View style={[
                     styles.contentBox,
@@ -365,7 +391,7 @@ export default function DreamEditScreen() {
                 </Animated.View>
                 
                 {/* 🔥 완료 버튼 - 하단 24px 고정 */}
-                <View style={styles.buttonContainer}>
+                <View style={[styles.buttonContainer, { bottom: BOTTOM_PADDING + insets.bottom }]}>
                     <TouchableOpacity 
                         style={[
                             styles.completeBtn,
@@ -391,35 +417,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.background,
     },
     
-    statusBarArea: {
-        height: scale(48),
-    },
-    
-    // 🔥 상단 헤더
-    header: {
-        position: 'absolute',
-        left: scale(16),
-        top: scale(64),
-        width: scale(380),
-        height: scale(24),
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        zIndex: 10,
-    },
-    
-    headerBtn: {
-        width: scale(24),
-        height: scale(24),
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    
-    headerTitle: {
-        fontSize: scale(18),
-        fontWeight: '600',
-        color: colors.text,
-    },
+
     
     // 🔥 이미지 영역
     imageContainer: {
@@ -490,7 +488,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: scale(16),
         right: scale(16),
-        bottom: BOTTOM_PADDING + (Platform.OS === 'ios' ? 34 : 0), // iOS Safe Area 포함
+        bottom: BOTTOM_PADDING, // iOS Safe Area는 인라인 스타일로 추가
     },
     
     // 🔥 완료 버튼

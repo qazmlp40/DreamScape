@@ -19,7 +19,7 @@ const colors = {
     inactive: '#9CA3AF',
 };
 
-export default function RecordStep3Screen() {
+export default function RecordStep2Screen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
 

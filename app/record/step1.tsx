@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
     Dimensions,
     ImageSourcePropType,
@@ -16,9 +16,9 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDreamRecord } from '../../contexts/DreamRecordContext';
 import IMAGES from '../assets/images';
 import { clamp } from '../utils/responsive';
-
 
 // 화면 크기
 const { width: screenWidth } = Dimensions.get('window');
@@ -147,6 +147,7 @@ export default function RecordStep1Screen() {
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
     const scrollViewRef = React.useRef<KeyboardAwareScrollView>(null);
+     const { setMood, setDreamText } = useDreamRecord();
 
     // 음성 텍스트가 전달되면 dreamContent에 설정
     useEffect(() => {
@@ -159,6 +160,8 @@ export default function RecordStep1Screen() {
 
     const handleNext = () => {
         if (selectedMood && dreamContent.trim()) {
+            setMood(selectedMood);
+            setDreamText(dreamContent.trim());
             router.push('/record/step2' as any);
         } else {
             console.log("감정과 꿈 내용을 모두 입력해주세요.");

@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import Svg, { Path } from 'react-native-svg';
+import { useDreamRecord } from '../../contexts/DreamRecordContext';
+import IMAGES from '../assets/images';
 
 
 // 🇰🇷 한글 로케일 설정
@@ -93,12 +95,13 @@ const today = new Date();
 const INITIAL_SELECTED_DATE = formatDateToString(today);
 
 const moodIcons: { [key: string]: any } = {
-    happy: require('../../assets/images/happy_icon.png'),
-    sad: require('../../assets/images/Sad_icon.png'),
-    angry: require('../../assets/images/anger_icon.png'),
-    excited: require('../../assets/images/Excitement_icon.png'),
-    impressed: require('../../assets/images/Impressed_icon.png'),
-    surprised: require('../../assets/images/Scared_icon.png'),
+    '1': IMAGES.happy_icon,
+    '2': IMAGES.sad_icon,
+    '3': IMAGES.anger_icon,
+    '4': IMAGES.excitement_icon,
+    '5': IMAGES.impressed_icon,
+    '6': IMAGES.scared_icon,
+    '7': IMAGES.ambiguous_icon,
 };
 
 // 더미 데이터 - 2025년 12월
@@ -185,8 +188,9 @@ const CustomDay: React.FC<CustomDayProps> = ({ date, state, marking, onPress }) 
 // === 메인 화면 컴포넌트 ===
 export default function CalendarScreen() {
     const router = useRouter();
+    const { savedRecords, getRecordByDate } = useDreamRecord();
     const [selectedDate, setSelectedDate] = useState<string>(INITIAL_SELECTED_DATE);
-    const [currentMonth, setCurrentMonth] = useState<Date>(new Date()); // 오늘 날짜로 설정
+    const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
     const handleEditPress = () => {
         router.push(`/dream-edit?date=${selectedDate}`);
@@ -203,16 +207,16 @@ export default function CalendarScreen() {
     };
 
     const getDreamByDate = (date: string) => {
-        return dummyDreams.find(dream => dream.date === date);
+        return getRecordByDate(date);
     };
 
     const processedMarkedDates = useMemo(() => {
         const dates: { [key: string]: DreamMarking } = {};
         
-        dummyDreams.forEach(dream => {
-            dates[dream.date] = {
+        savedRecords.forEach(record => {
+            dates[record.date] = {
                 hasDream: true,
-                emotionImage: moodIcons[dream.emotion],
+                emotionImage: moodIcons[record.mood],
             };
         });
         
@@ -224,7 +228,7 @@ export default function CalendarScreen() {
         }; 
 
         return dates;
-    }, [selectedDate]);
+    }, [selectedDate, savedRecords]);
 
     const handleDayPress = (day: DateData) => {
         setSelectedDate(day.dateString);
@@ -379,7 +383,7 @@ export default function CalendarScreen() {
                                         )}
                                     </View>
                                     <Text style={styles.cardText} numberOfLines={2}>
-                                        {selectedDream?.summary || '기록된 꿈이 없습니다.'}
+                                        {selectedDream?.analysis?.summary || selectedDream?.dreamText || '기록된 꿈이 없습니다.'}
                                     </Text>
                                 </View>
                             </View>
@@ -398,7 +402,7 @@ export default function CalendarScreen() {
                                         )}
                                     </View>
                                     <Text style={styles.cardText}>
-                                        {selectedDream?.keywords?.join(', ') || '키워드 없음'}
+                                        {selectedDream?.analysis?.tags?.join(', ') || '키워드 없음'}
                                     </Text>
                                 </View>
                             </View>
