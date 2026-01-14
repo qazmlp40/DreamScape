@@ -1,3 +1,4 @@
+import Pigicon from '@/assets/images/icons/dream_symbol/pig.svg';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -35,8 +36,7 @@ export default function RecordStep4Screen() {
                     activeOpacity={0.8}
                     onPress={handleCharacterClick}
                 >
-                    <Text style={styles.characterPlaceholder}>꿈 상징 캐릭터</Text>
-                    <Text style={styles.characterSubText}>완성</Text>
+                    <Pigicon />
                 </TouchableOpacity>
 
                 <Text style={styles.completeTitle}>완성 !</Text>
@@ -84,7 +84,6 @@ const styles = StyleSheet.create({
     characterBox: {
         width: 142,
         height: 142,
-        backgroundColor: '#E5E7EB',
         borderRadius: 8,
         justifyContent: 'center',
         alignItems: 'center',

@@ -71,7 +71,8 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
     const newRecord: DreamRecord = {
       id: Date.now().toString(),
       date: selectedDate || getTodayDate(),
-      title: currentTitle || '꿈 제목',
+      // '꿈 제목'이 고정되어서 렌더링 되길래 기본값을 "" (공백)으로
+      title: currentTitle,
       mood: currentMood,
       dreamText: currentDreamText,
       analysis: currentAnalysis || undefined,

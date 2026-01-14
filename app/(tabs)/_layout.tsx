@@ -1,6 +1,18 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Image, Platform } from 'react-native';
+import { Platform } from 'react-native';
+
+import BarChartDisabled from '@/assets/images/icons/footer/bar_chart_disabled.svg';
+import BarChartTrue from '@/assets/images/icons/footer/bar_chart_true.svg';
+
+import CalendarDisabled from '@/assets/images/icons/footer/calendar_disabled.svg';
+import CalendarTrue from '@/assets/images/icons/footer/calendar_true.svg';
+
+import UserDisabled from '@/assets/images/icons/footer/user_disabled.svg';
+import UserTrue from '@/assets/images/icons/footer/user_true.svg';
+
+import HomeDisabled from '@/assets/images/icons/footer/home_disabled.svg';
+import HomeTrue from '@/assets/images/icons/footer/home_true.svg';
 
 const tapIcon = require('../../assets/images/tap_icon.png');
 
@@ -11,6 +23,9 @@ const colors = {
 };
 
 export default function TabLayout() {
+  console.log("✅ metro.config.js loaded");
+
+
   return (
     <Tabs
       screenOptions={{
@@ -36,64 +51,49 @@ export default function TabLayout() {
         name="index"
         options={{
           title: '홈',
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={tapIcon}
-              style={{ 
-                width: 24, 
-                height: 24,
-                tintColor: focused ? colors.primary : colors.inactive
-              }}
-            />
-          ),
+          tabBarIcon: ({ focused }) =>
+            focused ? (
+              <HomeTrue width={24} height={24} />
+            ) : (
+              <HomeDisabled width={24} height={24} />
+            ),
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
           title: '캘린더',
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={tapIcon}
-              style={{ 
-                width: 24, 
-                height: 24,
-                tintColor: focused ? colors.primary : colors.inactive
-              }}
-            />
-          ),
+          tabBarIcon: ({ focused }) =>
+            focused ? (
+              <CalendarTrue width={24} height={24} />
+            ) : (
+              <CalendarDisabled width={24} height={24} />
+            ),
         }}
       />
+
       <Tabs.Screen
         name="chart"
         options={{
           title: '차트',
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={tapIcon}
-              style={{ 
-                width: 24, 
-                height: 24,
-                tintColor: focused ? colors.primary : colors.inactive
-              }}
-            />
-          ),
+          tabBarIcon: ({ focused }) =>
+            focused ? (
+              <BarChartTrue width={24} height={24} />
+            ) : (
+              <BarChartDisabled width={24} height={24} />
+            ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: '프로필',
-          tabBarIcon: ({ focused }) => (
-            <Image
-              source={tapIcon}
-              style={{ 
-                width: 24, 
-                height: 24,
-                tintColor: focused ? colors.primary : colors.inactive
-              }}
-            />
-          ),
+          tabBarIcon: ({ focused }) =>
+            focused ? (
+              <UserTrue width={24} height={24} />
+            ) : (
+              <UserDisabled width={24} height={24} />
+            ),
         }}
       />
     </Tabs>

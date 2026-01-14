@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
     Dimensions,
     Pressable,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 // 영상 컴포넌트 임포트
 // 실제 프로젝트에서는 'react-native-video' 설치 필요
+import { ResizeMode, Video } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -33,6 +34,9 @@ export default function RecordStep4Screen() {
     const [isPlaying, setIsPlaying] = useState(true);
     const [showNextButton, setShowNextButton] = useState(false);
 
+    const DEMO_VIDEO_URL =
+    'https://video-product.cdn.minimax.io/inference_output/video/2025-12-13/2f5a39d1-3a71-494b-8be9-e21c24b2a217/output.mp4';
+
     useEffect(() => {
         const timer = setTimeout(() => {
             setShowNextButton(true);
@@ -45,9 +49,26 @@ export default function RecordStep4Screen() {
     };
 
     const handleNext = () => {
-        const selectedDate = params.selectedDate as string;
-        router.push(`/record/step5${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
-    };
+        const date = params.date as string | undefined;
+        const id = params.id as string | undefined;
+        const selectedDate = params.selectedDate as string | undefined; // 작성 플로우일 수도 있으니 유지
+      
+        // ✅ 1) 캘린더에서 온 경우: date/id를 최우선으로 넘김
+        if (id) {
+          router.push({ pathname: '/record/step5', params: { id } } as any);
+          return;
+        }
+        if (date) {
+          router.push({ pathname: '/record/step5', params: { date } } as any);
+          return;
+        }
+      
+        // ✅ 2) 기존 작성 플로우: selectedDate 유지
+        router.push({
+          pathname: '/record/step5',
+          params: selectedDate ? { selectedDate } : {},
+        } as any);
+      };      
 
     return (
         <>
@@ -57,7 +78,7 @@ export default function RecordStep4Screen() {
             <View style={styles.header}> 
                 <View />
                 <Pressable onPress={handleSkip}>
-                    <Text style={styles.skipText}>건너뛰기</Text>
+                    <Text style={[styles.skipText, {marginRight: 16}]}>건너뛰기</Text>
                 </Pressable>
             </View>
 
@@ -66,13 +87,17 @@ export default function RecordStep4Screen() {
                 {/* 캐릭터 클릭 전 */}
                 {/* 삭제됨 */}
                 {/* 영상 재생 중 */}
-                <Text style={styles.videoText}>
-                    AI 영상 재생
-                </Text>
-
-               
+                {/* ✅ 실제 영상 */}
+                <View style={styles.videoWrapper}>
+                    <Video
+                    source={{ uri: DEMO_VIDEO_URL }}
+                    style={styles.video}
+                    resizeMode={ResizeMode.CONTAIN}   
+                    shouldPlay
+                    useNativeControls
+                    />
+                </View>
             </View>
-
             {/* 하단 버튼: 영상 끝난 후에만 표시 */}
             {showNextButton && (
                 <View style={[styles.buttonContainer, { paddingBottom: BOTTOM_INSET }]}> 
@@ -95,6 +120,13 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
     },
+    videoWrapper: {
+        width: screenWidth - 40,
+        aspectRatio: 16 / 9,       // 박스를 영상 비율로 고정
+        backgroundColor: 'transparent',
+        borderRadius: 12,
+        overflow: 'hidden',
+      },
     header: {
         position: 'absolute',
         top: 64,

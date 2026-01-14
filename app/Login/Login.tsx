@@ -206,7 +206,7 @@ const Login: React.FC = () => {
             { position: 'absolute', left: s(16), right: s(16), bottom: s(23) },
           ]}
         >
-          <CompleteBtn onPress={handleLogin} disabled={isDisabled || loading} title="완료" />
+          <CompleteBtn onPress={() => router.push('/(tabs)')} disabled={isDisabled || loading} title="완료" />
         </View>
       </View>
     </SafeAreaView>

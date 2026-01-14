@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { router } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Keyboard,
@@ -16,9 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import Logo from './Icons/logo';
 
-/* -----------------------------------------
-  📌 useScale 훅
------------------------------------------- */
+// useScale 훅
 export const BASE_WIDTH = 412;
 
 function useScale() {
@@ -27,9 +25,7 @@ function useScale() {
   return { s, width };
 }
 
-/* -----------------------------------------
-  📌 Right_Arrow 아이콘
------------------------------------------- */
+// Right_Arrow 아이콘 (>)
 const Right_Arrow: React.FC = () => {
   const { s } = useScale();
   const W = 10;
@@ -51,16 +47,16 @@ const Right_Arrow: React.FC = () => {
   );
 };
 
-/* -----------------------------------------
-  📌 useSignupForm 훅
------------------------------------------- */
+// useSignupForm 
 function useSignupForm() {
+  // 회원가입 입력값 상태
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [ID, setID] = useState('');
   const [PW, setPW] = useState('');
   const [checkPW, setCheckPW] = useState('');
 
+  // reset() : 폼 초기화
   const reset = () => {
     setUsername('');
     setEmail('');
@@ -186,6 +182,13 @@ const Signup: React.FC = () => {
   const [globalErr, setGlobalErr] = useState('');
   const [termChecked, setTermChecked] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(false);
+  const params = useLocalSearchParams();
+
+  useEffect(() => {
+    if (params.acceptedTerms === '1') {
+      setTermChecked(true);
+    }
+  }, [params.acceptedTerms]);  
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => setScrollEnabled(true));
@@ -261,6 +264,8 @@ const Signup: React.FC = () => {
   }, [PW, checkPW, username, ID, email, isDisabled, navigation]);
 
   return (
+    <>
+    <Stack.Screen options={{headerShown: false}} />
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.container}>
         <KeyboardAwareScrollView
@@ -330,8 +335,17 @@ const Signup: React.FC = () => {
           >
             <Text style={styles.detail_text}>이용약관 확인하기</Text>
             <TouchableOpacity
-              onPress={() => router.push('/(auth)/terms')}
-            >
+            onPress={() =>
+              router.push({
+                pathname: '/(auth)/terms',
+                params: {
+                  onAccept: () => {
+                    setTermChecked(true); // ✅ 체크 버튼 활성화
+                  },
+                },
+              })
+            }
+          >
               <Right_Arrow />
             </TouchableOpacity>
           </View>
@@ -348,6 +362,7 @@ const Signup: React.FC = () => {
         </View>
       </View>
     </SafeAreaView>
+  </>
   );
 };
 

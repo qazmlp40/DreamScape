@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Dimensions,
+    Image,
     ImageSourcePropType,
     Platform,
     Pressable,
@@ -199,10 +200,11 @@ export default function RecordStep1Screen() {
 
                 {/* 2. 캐릭터 박스 */}
                 <View style={styles.characterSection}>
-                    <View style={styles.characterBox}>
-                        <Text style={styles.characterPlaceholder}>꿈 상징 캐릭터</Text>
-                        <Text style={styles.characterSubText}>제작 중 이미지</Text>
-                    </View>
+                    <Image
+                        source={require('../../assets/images/icons/making_image.png')}
+                        style={{ width: 120, height: 120 }}
+                        resizeMode="contain"
+                    />
                 </View>
 
                 {/* 3. 오늘의 감정 */}
@@ -320,18 +322,6 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
         marginBottom: 40,
-    },
-    characterBox: {
-        width: 142,
-        height: 142,
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        backgroundColor: colors.cardBackground,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     characterPlaceholder: {
         fontSize: 14,

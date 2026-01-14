@@ -1,3 +1,5 @@
+import Pigicon from '@/assets/images/icons/dream_symbol/pig.svg';
+import NoteIcon from '@/assets/images/icons/note.svg';
 import { Link, Stack } from 'expo-router';
 import React from 'react';
 import {
@@ -61,14 +63,11 @@ function HomeScreen() {
     <View style={homeStyles.mainContainer}>
       <SafeAreaView style={homeStyles.safeContentArea}>
         <View style={homeStyles.contentContainer}>
-          {/* --- 0. 헤더 타이틀 --- */}
-          <Text style={homeStyles.headerTitle}>오늘의 꿈은?</Text>
-
           {/* --- 1. 꿈 상징 캐릭터 박스 --- */}
           <View style={homeStyles.characterSection}>
-            <View style={homeStyles.characterBox}>
-              <Text style={homeStyles.characterPlaceholder}>꿈 상징 캐릭터</Text>
-              <Text style={homeStyles.characterPlaceholderSub}>?</Text>
+              <NoteIcon />
+            <View style={{marginTop: 31}}>
+              <Text style={homeStyles.character_text}>오늘의 꿈을 기록해보세요</Text>
             </View>
           </View>
         </View>
@@ -106,18 +105,14 @@ const homeStyles = StyleSheet.create({
     marginLeft: -4,
   },
   characterSection: {
+    marginTop: 124,
     marginBottom: 100,
     alignItems: 'center',
   },
-  characterBox: {
-    width: 220,
-    height: 220,
-    backgroundColor: colors.cardBackground,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+  character_text: {
+    color: '#1A1A1A',
+    fontSize: 20,
+    fontWeight: 500
   },
   characterPlaceholder: {
     fontSize: 18,
@@ -167,6 +162,13 @@ function TodayDreamScreen() {
   const insets = useSafeAreaInsets();
   const BOTTOM_INSET = insets.bottom || 20;
 
+  // 데모용 하드코딩 값
+  const DEMO_TITLE = '돈을 뿌리다 쓰러진 돼지';
+  const DEMO_SUMMARY =
+    '꿈에서 돼지가 하늘을 날며 돈을 뿌렸고, 돈에는 숫자가 적혀 있었습니다. 이후 돼지가 갑자기 쓰러졌고 꿈이 끝났습니다. 꿈을 꾼 후 기분이 이상했습니다.';
+  const DEMO_INTERPRETATION =
+    '예상치 못한 기회와 불안정한 성공을 의미한다.';
+
   return (
     <View style={todayStyles.mainContainer}>
       <SafeAreaView style={todayStyles.safeContentArea}>
@@ -176,11 +178,22 @@ function TodayDreamScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={todayStyles.figmaCard}>
-            <Text style={todayStyles.cardText}>꿈 상징 캐릭터</Text>
+            <Pigicon width={200} height={200}/>
           </View>
           <View style={todayStyles.whiteCard}>
-            <Text style={todayStyles.dreamTitle}>{todayRecord?.title || '꿈 제목'}</Text>
-            <Text style={todayStyles.dreamSummary}>{todayRecord?.analysis?.summary || todayRecord?.dreamText || '꿈 내용 요약'}</Text>
+
+            {/* 원래 작성되어있던 코드 */}
+            {/* <Text style={todayStyles.dreamTitle}>{todayRecord?.title || DEMO_TITLE}</Text>
+            <Text style={todayStyles.dreamSummary}>{todayRecord?.analysis?.summary || todayRecord?.dreamText || DEMO_SUMMARY}</Text> */}
+            
+            {/* 데모용 - 강제로 렌더링 시키기 코드 */}
+            <Text style={todayStyles.dreamTitle}>
+              {todayRecord?.title?.trim() ? todayRecord.title : DEMO_TITLE}
+            </Text>
+            <Text style={todayStyles.dreamSummary}>
+              {todayRecord?.analysis?.summary ?? DEMO_SUMMARY}
+            </Text>
+
           </View>
           <View style={todayStyles.newBox}>
             <View style={todayStyles.innerBox}>
@@ -191,7 +204,16 @@ function TodayDreamScreen() {
       </SafeAreaView>
 
       {/* 자세히 보기 버튼 */}
-      <Link href="/record/step5" asChild>
+      <Link
+        href={{
+          pathname: '/record/step5',
+          params: {
+            id: todayRecord?.id ?? '',
+            date: todayRecord?.date ?? '',
+          },
+        }}
+        asChild
+      >
         <Pressable style={todayStyles.detailButton}>
           <Text style={todayStyles.detailButtonText}>자세히 보기</Text>
         </Pressable>
@@ -220,16 +242,16 @@ const todayStyles = StyleSheet.create({
   figmaCard: {
     width: 200,
     height: 200,
-    padding: 119,
+    // padding: 119,
     paddingHorizontal: 58,
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.cardBackground,
+    // gap: 10,
+    // backgroundColor: colors.cardBackground,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    // borderWidth: 1,
+    // borderColor: colors.border,
     marginBottom: 4,
     alignSelf: 'center',
      marginTop: 72,
@@ -286,7 +308,7 @@ const todayStyles = StyleSheet.create({
   dreamTitle: {
     color: '#000',
     textAlign: 'center',
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '600',
     lineHeight: 36,
     alignSelf: 'stretch',

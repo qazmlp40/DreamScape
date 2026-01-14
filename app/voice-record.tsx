@@ -14,8 +14,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-
-
 // 디자인 상수
 const HEADER_BG_COLOR = '#FFFFFF';
 const HEADER_TEXT_COLOR = '#1F2937';
@@ -163,7 +161,7 @@ export default function VoiceRecordScreen() {
         timeoutsRef.current = [];
         
         // 단어별로 실시간 표시 데모 (긴 버전)
-        const words = ['어젯밤', '꿈에서', '하늘을', '날고', '있었어요.', '구름', '사이를', '자유롭게', '날아다니며', '아름다운', '풍경을', '보았습니다.', '갑자기', '높은', '산이', '나타나고', '그', '위에', '아름다운', '성이', '있었어요.', '성', '안에는', '많은', '사람들이', '있었고', '모두', '행복해', '보였어요.', '나도', '그들과', '함께', '축제를', '즐기며', '웃고', '떠들었습니다.', '정말', '신비하고', '마법같은', '경험이었어요.', '그리고', '또', '다른', '세계로', '이동하여', '더', '많은', '모험을', '경험했습니다.'];
+        const words = ['돼지가','갑자기','하늘을','개날았삼','그리고','돈을','개뿌림','근데','그','돈에','숫자가','적혀있었거든','근데','돼지가','갑자기','쓰러졌어','그리고','꿈이','끝남','기분이','좀','이상한데'];
         let currentText = recordedText; // 기존 텍스트에서 시작
         
         words.forEach((word, index) => {

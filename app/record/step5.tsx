@@ -1,3 +1,4 @@
+import Pigicon from '@/assets/images/icons/dream_symbol/pig.svg';
 import * as MediaLibrary from 'expo-media-library';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -44,29 +45,52 @@ const screenWidth = Dimensions.get('window').width;
 const FIXED_BUTTON_HEIGHT = 56;
 
 export default function RecordStep5Screen() {
-  const { currentRecord, saveRecord, resetCurrent } = useDreamRecord();
+  const {
+    currentRecord,
+    saveRecord,
+    resetCurrent,
+    getRecordById,
+    getRecordByDate,
+  } = useDreamRecord();
+
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const BOTTOM_INSET = insets.bottom || 20;
   const [isSaved, setIsSaved] = useState(false);
   const viewRef = useRef(null);
- const { currentMood } = useDreamRecord(); 
-  //currentRecord에서 데이터 가져오기
-  const selectedMoodId = currentRecord?.mood || '1';
-  const selectedMood = MOODS.find(mood => mood.id === selectedMoodId);
-  const dreamSummary = currentRecord?.analysis?.summary || '꿈 일기 요약 내용이 여기에 표시됩니다.';
-  const dreamInterpretation = currentRecord?.analysis?.interpretation || '이 꿈은 당신의 내면에 숨겨진 욕망을 나타냅니다.';
 
- 
-  const dreamInterpretations = [
-    {
-      id: '1',
-      title: '꿈 내용 1',
-      description: currentRecord?.analysis?.interpretation || '이 꿈은 당신의 내면에 숨겨진 욕망을 나타냅니다.'
-    }
-  ];
-  const firstInterpretation = dreamInterpretations[0]; // ✅ 변수 정의
+  // ✅ params로 저장된 record 먼저 찾기
+  const record =
+    (params.id ? getRecordById(String(params.id)) : null) ??
+    (params.date ? getRecordByDate(String(params.date)) : null);
+
+  // ✅ record를 먼저 쓰고, 없으면 currentRecord
+  const displayRecord = record ?? currentRecord;
+
+  // ✅ 데모용 하드코딩 값
+  const DEMO_TITLE = '돈을 뿌리다 쓰러진 돼지';
+  const DEMO_SUMMARY =
+    '꿈에서 돼지가 하늘을 날며 돈을 뿌렸고, 돈에는 숫자가 적혀 있었습니다. 이후 돼지가 갑자기 쓰러졌고 꿈이 끝났습니다. 꿈을 꾼 후 기분이 이상했습니다.';
+  const DEMO_INTERPRETATION =
+    '예상치 못한 기회와 불안정한 성공을 의미한다.';
+
+  // ✅ 감정 태그도 displayRecord 기준
+  const selectedMoodId = displayRecord?.mood ?? '1';
+  const selectedMood = MOODS.find(m => m.id === selectedMoodId);
+
+  // ✅ 화면에 뿌리는 데이터도 displayRecord 기준으로 통일
+  const dreamTitle =
+    displayRecord?.title?.trim() ? displayRecord.title : DEMO_TITLE;
+
+  const dreamSummary =
+    displayRecord?.analysis?.summary ?? displayRecord?.dreamText ?? DEMO_SUMMARY;
+
+  const dreamInterpretation =
+    displayRecord?.analysis?.interpretation ?? DEMO_INTERPRETATION;
+
+  // (아래 handleSave/handleNext... 기존 그대로)
+
 
   const handleSave = () => {
     setIsSaved(true);
@@ -78,7 +102,7 @@ export default function RecordStep5Screen() {
     saveRecord(selectedDate);     // ✅ 선택된 날짜로 저장
     console.log('💾 step5 저장 완료');
     resetCurrent();   // ✅ 현재 데이터 초기화
-    router.replace('/(tabs)' as any); // 캘린더로 이동
+    router.replace('/(tabs)/calendar'); // 캘린더로 이동
   };
 
   const handleFinish = () => {
@@ -130,17 +154,17 @@ export default function RecordStep5Screen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Title */}
-          <Text style={styles.title}>꿈 제목</Text>
+          <Text style={styles.title}>{dreamTitle}</Text>
           
           {/* Character Image */}
           <View style={styles.characterBox}>
-            <Text style={styles.characterText}>꿈 상징 캐릭터</Text>
+            <Pigicon />
           </View>
 
           {/* Dream Summary Input - 🔥 내용에 따라 자동 높이 조절 */}
           <View style={styles.inputContainer}>
             <Text style={styles.summaryText}>
-              {dreamSummary}
+              {DEMO_SUMMARY}
             </Text>
           </View>
 
@@ -151,7 +175,7 @@ export default function RecordStep5Screen() {
           )}
 
           <View style={styles.optionContent}>
-            <Text style={styles.optionTitle}>꿈 해석</Text>
+            <Text style={styles.optionTitle}> {dreamTitle} </Text>
             <Text style={styles.optionDescription}>
               {dreamInterpretation}
             </Text>
@@ -227,11 +251,10 @@ const styles = StyleSheet.create({
   characterBox: {
     width: 200,
     height: 200,
-    backgroundColor: '#B6B6B6',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 44,
     marginTop: 0,
     alignSelf: 'center',
   },
@@ -245,7 +268,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 32,
     alignSelf: 'stretch',
   },
   summaryText: {

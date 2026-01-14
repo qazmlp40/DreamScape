@@ -203,8 +203,11 @@ export default function CalendarScreen() {
 
     // 꿈 영상 보기 버튼 → record/step4.tsx로 이동
     const handleVideoPress = () => {
-        router.push('/record/step4');
-    };
+        router.push({
+          pathname: '/record/step4',
+          params: { date: selectedDate }, // ✅ 최소 date는 넘겨
+        });
+      };      
 
     const getDreamByDate = (date: string) => {
         return getRecordByDate(date);

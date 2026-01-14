@@ -2,10 +2,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import {
     ActivityIndicator,
-    Dimensions,
-    StyleSheet,
+    Dimensions, Image, StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,8 +39,11 @@ export default function RecordStep2Screen() {
             <View style={styles.centerContent}>
                 {/* 캐릭터 박스 */}
                 <View style={styles.characterBox}>
-                    <Text style={styles.characterPlaceholder}>꿈 상징 캐릭터</Text>
-                    <Text style={styles.characterSubText}>제작 중 이미지</Text>
+                    <Image
+                        source={require('../../assets/images/icons/making_image.png')}
+                        style={{ width: 200, height: 200 }}
+                        resizeMode="contain"
+                    />
                 </View>
 
                 {/* 제작 중 텍스트 */}
@@ -61,7 +63,6 @@ export default function RecordStep2Screen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -72,11 +73,6 @@ const styles = StyleSheet.create({
     },
     characterBox: {
         width: Math.min(200, Math.round(screenWidth * 0.5)),
-        height: Math.min(200, Math.round(screenWidth * 0.5)),
-        backgroundColor: colors.cardBackground,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 40,
@@ -95,7 +91,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        fontSize: 20,
+        fontSize: 28,
         fontWeight: '700',
         color: colors.text,
         marginBottom: 20,

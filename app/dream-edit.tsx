@@ -272,7 +272,10 @@ export default function DreamEditScreen() {
 
         if (dreamData?.id) {
             // 기존 레코드 업데이트
-            updateRecord(dreamData.id, { dreamText: dreamText });
+            updateRecord(dreamData.id, {
+                dreamText,
+                mood: dreamData.mood, // ✅ 기존 유지
+              });              
         }
 
         Alert.alert(
