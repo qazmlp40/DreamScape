@@ -16,10 +16,12 @@ public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long user_id;
+    @Column(name = "user_id")  // ✅ DB 컬럼명 명시
+    private Long userId;  // ✅ Java 필드명도 userId로 변경
 
-    @Column
+    @Column(name = "user_nick_name")
     private String userNickName;
+
     @Column
     private String name;
 
@@ -29,12 +31,15 @@ public class UserEntity {
     @Column
     private String password;
 
-    @Column
+    @Column(name = "profile_image")
     private String profileImage;
 
-    @Column
+    @Column(name = "social_provider")
     private String socialProvider;
 
-    LocalDateTime createdAt;
-    LocalDateTime updatedAt;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

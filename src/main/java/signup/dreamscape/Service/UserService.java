@@ -61,7 +61,7 @@ public class UserService {
         String token = jwtProvider.createToken(user.getEmail());
 
         return UserResponseDTO.builder()
-                .userId(user.getUser_id())
+                .userId(user.getUserId())
                 .userNickName(user.getUserNickName())
                 .name(user.getName())
                 .email(user.getEmail())
@@ -89,7 +89,7 @@ public class UserService {
                     String token = jwtProvider.createToken(email);
 
                     return UserResponseDTO.builder()
-                            .userId(user.getUser_id())
+                            .userId(user.getUserId())
                             .userNickName(user.getUserNickName())
                             .name(user.getName())
                             .email(user.getEmail())
@@ -120,7 +120,7 @@ public class UserService {
 
         return users.stream()
                 .map(user -> UserResponseDTO.builder()
-                        .userId(user.getUser_id())
+                        .userId(user.getUserId())
                         .userNickName(user.getUserNickName())
                         .name(user.getName())
                         .email(user.getEmail())
@@ -140,7 +140,7 @@ public class UserService {
 
         return optionalUser
                 .map(user -> UserResponseDTO.builder()
-                        .userId(user.getUser_id())
+                        .userId(user.getUserId())
                         .userNickName(user.getUserNickName())
                         .name(user.getName())
                         .email(user.getEmail())
@@ -181,7 +181,7 @@ public class UserService {
         userRepository.delete(user);
 
         return UserResponseDTO.builder()
-                .userId(user.getUser_id())
+                .userId(user.getUserId())
                 .userNickName(user.getUserNickName())
                 .name(user.getName())
                 .email(user.getEmail())
