@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -15,7 +15,6 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import Logo from './Icons/logo';
-
 // useScale 훅
 export const BASE_WIDTH = 412;
 
@@ -170,7 +169,7 @@ const CompleteBtn: React.FC<CompleteBtnProps> = ({ onPress, disabled = false, ti
 /* -----------------------------------------
   📌 Signup 페이지 본체
 ------------------------------------------ */
-const BASE_URL = 'http://10.0.2.2:8080';
+const BASE_URL = "http://192.168.0.22:8080";
 
 const Signup: React.FC = () => {
   const navigation = useNavigation();
@@ -180,15 +179,18 @@ const Signup: React.FC = () => {
 
   const [pwError, setPwError] = useState(false);
   const [globalErr, setGlobalErr] = useState('');
+  const { acceptedTerms } = useLocalSearchParams<{ acceptedTerms?: string }>();
   const [termChecked, setTermChecked] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(false);
   const params = useLocalSearchParams();
 
+  const route = useRoute();
+  
   useEffect(() => {
-    if (params.acceptedTerms === '1') {
-      setTermChecked(true);
+    if (route.params?.acceptedTerms === '1') {
+      setTermChecked(true); // ✅ 체크박스 활성화
     }
-  }, [params.acceptedTerms]);  
+  }, [route.params]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => setScrollEnabled(true));
@@ -257,6 +259,7 @@ const Signup: React.FC = () => {
       }
 
       // 성공
+      alert("회원가입이 완료되었습니다");
       router.replace('/(auth)/login');
     } catch (e) {
       setGlobalErr('서버에 연결할 수 없습니다.');
@@ -358,7 +361,7 @@ const Signup: React.FC = () => {
             { position: 'absolute', left: s(16), right: s(16), bottom: s(23) },
           ]}
         >
-          <CompleteBtn onPress={() => {router.replace('/(auth)/login')}} disabled={isDisabled} title="완료" />
+          <CompleteBtn onPress={handleSignup} disabled={isDisabled} title="완료" />
         </View>
       </View>
     </SafeAreaView>

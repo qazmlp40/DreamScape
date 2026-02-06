@@ -1,5 +1,5 @@
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { router, Stack } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { Stack, useRouter } from 'expo-router';
 import React from 'react';
 import {
   StyleSheet,
@@ -77,11 +77,11 @@ const CompleteBtn: React.FC<CompleteBtnProps> = ({
 --------------------------------------------------- */
 const Terms: React.FC = () => {
   const navigation = useNavigation();
-  const route = useRoute();
+  const router = useRouter();
   const { s } = useScale();
 
   const handleConfirm = () => {
-    router.replace({
+    router.push({
       pathname: '/(auth)/signup',
       params: { acceptedTerms: '1' },
     });

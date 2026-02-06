@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Logo from './Icons/logo';
 
-const BASE_URL = 'http://10.0.2.2:8080';
+const BASE_URL = 'http://192.168.0.22:8080';
 
 /* ------------------ useScale 훅 ------------------ */
 
@@ -113,6 +113,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = useCallback(async () => {
+    console.log("✅ handleLogin pressed");
     if (loading) return;
     setPwError(false);
     setGlobalErr('');
@@ -206,7 +207,7 @@ const Login: React.FC = () => {
             { position: 'absolute', left: s(16), right: s(16), bottom: s(23) },
           ]}
         >
-          <CompleteBtn onPress={() => router.push('/(tabs)')} disabled={isDisabled || loading} title="완료" />
+          <CompleteBtn onPress={handleLogin} disabled={isDisabled || loading} title="완료" />
         </View>
       </View>
     </SafeAreaView>
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
     width: '100%',
     flex: 1,
     backgroundColor: '#fff',
-  },
+  }, 
   logo_container: {
     width: '100%',
     alignItems: 'center',
