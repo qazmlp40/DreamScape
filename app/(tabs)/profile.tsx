@@ -13,8 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { API_BASE_URL } from '../../constants/api';
 
-const BASE_URL = 'http://10.0.2.2:8080';
+const BASE_URL = API_BASE_URL; // TODO: constants/api.ts의 API_BASE_URL을 본인 백엔드 주소로 맞추면 여기만 따라옴.
 
 /* ------------------ useScale 훅 (통합) ------------------ */
 
@@ -293,7 +294,7 @@ const Profile = () => {
         return;
       }
 
-      const res = await fetch(`${BASE_URL}/t_user/${userId}`, {
+      const res = await fetch(`${BASE_URL}/api/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
       });

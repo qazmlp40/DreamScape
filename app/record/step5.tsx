@@ -1,7 +1,7 @@
 import Pigicon from '@/assets/images/icons/dream_symbol/pig.svg';
 import * as MediaLibrary from 'expo-media-library';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Dimensions,
@@ -14,10 +14,14 @@ import {
   Text,
   View
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
+import { API_BASE_URL } from '../../constants/api';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 import IMAGES from '../assets/images';
+import { dreamApi } from '@/services/dreamApi';
 
 const colors = {
   text: '#1F2937',
@@ -59,6 +63,42 @@ export default function RecordStep5Screen() {
   const BOTTOM_INSET = insets.bottom || 20;
   const [isSaved, setIsSaved] = useState(false);
   const viewRef = useRef(null);
+  const [remoteRecord, setRemoteRecord] = useState<{
+    title?: string;
+    mood?: string;
+    summary?: string;
+    interpretation?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const fetchDream = async () => {
+      if (!params.id) {
+        setRemoteRecord(null);
+        return;
+      }
+
+      try {
+        const storedUserId = await AsyncStorage.getItem('userId');
+        if (!storedUserId) {
+          return;
+        }
+
+        const res = await axios.get(`${API_BASE_URL}/api/dreams/${params.id}`);
+        const data = res.data || {};
+
+        setRemoteRecord({
+          title: data.title || data.dreamTitle,
+          mood: data.mood || data.emotion,
+          summary: data.aiSummary ?? data.summary ?? data.rawText ?? data.content,
+          interpretation: data.aiInterpretation ?? data.interpretation ?? data.analysisText,
+        });
+      } catch (error) {
+        console.error('꿈 데이터 불러오기 실패:', error);
+      }
+    };
+
+    fetchDream();
+  }, [params.id]);
 
   // ✅ params로 저장된 record 먼저 찾기
   const record =
@@ -68,41 +108,85 @@ export default function RecordStep5Screen() {
   // ✅ record를 먼저 쓰고, 없으면 currentRecord
   const displayRecord = record ?? currentRecord;
 
-  // ✅ 데모용 하드코딩 값
-  const DEMO_TITLE = '돈을 뿌리다 쓰러진 돼지';
-  const DEMO_SUMMARY =
-    '꿈에서 돼지가 하늘을 날며 돈을 뿌렸고, 돈에는 숫자가 적혀 있었습니다. 이후 돼지가 갑자기 쓰러졌고 꿈이 끝났습니다. 꿈을 꾼 후 기분이 이상했습니다.';
-  const DEMO_INTERPRETATION =
-    '예상치 못한 기회와 불안정한 성공을 의미한다.';
-
   // ✅ 감정 태그도 displayRecord 기준
-  const selectedMoodId = displayRecord?.mood ?? '1';
-  const selectedMood = MOODS.find(m => m.id === selectedMoodId);
+  const selectedMoodId = (remoteRecord?.mood ?? displayRecord?.mood) ?? '1';
+  const selectedMood = MOODS.find(
+    m => m.id === selectedMoodId || m.name === selectedMoodId,
+  );
 
   // ✅ 화면에 뿌리는 데이터도 displayRecord 기준으로 통일
   const dreamTitle =
-    displayRecord?.title?.trim() ? displayRecord.title : DEMO_TITLE;
+    (remoteRecord?.title && remoteRecord.title.trim()) ||
+    (displayRecord?.title && displayRecord.title.trim()) ||
+    '';
 
   const dreamSummary =
-    displayRecord?.analysis?.summary ?? displayRecord?.dreamText ?? DEMO_SUMMARY;
+    remoteRecord?.summary ??
+    displayRecord?.analysis?.summary ??
+    displayRecord?.dreamText ??
+    '';
 
   const dreamInterpretation =
-    displayRecord?.analysis?.interpretation ?? DEMO_INTERPRETATION;
+    remoteRecord?.interpretation ??
+    displayRecord?.analysis?.interpretation ??
+    '';
 
   // (아래 handleSave/handleNext... 기존 그대로)
 
 
-  const handleSave = () => {
-    setIsSaved(true);
+  const handleSave = async () => {
+    try {
+      console.log('저장 시작:', {
+        date: params.selectedDate,
+        title: dreamTitle,
+        dreamText: dreamSummary,
+        mood: selectedMoodId,
+      });
+      
+      await dreamApi.saveDream({
+        date: params.selectedDate as string,
+        title: dreamTitle,
+        dreamText: dreamSummary,
+        mood: selectedMoodId,
+        summary: dreamSummary,
+        interpretation: dreamInterpretation,
+      });
+      
+      console.log('저장 성공');
+      setIsSaved(true);
+    } catch (error: any) {
+      console.error('저장 실패:', error.response?.data || error.message);
+      Alert.alert('오류', '저장에 실패했습니다.');
+    }
   };
 
-  const handleNext = () => {
-    console.log('💾 step5 저장 시작:', currentRecord);
-    const selectedDate = params.selectedDate as string;
-    saveRecord(selectedDate);     // ✅ 선택된 날짜로 저장
-    console.log('💾 step5 저장 완료');
-    resetCurrent();   // ✅ 현재 데이터 초기화
-    router.replace('/(tabs)/calendar'); // 캘린더로 이동
+  const handleNext = async () => {
+    try {
+      const selectedDate = params.selectedDate as string;
+      console.log('다음 버튼 저장:', {
+        date: selectedDate,
+        title: dreamTitle,
+        dreamText: dreamSummary,
+        mood: selectedMoodId,
+      });
+      
+      await dreamApi.saveDream({
+        date: selectedDate,
+        title: dreamTitle,
+        dreamText: dreamSummary,
+        mood: selectedMoodId,
+        summary: dreamSummary,
+        interpretation: dreamInterpretation,
+      });
+      
+      console.log('저장 성공');
+      saveRecord(selectedDate);
+      resetCurrent();
+      router.replace('/(tabs)/calendar');
+    } catch (error: any) {
+      console.error('저장 실패:', error.response?.data || error.message);
+      Alert.alert('오류', '저장에 실패했습니다.');
+    }
   };
 
   const handleFinish = () => {
@@ -164,7 +248,7 @@ export default function RecordStep5Screen() {
           {/* Dream Summary Input - 🔥 내용에 따라 자동 높이 조절 */}
           <View style={styles.inputContainer}>
             <Text style={styles.summaryText}>
-              {DEMO_SUMMARY}
+              {dreamSummary}
             </Text>
           </View>
 

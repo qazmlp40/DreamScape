@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Dimensions, Image, StyleSheet,
@@ -7,6 +7,8 @@ import {
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDreamRecord } from '../../contexts/DreamRecordContext';
+import { dreamApi } from '@/services/dreamApi';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -22,16 +24,48 @@ export default function RecordStep2Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
+    const { dreamText, setAnalysis } = useDreamRecord();
+    const [isLoading, setIsLoading] = useState(true);
 
-    // 3초 후 자동으로 다음 화면으로 이동
     useEffect(() => {
-        const timer = setTimeout(() => {
-            const selectedDate = params.selectedDate as string;
-            router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
-        }, 3000);
+        const fetchAnalysis = async () => {
+            if (!dreamText) {
+                // 꿈 텍스트가 없으면 3초 후 다음 화면으로
+                setTimeout(() => {
+                    const selectedDate = params.selectedDate as string;
+                    router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
+                }, 3000);
+                return;
+            }
 
-        return () => clearTimeout(timer);
-    }, [params.selectedDate]);
+            try {
+                setIsLoading(true);
+                const result = await dreamApi.analyzeDream(dreamText);
+                
+                // 백엔드 응답: { aiSummary: string, dreamId: number }
+                setAnalysis({
+                    summary: result.aiSummary ?? dreamText,
+                    interpretation: '',
+                    tags: [],
+                });
+            } catch (error) {
+                console.error('Analysis error:', error);
+                // 실패 시 원본 텍스트 사용
+                setAnalysis({
+                    summary: dreamText,
+                    interpretation: '',
+                    tags: [],
+                });
+            } finally {
+                setIsLoading(false);
+                // API 응답 후 다음 화면으로
+                const selectedDate = params.selectedDate as string;
+                router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
+            }
+        };
+
+        fetchAnalysis();
+    }, [dreamText, params.selectedDate]);
 
     return (
         <View style={styles.container}>
@@ -65,6 +99,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#FFFFFF',
     },
     centerContent: {
         alignItems: 'center',

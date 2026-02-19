@@ -1,3 +1,14 @@
+/**
+ * 로그인 페이지
+ * 
+ * 수정 사항:
+ * 1. API_BASE_URL 사용 - constants/api.ts에서 import하여 서버 URL 통합 관리
+ * 2. 타임아웃 처리 - 10초 타임아웃 추가 (AbortController 사용)
+ * 3. 로딩 상태 표시 - 로그인 중일 때 "처리중..." 표시 및 버튼 비활성화
+ * 4. 에러 메시지 개선 - 타임아웃/연결 실패 시 구체적인 메시지 표시
+ * 5. 중복 요청 방지 - loading 상태로 중복 클릭 방지
+ */
+import { API_BASE_URL } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { router, Stack } from 'expo-router';
@@ -12,8 +23,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Logo from './Icons/logo';
-
-const BASE_URL = 'http://192.168.0.22:8080';
 
 /* ------------------ useScale 훅 ------------------ */
 
@@ -112,9 +121,10 @@ const Login: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
 
+  // 로그인 처리 함수
   const handleLogin = useCallback(async () => {
     console.log("✅ handleLogin pressed");
-    if (loading) return;
+    if (loading) return; // 중복 요청 방지
     setPwError(false);
     setGlobalErr('');
 
@@ -128,11 +138,19 @@ const Login: React.FC = () => {
 
     try {
       setLoading(true);
-      const res = await fetch(`${BASE_URL}/t_user/login`, {
+      
+      // 10초 타임아웃 설정
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const res = await fetch(`${API_BASE_URL}/t_user/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: userID.trim(), password: userPW }),
+        signal: controller.signal, // 타임아웃 신호
       });
+      
+      clearTimeout(timeoutId);
       const data = await res.json();
 
       // 성공 판정: token 유무로 체크
@@ -165,7 +183,12 @@ const Login: React.FC = () => {
     } catch (e: any) {
       console.log('에러 발생:', e?.message);
       setPwError(true);
-      setGlobalErr('서버에 연결할 수 없습니다.');
+      // 타임아웃과 일반 에러 구분
+      if (e.name === 'AbortError') {
+        setGlobalErr('서버 응답 시간 초과. 네트워크를 확인해주세요.');
+      } else {
+        setGlobalErr(`서버 연결 실패: ${API_BASE_URL}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -207,7 +230,8 @@ const Login: React.FC = () => {
             { position: 'absolute', left: s(16), right: s(16), bottom: s(23) },
           ]}
         >
-          <CompleteBtn onPress={handleLogin} disabled={isDisabled || loading} title="완료" />
+          {/* 완료 버튼 - 로딩 중일 때 "처리중..." 표시 */}
+          <CompleteBtn onPress={handleLogin} disabled={isDisabled || loading} title={loading ? "처리중..." : "완료"} />
         </View>
       </View>
     </SafeAreaView>

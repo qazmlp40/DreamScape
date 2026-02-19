@@ -1,9 +1,22 @@
+/**
+ * 회원가입 페이지
+ * 
+ * 수정 사항:
+ * 1. API_BASE_URL 사용 - constants/api.ts에서 import하여 서버 URL 통합 관리
+ * 2. 타임아웃 처리 - 10초 타임아웃 추가 (AbortController 사용)
+ * 3. 중복 요청 방지 - isSubmitting 상태로 중복 클릭 방지
+ * 4. 로딩 상태 표시 - 회원가입 중일 때 "처리중..." 표시 및 버튼 비활성화
+ * 5. 에러 메시지 개선 - 타임아웃/연결 실패 시 구체적인 메시지 표시
+ * 6. finally 블록 추가 - 에러 발생 시에도 isSubmitting 상태 초기화
+ */
+import { API_BASE_URL } from '@/constants/api';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Keyboard,
+  LogBox,
   StyleSheet,
   Text,
   TextInput,
@@ -15,7 +28,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import Logo from './Icons/logo';
-// useScale 훅
+
+LogBox.ignoreLogs(['Error measuring text field']);
+
 export const BASE_WIDTH = 412;
 
 function useScale() {
@@ -169,8 +184,6 @@ const CompleteBtn: React.FC<CompleteBtnProps> = ({ onPress, disabled = false, ti
 /* -----------------------------------------
   📌 Signup 페이지 본체
 ------------------------------------------ */
-const BASE_URL = "http://192.168.0.22:8080";
-
 const Signup: React.FC = () => {
   const navigation = useNavigation();
   const { s } = useScale();
@@ -182,6 +195,7 @@ const Signup: React.FC = () => {
   const { acceptedTerms } = useLocalSearchParams<{ acceptedTerms?: string }>();
   const [termChecked, setTermChecked] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const params = useLocalSearchParams();
 
   const route = useRoute();
@@ -213,7 +227,10 @@ const Signup: React.FC = () => {
     setTermChecked(prev => !prev);
   }, []);
 
+  // 회원가입 처리 함수
   const handleSignup = useCallback(async () => {
+    if (isSubmitting) return; // 중복 요청 방지
+    
     setPwError(false);
     setGlobalErr('');
 
@@ -228,6 +245,8 @@ const Signup: React.FC = () => {
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       const payload = {
         userNickName: ID.trim(),
@@ -238,11 +257,18 @@ const Signup: React.FC = () => {
         socialProvider: 'local',
       };
 
-      const res = await fetch(`${BASE_URL}/t_user/signup`, {
+      // 10초 타임아웃 설정
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch(`${API_BASE_URL}/t_user/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal, // 타임아웃 신호
       });
+
+      clearTimeout(timeoutId);
 
       const text = await res.text();
       let data: { message?: string } = {};
@@ -261,10 +287,19 @@ const Signup: React.FC = () => {
       // 성공
       alert("회원가입이 완료되었습니다");
       router.replace('/(auth)/login');
-    } catch (e) {
-      setGlobalErr('서버에 연결할 수 없습니다.');
+    } catch (e: any) {
+      // 타임아웃과 일반 에러 구분
+      if (e.name === 'AbortError') {
+        setGlobalErr('서버 응답 시간 초과. 네트워크를 확인해주세요.');
+      } else {
+        setGlobalErr(`서버 연결 실패: ${API_BASE_URL}`);
+      }
+      console.error('Signup error:', e);
+    } finally {
+      // 에러 발생 시에도 상태 초기화
+      setIsSubmitting(false);
     }
-  }, [PW, checkPW, username, ID, email, isDisabled, navigation]);
+  }, [PW, checkPW, username, ID, email, isDisabled, isSubmitting, navigation]);
 
   return (
     <>
@@ -337,18 +372,7 @@ const Signup: React.FC = () => {
             ]}
           >
             <Text style={styles.detail_text}>이용약관 확인하기</Text>
-            <TouchableOpacity
-            onPress={() =>
-              router.push({
-                pathname: '/(auth)/terms',
-                params: {
-                  onAccept: () => {
-                    setTermChecked(true); // ✅ 체크 버튼 활성화
-                  },
-                },
-              })
-            }
-          >
+            <TouchableOpacity onPress={toggleTerms}>
               <Right_Arrow />
             </TouchableOpacity>
           </View>
@@ -361,7 +385,8 @@ const Signup: React.FC = () => {
             { position: 'absolute', left: s(16), right: s(16), bottom: s(23) },
           ]}
         >
-          <CompleteBtn onPress={handleSignup} disabled={isDisabled} title="완료" />
+          {/* 완료 버튼 - 제출 중일 때 "처리중..." 표시 */}
+          <CompleteBtn onPress={handleSignup} disabled={isDisabled || isSubmitting} title={isSubmitting ? "처리중..." : "완료"} />
         </View>
       </View>
     </SafeAreaView>

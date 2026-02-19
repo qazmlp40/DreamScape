@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+    Alert,
     Dimensions,
     Image,
     ImageSourcePropType,
@@ -17,9 +19,12 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { API_BASE_URL } from '../../constants/api';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 import IMAGES from '../assets/images';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { clamp } from '../utils/responsive';
+import { dreamApi } from '@/services/dreamApi';
 
 // 화면 크기
 const { width: screenWidth } = Dimensions.get('window');
@@ -56,6 +61,8 @@ const MOODS = [
 ];
 
 const FIXED_BUTTON_HEIGHT = 56;
+// TODO: Set API_BASE_URL in constants/api.ts to your backend IP:PORT (e.g., http://192.168.0.5:8080)
+const SERVER_URL = API_BASE_URL;
 
 /**
  * 커스텀 헤더 (흰색 + 마이크 음성인식)
@@ -143,12 +150,13 @@ export default function RecordStep1Screen() {
     const [selectedMood, setSelectedMood] = useState<string | null>(null);
     const [dreamContent, setDreamContent] = useState('');
     const [isListening, setIsListening] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
     const scrollViewRef = React.useRef<KeyboardAwareScrollView>(null);
-     const { setMood, setDreamText } = useDreamRecord();
+     const { setMood, setDreamText, setAnalysis } = useDreamRecord();
 
     // 음성 텍스트가 전달되면 dreamContent에 설정
     useEffect(() => {
@@ -159,15 +167,42 @@ export default function RecordStep1Screen() {
 
 
 
-    const handleNext = () => {
-        if (selectedMood && dreamContent.trim()) {
-            setMood(selectedMood);
-            setDreamText(dreamContent.trim());
-            const selectedDate = params.selectedDate as string;
-            router.push(`/record/step2${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
-        } else {
-            console.log("감정과 꿈 내용을 모두 입력해주세요.");
+    const submitDreamToServer = async (emotion: string, content: string, selectedDate?: string) => {
+        setIsSubmitting(true);
+        try {
+            const moodLabel = MOODS.find(m => m.id === emotion)?.name ?? emotion;
+
+            const result = await dreamApi.analyzeDream(content);
+            // 백엔드 응답: { aiSummary: string, dreamId: number }
+            setAnalysis({
+                summary: result.aiSummary ?? content,
+                interpretation: '',
+                tags: [],
+            });
+        } catch (error: any) {
+            console.error('Analysis error:', error);
+            // 실패 시 원본 텍스트를 summary로 사용
+            setAnalysis({
+                summary: content,
+                interpretation: '',
+                tags: [],
+            });
+        } finally {
+            setIsSubmitting(false);
         }
+    };
+
+    const handleNext = () => {
+        if (!(selectedMood && dreamContent.trim())) {
+            Alert.alert('입력 필요', '감정과 꿈 내용을 모두 입력해주세요.');
+            return;
+        }
+
+        const selectedDate = params.selectedDate as string;
+        setMood(selectedMood);
+        setDreamText(dreamContent.trim());
+        router.push(`/record/step2${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
+        submitDreamToServer(selectedMood, dreamContent.trim(), selectedDate);
     };
 
     const handleMicPress = async () => {
@@ -270,9 +305,9 @@ export default function RecordStep1Screen() {
                     onPress={handleNext}
                     style={[
                         styles.nextButton,
-                        { opacity: (selectedMood && dreamContent.trim()) ? 1 : 0.5 }
+                        { opacity: (selectedMood && dreamContent.trim() && !isSubmitting) ? 1 : 0.5 }
                     ]}
-                    disabled={!(selectedMood && dreamContent.trim())}
+                    disabled={isSubmitting || !(selectedMood && dreamContent.trim())}
                 >
                     <Text style={styles.nextButtonText}>완료</Text>
                 </Pressable>
