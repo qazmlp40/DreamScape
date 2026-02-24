@@ -27,8 +27,8 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/t_user/signup",
                                 "/t_user/login",
-                                "/t_user/all",
-                                "t_user/**"
+                                "/t_user/delete/all",
+                                "/t_user/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

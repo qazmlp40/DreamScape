@@ -1,8 +1,8 @@
 package signup.dreamscape.Service;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import signup.dreamscape.DTO.MediaResponseDTO;
 import signup.dreamscape.Entity.DreamEntity;
 import signup.dreamscape.Entity.DreamMediaEntity;
@@ -17,31 +17,23 @@ public class MediaService {
     private final DreamMediaRepository dreamMediaRepository;
 
     @Transactional
-    public MediaResponseDTO createDummyMedia(Long dreamId) {
+    public MediaResponseDTO generateVideo(Long dreamId) {
 
-        // 1. Dream 조회
+        // dream 존재 검증
         DreamEntity dream = dreamRepository.findById(dreamId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 dreamId 입니다: " + dreamId));
 
-        // 2. 1차 구현 - Dummy 데이터
         String dummyUrl = "https://example.com/dummy-video.mp4";
-        String mediaType = "VIDEO";
 
-        // 3. DreamMedia 엔티티 생성
         DreamMediaEntity media = DreamMediaEntity.builder()
-                .dream(dream)
-                .mediaType(mediaType)
+                .dreamId(dream.getDreamId()) // ✅ Flat 방식
                 .mediaUrl(dummyUrl)
                 .build();
 
-        // 4. 저장
         DreamMediaEntity saved = dreamMediaRepository.save(media);
 
-        // 5. 엔티티 -> DTO 변환
         return MediaResponseDTO.builder()
-                .id(saved.getId())
-                .mediaType(saved.getMediaType())
-                .mediaurl(saved.getMediaUrl())
+                .mediaUrl(saved.getMediaUrl()) // ✅ DTO 필드가 mediaUrl 하나면 이것만
                 .build();
     }
 }

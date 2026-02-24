@@ -15,7 +15,6 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
-    private final String uploadDir = "./uploads/";
 
     @Autowired
     public UserController(UserService userService) {
@@ -34,31 +33,27 @@ public class UserController {
         return userService.login(requestDTO.getEmail(), requestDTO.getPassword());
     }
 
-    // ✅ 전체 회원 조회
+    // 전체 회원 조회
     @GetMapping("/all")
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
-        List<UserResponseDTO> users = userService.getAllUsers();
-        return ResponseEntity.ok(users);
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    //  단일 회원 조회 (userId로 조회)
+    // 단일 회원 조회
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Long userId) {
-        UserResponseDTO response = userService.getUserById(userId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(userService.getUserById(userId));
     }
 
-    //  회원 탈퇴 (단일 삭제)
+    // 회원 탈퇴 (단일 삭제)
     @DeleteMapping("/{userId}")
     public ResponseEntity<UserResponseDTO> deleteUserById(@PathVariable Long userId) {
-        UserResponseDTO response = userService.deleteUserById(userId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(userService.deleteUserById(userId));
     }
 
-    //  전체 회원 삭제 (관리자용)
-    @DeleteMapping("/all")
+    // 전체 회원 삭제 (ID는 계속 증가) - 운영에 더 적합
+    @DeleteMapping("/delete/all")
     public ResponseEntity<String> deleteAllUsers() {
-        String result = userService.deleteAllUsers();
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(userService.deleteAllUsers());
     }
 }

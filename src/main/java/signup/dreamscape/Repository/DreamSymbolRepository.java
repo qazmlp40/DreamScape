@@ -17,4 +17,3 @@ public interface DreamSymbolRepository extends JpaRepository<DreamSymbolEntity, 
     // 반환은 엔티티 전체가 됨
     List<DreamSymbolEntity> findByKeywordIn(List<String> keyword);
 }
-

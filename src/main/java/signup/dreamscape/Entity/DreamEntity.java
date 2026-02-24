@@ -7,57 +7,38 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "t_dream")
 @Getter
 @Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor // 기본 생성자 자동 생성
+@AllArgsConstructor // 모든 필드 포함한 생성자 자동 생성
+@Builder // 빌더 패턴으로 객체 생성
 public class DreamEntity {
-
     @Id
-    @GeneratedValue
-    private Long dreamId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long dreamId; // PK
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private UserEntity user;
+    @Column
+    private String title; // 꿈 제목
 
-    @Column(nullable = false, length = 200)
-    private String title;
+    @Column
+    private String rawText; // 사용자가 입력한 원본 꿈 내용
 
-    @Column(columnDefinition = "TEXT", nullable = false)
-    private String rawText;  // ✅ content → rawText
+    @Column
+    private String aiSummary; // AI 요약 결과
 
-    @Column(length = 50)
-    private String mood;
-
-    @ElementCollection
-    @CollectionTable(name = "dream_tags", joinColumns = @JoinColumn(name = "dream_id"))
-    @Column(name = "tag")
-    private List<String> tags = new ArrayList<>();
-
-    @Column(columnDefinition = "TEXT")
-    private String aiSummary;
-
-    @Column(nullable = false, updatable = false)
+    @Column
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
+    @Column
     private LocalDateTime updatedAt;
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-        if (this.tags == null) {
-            this.tags = new ArrayList<>();
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    @Column
+    private Long userId; // 실제로는 user테이블과 일대다연결
 }
+

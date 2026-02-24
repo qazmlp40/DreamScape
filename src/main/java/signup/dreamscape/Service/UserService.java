@@ -196,4 +196,5 @@ public class UserService {
         userRepository.deleteAll();
         return "모든 회원이 삭제되었습니다.";
     }
+
 }
