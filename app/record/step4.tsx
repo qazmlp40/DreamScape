@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 // 영상 컴포넌트 임포트
 // 실제 프로젝트에서는 'react-native-video' 설치 필요
+import { useDreamRecord } from '@/contexts/DreamRecordContext';
 import { ResizeMode, Video } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,6 +34,12 @@ export default function RecordStep4Screen() {
 
     const [isPlaying, setIsPlaying] = useState(true);
     const [showNextButton, setShowNextButton] = useState(false);
+    
+    const { currentVideoUrl } = useDreamRecord();
+    // 또는 const { currentRecord } = useDreamRecord(); currentRecord.videoUrl
+    const videoUrl = currentVideoUrl;
+
+    console.log('Step4 videoUrl:', videoUrl);
 
     const DEMO_VIDEO_URL =
     'https://video-product.cdn.minimax.io/inference_output/video/2025-12-13/2f5a39d1-3a71-494b-8be9-e21c24b2a217/output.mp4';
@@ -89,13 +96,19 @@ export default function RecordStep4Screen() {
                 {/* 영상 재생 중 */}
                 {/* ✅ 실제 영상 */}
                 <View style={styles.videoWrapper}>
-                    <Video
-                    source={{ uri: DEMO_VIDEO_URL }}
-                    style={styles.video}
-                    resizeMode={ResizeMode.CONTAIN}   
-                    shouldPlay
-                    useNativeControls
-                    />
+                    {videoUrl ? (
+                        <Video
+                        source={{ uri: videoUrl }}
+                        style={styles.video}
+                        resizeMode={ResizeMode.CONTAIN}
+                        shouldPlay
+                        useNativeControls
+                        onError={(e) => console.log('Video error:', e)}
+                        onLoad={() => console.log('Video loaded')}
+                        />
+                    ) : (
+                        <Text style={{ color: colors.inactive }}>영상 불러오는 중...</Text>
+                    )}
                 </View>
             </View>
             {/* 하단 버튼: 영상 끝난 후에만 표시 */}

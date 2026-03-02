@@ -1,4 +1,6 @@
 import Pigicon from '@/assets/images/icons/dream_symbol/pig.svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import * as MediaLibrary from 'expo-media-library';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -14,14 +16,11 @@ import {
   Text,
   View
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { captureRef } from 'react-native-view-shot';
 import { API_BASE_URL } from '../../constants/api';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 import IMAGES from '../assets/images';
-import { dreamApi } from '@/services/dreamApi';
 
 const colors = {
   text: '#1F2937',
@@ -133,60 +132,75 @@ export default function RecordStep5Screen() {
 
   // (아래 handleSave/handleNext... 기존 그대로)
 
+  // 수정 전 (서버에 중복으로 저장되는 문제제)
 
-  const handleSave = async () => {
-    try {
-      console.log('저장 시작:', {
-        date: params.selectedDate,
-        title: dreamTitle,
-        dreamText: dreamSummary,
-        mood: selectedMoodId,
-      });
+  // const handleSave = async () => {
+  //   try {
+  //     console.log('저장 시작:', {
+  //       date: params.selectedDate,
+  //       title: dreamTitle,
+  //       dreamText: dreamSummary,
+  //       mood: selectedMoodId,
+  //     });
       
-      await dreamApi.saveDream({
-        date: params.selectedDate as string,
-        title: dreamTitle,
-        dreamText: dreamSummary,
-        mood: selectedMoodId,
-        summary: dreamSummary,
-        interpretation: dreamInterpretation,
-      });
+  //     await dreamApi.saveDream({
+  //       date: params.selectedDate as string,
+  //       title: dreamTitle,
+  //       dreamText: dreamSummary,
+  //       mood: selectedMoodId,
+  //       summary: dreamSummary,
+  //       interpretation: dreamInterpretation,
+  //     });
       
-      console.log('저장 성공');
-      setIsSaved(true);
-    } catch (error: any) {
-      console.error('저장 실패:', error.response?.data || error.message);
-      Alert.alert('오류', '저장에 실패했습니다.');
-    }
+  //     console.log('저장 성공');
+  //     setIsSaved(true);
+  //   } catch (error: any) {
+  //     console.error('저장 실패:', error.response?.data || error.message);
+  //     Alert.alert('오류', '저장에 실패했습니다.');
+  //   }
+  // };
+
+  // const handleNext = async () => {
+  //   try {
+  //     const selectedDate = params.selectedDate as string;
+  //     console.log('다음 버튼 저장:', {
+  //       date: selectedDate,
+  //       title: dreamTitle,
+  //       dreamText: dreamSummary,
+  //       mood: selectedMoodId,
+  //     });
+      
+  //     await dreamApi.saveDream({
+  //       date: selectedDate,
+  //       title: dreamTitle,
+  //       dreamText: dreamSummary,
+  //       mood: selectedMoodId,
+  //       summary: dreamSummary,
+  //       interpretation: dreamInterpretation,
+  //     });
+      
+  //     console.log('저장 성공');
+  //     saveRecord(selectedDate);
+  //     resetCurrent();
+  //     router.replace('/(tabs)/calendar');
+  //   } catch (error: any) {
+  //     console.error('저장 실패:', error.response?.data || error.message);
+  //     Alert.alert('오류', '저장에 실패했습니다.');
+  //   }
+  // };
+
+  const handleSave = () => {
+    // 서버 저장 X, 모달만 띄우기
+    setIsSaved(true);
   };
-
-  const handleNext = async () => {
-    try {
-      const selectedDate = params.selectedDate as string;
-      console.log('다음 버튼 저장:', {
-        date: selectedDate,
-        title: dreamTitle,
-        dreamText: dreamSummary,
-        mood: selectedMoodId,
-      });
-      
-      await dreamApi.saveDream({
-        date: selectedDate,
-        title: dreamTitle,
-        dreamText: dreamSummary,
-        mood: selectedMoodId,
-        summary: dreamSummary,
-        interpretation: dreamInterpretation,
-      });
-      
-      console.log('저장 성공');
-      saveRecord(selectedDate);
-      resetCurrent();
-      router.replace('/(tabs)/calendar');
-    } catch (error: any) {
-      console.error('저장 실패:', error.response?.data || error.message);
-      Alert.alert('오류', '저장에 실패했습니다.');
-    }
+  
+  const handleNext = () => {
+    const selectedDate = params.selectedDate as string;
+  
+    // 서버 저장 X, 로컬 저장 + 화면 이동만
+    saveRecord(selectedDate);
+    resetCurrent();
+    router.replace('/(tabs)/calendar');
   };
 
   const handleFinish = () => {

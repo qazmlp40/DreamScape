@@ -1,3 +1,4 @@
+import { dreamApi } from '@/services/dreamApi';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -8,7 +9,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
-import { dreamApi } from '@/services/dreamApi';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -24,48 +24,92 @@ export default function RecordStep2Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
-    const { dreamText, setAnalysis } = useDreamRecord();
+    const { dreamText = '', setAnalysis, setVideoUrl } = useDreamRecord();
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchAnalysis = async () => {
-            if (!dreamText) {
-                // 꿈 텍스트가 없으면 3초 후 다음 화면으로
-                setTimeout(() => {
-                    const selectedDate = params.selectedDate as string;
-                    router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
-                }, 3000);
-                return;
-            }
+    // ** 수정 전 원래 코드
+    // useEffect(() => {
+    //     const fetchAnalysis = async () => {
+    //         if (!dreamText) {
+    //             // 꿈 텍스트가 없으면 3초 후 다음 화면으로
+    //             setTimeout(() => {
+    //                 const selectedDate = params.selectedDate as string;
+    //                 router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
+    //             }, 3000);
+    //             return;
+    //         }
 
-            try {
-                setIsLoading(true);
-                const result = await dreamApi.analyzeDream(dreamText);
+    //         try {
+    //             setIsLoading(true);
+    //             const result = await dreamApi.interpretDream(dreamText);
                 
-                // 백엔드 응답: { aiSummary: string, dreamId: number }
-                setAnalysis({
-                    summary: result.aiSummary ?? dreamText,
-                    interpretation: '',
-                    tags: [],
-                });
-            } catch (error) {
-                console.error('Analysis error:', error);
-                // 실패 시 원본 텍스트 사용
-                setAnalysis({
-                    summary: dreamText,
-                    interpretation: '',
-                    tags: [],
-                });
-            } finally {
-                setIsLoading(false);
-                // API 응답 후 다음 화면으로
-                const selectedDate = params.selectedDate as string;
-                router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
-            }
-        };
+    //             // 백엔드 응답: { aiSummary: string, dreamId: number }
+    //             setAnalysis({
+    //                 summary: result.aiSummary ?? dreamText,
+    //                 interpretation: '',
+    //                 tags: [],
+    //             });
+    //         } catch (error) {
+    //             console.error('Analysis error:', error);
+    //             // 실패 시 원본 텍스트 사용
+    //             setAnalysis({
+    //                 summary: dreamText,
+    //                 interpretation: '',
+    //                 tags: [],
+    //             });
+    //         } finally {
+    //             setIsLoading(false);
+    //             // API 응답 후 다음 화면으로
+    //             const selectedDate = params.selectedDate as string;
+    //             router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
+    //         }
+    //     };
 
-        fetchAnalysis();
-    }, [dreamText, params.selectedDate]);
+    //     fetchAnalysis();
+    // }, [dreamText, params.selectedDate]);
+
+    useEffect(() => {
+        const run = async () => {
+          const dreamIdParam = params.dreamId;
+          const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
+      
+          if (!dreamId || Number.isNaN(dreamId)) {
+            console.error('dreamId가 없습니다.');
+            return;
+          }
+      
+          try {
+            setIsLoading(true);
+      
+            // ✅ 해몽 + 영상 생성 병렬 실행
+            const [interpretRes, videoRes] = await Promise.all([
+              dreamApi.interpretDream(dreamId),
+              dreamApi.generateVideo(dreamId),
+            ]);
+
+            console.log('dreamApi.generateVideo 응답:', videoRes); //generateVideo 응답 로그
+      
+            // 해몽 저장
+            setAnalysis({
+              summary: interpretRes.aiSummary ?? dreamText,
+              interpretation: interpretRes.aiInterpretation ?? '',
+              tags: interpretRes.tags ?? [], // tags가 아직 null일 가능성 높음
+            });
+
+            // 영상 저장
+            setVideoUrl(videoRes.mediaUrl ?? '');
+      
+          } catch (e) {
+            console.error('제작 중 오류:', e);
+          } finally {
+            setIsLoading(false);
+            const selectedDate = params.selectedDate as string | undefined;
+            router.push(`/record/step3?dreamId=${dreamId}${selectedDate ? `&selectedDate=${selectedDate}` : ''}` as any);
+          }
+        };
+      
+        run();
+      }, [params.dreamId, params.selectedDate]);
 
     return (
         <View style={styles.container}>

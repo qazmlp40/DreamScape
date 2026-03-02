@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 
+import { dreamApi } from '@/services/dreamApi';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -22,9 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '../../constants/api';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 import IMAGES from '../assets/images';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { clamp } from '../utils/responsive';
-import { dreamApi } from '@/services/dreamApi';
 
 // 화면 크기
 const { width: screenWidth } = Dimensions.get('window');
@@ -166,43 +165,74 @@ export default function RecordStep1Screen() {
     }, [params.voiceText]);
 
 
-
+    // saveDream 호출해서 dreamId 받기
+    // interpretDream(dreamId) 호출
+    // 응답의 aiInterpretation을 state/로컬에 저장
     const submitDreamToServer = async (emotion: string, content: string, selectedDate?: string) => {
         setIsSubmitting(true);
         try {
-            const moodLabel = MOODS.find(m => m.id === emotion)?.name ?? emotion;
+          const date = selectedDate ?? new Date().toISOString().slice(0, 10);
+      
+          // 1) 저장해서 dreamId 받기
+          const saved = await dreamApi.saveDream({
+            date,
+            title: '',
+            dreamText: content,
+            mood: emotion,
+          });
+      
+          const dreamId = saved.dreamId;
 
-            const result = await dreamApi.analyzeDream(content);
-            // 백엔드 응답: { aiSummary: string, dreamId: number }
-            setAnalysis({
-                summary: result.aiSummary ?? content,
-                interpretation: '',
-                tags: [],
-            });
+        // ** step 2에서 interpretDream 중복 호출되니까 아래 코드는 임시 주석 처리
+        //   // 2) dreamId로 해몽 호출
+        //   const result = await dreamApi.interpretDream(dreamId);
+      
+        //   // 3) 응답을 상태에 저장 (DreamResponseDTO 기준)
+        //   setAnalysis({
+        //     summary: result.aiSummary ?? content,
+        //     interpretation: result.aiInterpretation ?? '',
+        //     tags: result.tags ?? [],
+        //   });
+        // 
+
+          return { dreamId };
         } catch (error: any) {
-            console.error('Analysis error:', error);
-            // 실패 시 원본 텍스트를 summary로 사용
-            setAnalysis({
-                summary: content,
-                interpretation: '',
-                tags: [],
-            });
+          console.error('Analysis error:', error);
+          setAnalysis({
+            summary: content,
+            interpretation: '',
+            tags: [],
+          });
+          return null;
         } finally {
-            setIsSubmitting(false);
+          setIsSubmitting(false);
         }
-    };
+      };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (!(selectedMood && dreamContent.trim())) {
             Alert.alert('입력 필요', '감정과 꿈 내용을 모두 입력해주세요.');
             return;
         }
 
         const selectedDate = params.selectedDate as string;
+
         setMood(selectedMood);
         setDreamText(dreamContent.trim());
-        router.push(`/record/step2${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
-        submitDreamToServer(selectedMood, dreamContent.trim(), selectedDate);
+
+        // 1) 저장 + 해몽 호출 (한 번만)
+        const res = await submitDreamToServer(selectedMood, dreamContent.trim(), selectedDate);
+
+        if (!res?.dreamId) {
+            Alert.alert('오류', '꿈 저장에 실패했어요. 다시 시도해주세요.');
+            return;
+        }
+        const dreamId = res.dreamId;
+
+        // 2) dreamId를 Step2로 넘기기
+        router.push(
+          `/record/step2?dreamId=${dreamId}${selectedDate ? `&selectedDate=${selectedDate}` : ''}` as any
+        );
     };
 
     const handleMicPress = async () => {
