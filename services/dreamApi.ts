@@ -76,4 +76,15 @@ export const dreamApi = {
     });
     return response.data; // MediaResponseDTO
   },
+
+  summarizeDream: async (dreamText: string) => {
+    console.log('dreamApi.summarizeDream 호출:', dreamText);
+  
+    const response = await api.post('/api/analysis/summarize', dreamText, {
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  
+    console.log('dreamApi.summarizeDream 응답:', response.data);
+    return response.data; // DreamResponseDTO (aiSummary 포함)
+  },
 };
