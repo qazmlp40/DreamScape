@@ -28,12 +28,13 @@ public class SecurityConfig {
                                 "/t_user/signup",
                                 "/t_user/login",
                                 "/t_user/delete/all",
-                                "/t_user/**"
+                                "/t_user/**",
+                                "api/media/++"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                .formLogin(Customizer.withDefaults())  // formLogin 기본 활성화 제거 안하려면 주석 처리
-                .httpBasic(Customizer.withDefaults()) // 필요하면 httpBasic도 추가
+               // .formLogin(Customizer.withDefaults())  // formLogin 기본 활성화 제거 안하려면 주석 처리
+               // .httpBasic(Customizer.withDefaults()) // 필요하면 httpBasic도 추가
 
         ;
 

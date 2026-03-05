@@ -1,3 +1,4 @@
+// src/main/java/signup/dreamscape/DTO/DreamRequestDTO.java
 package signup.dreamscape.DTO;
 
 import jakarta.validation.constraints.NotBlank;
@@ -5,6 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor

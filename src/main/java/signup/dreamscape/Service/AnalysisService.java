@@ -1,10 +1,9 @@
 package signup.dreamscape.Service;
 
-
-
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import okhttp3.OkHttpClient;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -71,7 +70,7 @@ public class AnalysisService {
 
 
     // 꿈 요약
-    public DreamResponseDTO summarizeText(String text) {
+    public DreamResponseDTO summarizeText(String text){
         // 입력값 검증
         if (text == null || text.trim().isEmpty()) {
             throw new IllegalArgumentException("꿈 텍스트는 비어있을 수 없습니다");
@@ -88,11 +87,20 @@ public class AnalysisService {
             // 3. API 호출 및 응답 처리
             String summaryText = callOpenAIAPI(request);
 
-            // 4. DreamResponseDTO 객체를 수동으로 생성하고 요약 텍스트를 설정
-            DreamResponseDTO dreamResponse = new DreamResponseDTO();
-            dreamResponse.setAiSummary(summaryText); // AI 요약 결과 설정
+            // 4. Entity 생성 및 저장
+            DreamEntity dreamEntity = new DreamEntity();
+            dreamEntity.setRawText(text);
+            dreamEntity.setAiSummary(summaryText);
 
-            return dreamResponse;
+            // 5. DB 저장
+            DreamEntity savedDream = dreamRepository.save(dreamEntity); // 레포지토리가 디비에 저장
+
+            // 6. 저장된 엔티티 정보 디티오로 옮기기 (프엔에 보내주는 값)
+            DreamResponseDTO responseDTO = new DreamResponseDTO();
+            responseDTO.setAiSummary(savedDream.getAiSummary());
+            responseDTO.setDreamId(savedDream.getDreamId());
+
+            return responseDTO;
 
         } catch (Exception e) {
             log.error("꿈 요약 처리 중 오류 발생", e);
@@ -175,13 +183,14 @@ public class AnalysisService {
                     .asText();       // 최종 텍스트로 추출
 
 
+
             return summaryText;
         }
     }
 
 
     // 꿈 해몽
-    public DreamResponseDTO analyzeDream(long dreamId) {
+    public DreamResponseDTO analyzeDream(long dreamId){
 
         // 1. 해당 꿈 가지고 오기
         DreamEntity dream = dreamRepository.findById(dreamId)
@@ -193,7 +202,7 @@ public class AnalysisService {
             throw new IllegalArgumentException("해석할 수 있는 꿈 내용이 없습니다. id=" + dreamId);
         }
 
-        try {
+        try{
             // 3. 키워드 뭐가 들어가 있는 지 감지
             List<String> allKeywords = dreamSymbolRepository.findAllKeywords(); // 키워드 조회
             List<String> detectedKeywords = detectKeywords(detectText, allKeywords);
@@ -216,6 +225,7 @@ public class AnalysisService {
             // 6. api 호출
             String interpretation = callOpenAIAPI(request);
 
+
             // 7. DreamResponseDTO 객체를 수동으로 생성
             DreamResponseDTO dreamResponse = new DreamResponseDTO();
             dreamResponse.setAiInterpretation(interpretation); // 꿈 해몽 저장
@@ -232,25 +242,25 @@ public class AnalysisService {
 
     // ========== 헬퍼 메서드 ==========
     // 키워드 감지에 사용할 텍스트 선택 (정리본 우선)
-    private String getTextForKeywordDetect(DreamEntity dream) {
-        if (dream.getAiSummary() != null && !dream.getAiSummary().isBlank())
+    private String getTextForKeywordDetect(DreamEntity dream){
+        if(dream.getAiSummary() != null && !dream.getAiSummary().isBlank())
             return dream.getAiSummary();
         return dream.getRawText();
     }
 
     // text안에서 상징 키워드 감지
-    private List<String> detectKeywords(String text, List<String> allKeywords) {
+    private List<String> detectKeywords(String text, List<String> allKeywords){
         List<String> detected = new ArrayList<>();
         if (text == null || text.isEmpty()) {
             return detected;
         }
 
         for (String keyword : allKeywords) {
-            if (keyword == null || keyword.isEmpty()) {
+            if (keyword == null || keyword.isEmpty()){
                 continue;
             }
 
-            if (text.contains(keyword)) {
+            if(text.contains(keyword)){
                 detected.add(keyword);
             }
         }
@@ -258,7 +268,7 @@ public class AnalysisService {
     }
 
     // 감지된 상징의 의미를 사람이 읽기 좋은 텍스트로 변환
-    private String makeSymbolMeaningText(List<DreamSymbolEntity> symbols) {
+    private String makeSymbolMeaningText(List<DreamSymbolEntity> symbols){
         if (symbols == null || symbols.isEmpty()) {
             return "감지된 상징이 없거나, 상징 사전에 등록된 상징이 없습니다.";
         }
@@ -267,7 +277,7 @@ public class AnalysisService {
         StringBuilder sb = new StringBuilder();
 
         // symbols 리스트 안에 있는 DreamSymbol 엔티티를 하나씩 꺼내면서 반복
-        for (DreamSymbolEntity s : symbols) {
+        for(DreamSymbolEntity s : symbols){
             sb.append("- 키워드: ")
                     .append(s.getKeyword())
                     .append("\n")
@@ -299,4 +309,7 @@ public class AnalysisService {
         return messages;
     }
 
+
+
 }
+

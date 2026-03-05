@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import signup.dreamscape.DTO.DreamRequestDTO;
 import signup.dreamscape.DTO.DreamResponseDTO;
 import signup.dreamscape.DTO.MediaResponseDTO;
+
 import signup.dreamscape.Service.DreamService;
 import signup.dreamscape.Service.MediaService;
 

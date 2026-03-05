@@ -7,13 +7,13 @@ import signup.dreamscape.Service.MediaService;
 
 @RestController
 @RequestMapping("/api/media")
-@RequiredArgsConstructor
+@RequiredArgsConstructor // final 붙은 필드를 생상자로 자동 주입
 public class MediaController {
 
     private final MediaService mediaService;
 
-    @PostMapping("/generate/video")
-    public MediaResponseDTO generateVideo(@RequestParam Long dreamId) {
+    @PostMapping("/generate/vedio")
+    public MediaResponseDTO generateVideo(@RequestParam Long dreamId) { //DTO가 아닌 Param 방식 사용
         return mediaService.generateVideo(dreamId);
     }
 }

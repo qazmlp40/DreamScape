@@ -12,7 +12,7 @@ import lombok.*;
 public class DreamSymbolEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long SymbolId; // PK
+    private Long id; // PK
 
     @Column
     private String keyword;

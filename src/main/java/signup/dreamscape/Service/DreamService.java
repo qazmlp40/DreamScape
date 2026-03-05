@@ -1,3 +1,4 @@
+// src/main/java/signup/dreamscape/Service/DreamService.java
 package signup.dreamscape.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -6,13 +7,10 @@ import org.springframework.transaction.annotation.Transactional;
 import signup.dreamscape.DTO.DreamRequestDTO;
 import signup.dreamscape.DTO.DreamResponseDTO;
 import signup.dreamscape.Entity.DreamEntity;
-import signup.dreamscape.Entity.UserEntity;
 import signup.dreamscape.Repository.DreamRepository;
-import signup.dreamscape.Repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,76 +18,72 @@ import java.util.stream.Collectors;
 public class DreamService {
 
     private final DreamRepository dreamRepository;
-    private final UserRepository userRepository;
 
     public DreamResponseDTO createDream(Long userId, DreamRequestDTO dto) {
-        // 유저 존재 검증(선택이지만 보통 하는 게 안전)
-        UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 userId: " + userId));
-
         LocalDateTime now = LocalDateTime.now();
 
-        DreamEntity dream = DreamEntity.builder()
-                .title(dto.getTitle())
-                .rawText(dto.getRawText())
-                .aiSummary(null)
-                .createdAt(now)
-                .updatedAt(now)
-                .userId(user.getUserId()) // DreamEntity가 Long userId 구조라서 이걸로
-                .build();
+        DreamEntity saved = dreamRepository.save(
+                DreamEntity.builder()
+                        .userId(userId)
+                        .title(dto.getTitle())
+                        .rawText(dto.getRawText())
+                        .aiSummary(null)     // DreamRequestDTO에 없으므로 일단 null
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build()
+        );
 
-        DreamEntity saved = dreamRepository.save(dream);
-        return toResponseDTO(saved);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public DreamResponseDTO getDream(Long dreamId) {
-        DreamEntity dream = dreamRepository.findById(dreamId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 dreamId: " + dreamId));
-
-        return toResponseDTO(dream);
+        DreamEntity entity = dreamRepository.findById(dreamId)
+                .orElseThrow(() -> new IllegalArgumentException("Dream not found: " + dreamId));
+        return toResponse(entity);
     }
 
     @Transactional(readOnly = true)
     public List<DreamResponseDTO> getDreamsByUser(Long userId) {
-        // 선택: userId 검증 (원치 않으면 이 블록 삭제 가능)
-        if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("존재하지 않는 userId: " + userId);
-        }
-
         return dreamRepository.findByUserId(userId).stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+                .map(this::toResponse)
+                .toList();
     }
 
     public DreamResponseDTO updateDream(Long dreamId, DreamRequestDTO dto) {
-        DreamEntity dream = dreamRepository.findById(dreamId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 dreamId: " + dreamId));
+        DreamEntity entity = dreamRepository.findById(dreamId)
+                .orElseThrow(() -> new IllegalArgumentException("Dream not found: " + dreamId));
 
-        dream.setTitle(dto.getTitle());
-        dream.setRawText(dto.getRawText());
-        dream.setUpdatedAt(LocalDateTime.now());
+        entity.setTitle(dto.getTitle());
+        entity.setRawText(dto.getRawText());
+        entity.setUpdatedAt(LocalDateTime.now());
+        // aiSummary는 dto에 없으니 기존 값 유지
 
-        DreamEntity saved = dreamRepository.save(dream);
-        return toResponseDTO(saved);
+        DreamEntity saved = dreamRepository.save(entity);
+        return toResponse(saved);
     }
 
     public void deleteDream(Long dreamId) {
         if (!dreamRepository.existsById(dreamId)) {
-            throw new IllegalArgumentException("존재하지 않는 dreamId: " + dreamId);
+            throw new IllegalArgumentException("Dream not found: " + dreamId);
         }
         dreamRepository.deleteById(dreamId);
     }
 
-    private DreamResponseDTO toResponseDTO(DreamEntity dream) {
+    private DreamResponseDTO toResponse(DreamEntity e) {
         return DreamResponseDTO.builder()
-                .dreamId(dream.getDreamId())
-                .title(dream.getTitle())
-                .rawText(dream.getRawText())
-                .aiSummary(dream.getAiSummary())
-                .createdAt(dream.getCreatedAt())
-                .updatedAt(dream.getUpdatedAt())
-                .userId(dream.getUserId())
+                .dreamId(e.getDreamId())
+                .userId(e.getUserId())
+                .title(e.getTitle())
+                .rawText(e.getRawText())
+                .aiSummary(e.getAiSummary())
+                .createdAt(e.getCreatedAt())
+                .recordedAt(e.getCreatedAt()) // recordedAt을 createdAt으로 매핑(현 시점)
+                .aiInterpretation(null)
+                .mood(null)
+                .tag(null)
+                .originalMediaUrl(null)
+                .editedMediaUrl(null)
                 .build();
     }
 }

@@ -1,9 +1,10 @@
 package signup.dreamscape.Controller;
 
-import signup.dreamscape.DTO.DreamResponseDTO;
-import signup.dreamscape.Service.AnalysisService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import signup.dreamscape.DTO.DreamResponseDTO;
+import signup.dreamscape.Service.AnalysisService;
 
 @RestController
 @RequestMapping("/api/analysis")
@@ -12,16 +13,18 @@ public class AnalysisController {
 
     private final AnalysisService analysisService;
 
+
     // 꿈 요약
-    @PostMapping("/summarize")
+    @PostMapping("/summarize")  // ← @PostMapping으로 변경!
     public DreamResponseDTO analysis(@RequestBody String dreamText) {
+
         return analysisService.summarizeText(dreamText);
     }
 
     // 꿈 해몽
     @GetMapping("/interpret/{dreamId}")
     public DreamResponseDTO interpret(@PathVariable Long dreamId){
+
         return analysisService.analyzeDream(dreamId);
     }
 }
-

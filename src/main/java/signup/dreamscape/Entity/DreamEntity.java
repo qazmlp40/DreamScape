@@ -1,11 +1,5 @@
+// src/main/java/signup/dreamscape/Entity/DreamEntity.java
 package signup.dreamscape.Entity;
-
-import jakarta.persistence.*;
-import lombok.*;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,10 +9,11 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor // 기본 생성자 자동 생성
-@AllArgsConstructor // 모든 필드 포함한 생성자 자동 생성
-@Builder // 빌더 패턴으로 객체 생성
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class DreamEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long dreamId; // PK
@@ -41,4 +36,3 @@ public class DreamEntity {
     @Column
     private Long userId; // 실제로는 user테이블과 일대다연결
 }
-
