@@ -231,8 +231,8 @@ export default function RecordStep1Screen() {
 
         // 2) dreamId를 Step2로 넘기기
         router.push(
-          `/record/step2?dreamId=${dreamId}${selectedDate ? `&selectedDate=${selectedDate}` : ''}` as any
-        );
+            `/record/step2?dreamId=${dreamId}&dreamText=${encodeURIComponent(dreamContent.trim())}${selectedDate ? `&selectedDate=${selectedDate}` : ''}` as any
+          );
     };
 
     const handleMicPress = async () => {

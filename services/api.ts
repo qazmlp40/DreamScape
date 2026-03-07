@@ -15,13 +15,14 @@ api.interceptors.request.use(
     const token = await AsyncStorage.getItem('accessToken');
     console.log('API 요청 URL:', config.url);
     console.log('API 요청 토큰:', token ? token.substring(0, 20) + '...' : '없음');
-    // 백엔드에 JWT 필터가 없어서 일단 주석 처리
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    //   console.log('Authorization 헤더 설정 완료');
-    // } else {
-    //   console.warn('⚠️ 토큰이 없습니다!');
-    // }
+    console.log('REQ', config.method, config.url, config.headers?.Authorization);
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Authorization 헤더 설정 완료');
+    } else {
+      console.warn('⚠️ 토큰이 없습니다!');
+    }
     return config;
   },
   (error) => Promise.reject(error)
