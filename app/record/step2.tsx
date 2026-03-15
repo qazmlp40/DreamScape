@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+// 캘린더 - rawtext 추가
 
 const colors = {
     text: '#1F2937',
@@ -21,6 +22,10 @@ const colors = {
     inactive: '#9CA3AF',
 };
 
+    // [step 2 - 분석 중 ... 화면]
+    // 1. step 1에서 전달받은 dreamId 기준으로 요약/ 해몽 API 호출 
+    // 2. 분석 결과(summary / interpretation / tags)를 Contexet에 저장
+    // ※ 영상 생성은 Step4에서 따로 처리함
 export default function RecordStep2Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -29,9 +34,8 @@ export default function RecordStep2Screen() {
     const [isLoading, setIsLoading] = useState(true);
 
     const {
-      currentDreamText: contextDreamText = '', // DreamRecordContext에 저장되어 있는 꿈 내용
-      setAnalysis,
-      setVideoUrl,
+      currentDreamText: contextDreamText = '', // Context에 임시 저장된 꿈 내용
+      setAnalysis, // summary, interpretation, tags 저장
     } = useDreamRecord();
     
     const dreamTextParam = // Step1에서 URL params로 넘겨준 꿈 내용
@@ -100,10 +104,12 @@ export default function RecordStep2Screen() {
           try {
             setIsLoading(true);
       
-            const [summarizeResult, interpretResult, videoResult] = await Promise.allSettled([
-              dreamApi.summarizeDream(finalDreamText),
+            // 요약 / 해몽을 동시에 요청
+            //  summarizeDream: dreamId의 aiSummary를 DB에 저장
+            //  interpretDream: dreamId 기준 해몽 결과 반환
+            const [summarizeResult, interpretResult] = await Promise.allSettled([
+              dreamApi.summarizeDream(dreamId, finalDreamText),
               dreamApi.interpretDream(dreamId),
-              dreamApi.generateVideo(dreamId),
             ]);
 
             let summary = finalDreamText ?? '';
@@ -113,7 +119,7 @@ export default function RecordStep2Screen() {
             // ✅ 요약 처리
             if (summarizeResult.status === 'fulfilled') {
               const summarizeRes = summarizeResult.value;
-              console.log('dreamApi.summarizeDream 응답:', summarizeRes);
+              console.log('[Step2] dreamApi.summarizeDream 응답:', summarizeRes);
 
               summary =
                 summarizeRes.aiSummary ??
@@ -131,7 +137,7 @@ export default function RecordStep2Screen() {
             // ✅ 해몽 처리
             if (interpretResult.status === 'fulfilled') {
               const interpretRes = interpretResult.value;
-              console.log('dreamApi.interpretDream 응답:', interpretRes);
+              console.log('[Step2] dreamApi.interpretDream 응답:', interpretRes);
               
               interpretation = interpretRes.aiInterpretation ?? '';
               tags = interpretRes.tags ?? [];
@@ -143,36 +149,28 @@ export default function RecordStep2Screen() {
               );
             }
 
-            // ✅ 최종 분석 결과 저장
+            // ✅ 분석 결과를 Context에 저장
             setAnalysis({
               summary,
               interpretation,
               tags,
             });
       
-            // ✅ 영상 처리
-            if (videoResult.status === 'fulfilled') {
-              const videoRes = videoResult.value;
-              console.log('dreamApi.generateVideo 응답:', videoRes);
-              setVideoUrl(videoRes.mediaUrl ?? '');
-            } else {
-              console.log(
-                'video failed:',
-                videoResult.reason?.response?.status,
-                videoResult.reason?.response?.data
-              );
-              setVideoUrl(null); // 또는 ''
-            }
-          } catch (e) {
-            console.error('제작 중 오류:', e);
-
-             // 전체 오류 시 최소 fallback
-            setAnalysis({
-              summary: finalDreamText ?? '',
-              interpretation: '',
-              tags: [],
-            });
-            setVideoUrl(null);
+          //   // ✅ 영상 처리
+          //   if (videoResult.status === 'fulfilled') {
+          //     const videoRes = videoResult.value;
+          //     console.log('dreamApi.generateVideo 응답:', videoRes);
+          //     setVideoUrl(videoRes.mediaUrl ?? '');
+          //   } else {
+          //     console.log(
+          //       'video failed:',
+          //       videoResult.reason?.response?.status,
+          //       videoResult.reason?.response?.data
+          //     );
+          //     setVideoUrl(null); // 또는 ''
+          //   }
+          // } catch (e) {
+          //   console.error('제작 중 오류:', e);)
           } finally {
             setIsLoading(false);
             const selectedDate = params.selectedDate as string | undefined;
@@ -201,9 +199,9 @@ export default function RecordStep2Screen() {
                     />
                 </View>
 
-                {/* 제작 중 텍스트 */}
+                {/* 분석 중 텍스트 */}
                 <View style={styles.loadingSection}>
-                    <Text style={styles.loadingText}>제작 중...</Text>
+                    <Text style={styles.loadingText}>분석 중...</Text>
                     <ActivityIndicator 
                         size="large" 
                         color={colors.inactive} 

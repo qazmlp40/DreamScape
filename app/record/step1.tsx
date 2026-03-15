@@ -1,6 +1,5 @@
-import { Ionicons } from '@expo/vector-icons';
-
 import { dreamApi } from '@/services/dreamApi';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -63,9 +62,7 @@ const FIXED_BUTTON_HEIGHT = 56;
 // TODO: Set API_BASE_URL in constants/api.ts to your backend IP:PORT (e.g., http://192.168.0.5:8080)
 const SERVER_URL = API_BASE_URL;
 
-/**
- * 커스텀 헤더 (흰색 + 마이크 음성인식)
- */
+// 커스텀 헤더 (흰색 + 마이크 음성인식) 
 const CustomRecordHeader = ({ title, onMicPress }: { title: string; onMicPress?: () => void }) => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -165,9 +162,8 @@ export default function RecordStep1Screen() {
     }, [params.voiceText]);
 
 
+    // [step 1 - 꿈 기록 화면]
     // saveDream 호출해서 dreamId 받기
-    // interpretDream(dreamId) 호출
-    // 응답의 aiInterpretation을 state/로컬에 저장
     const submitDreamToServer = async (emotion: string, content: string, selectedDate?: string) => {
         setIsSubmitting(true);
         try {
@@ -197,12 +193,12 @@ export default function RecordStep1Screen() {
 
           return { dreamId };
         } catch (error: any) {
-          console.error('Analysis error:', error);
-          setAnalysis({
-            summary: content,
-            interpretation: '',
-            tags: [],
-          });
+          console.error('Dream submit error:', error);
+        //   setAnalysis({
+        //     summary: content,
+        //     interpretation: '',
+        //     tags: [],
+        //   });
           return null;
         } finally {
           setIsSubmitting(false);
@@ -220,7 +216,7 @@ export default function RecordStep1Screen() {
         setMood(selectedMood);
         setDreamText(dreamContent.trim());
 
-        // 1) 저장 + 해몽 호출 (한 번만)
+        // 1) 꿈 저장 요청 후 dreamId 반환받기
         const res = await submitDreamToServer(selectedMood, dreamContent.trim(), selectedDate);
 
         if (!res?.dreamId) {

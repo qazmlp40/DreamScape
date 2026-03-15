@@ -10,6 +10,7 @@ import {
 // 영상 컴포넌트 임포트
 // 실제 프로젝트에서는 'react-native-video' 설치 필요
 import { useDreamRecord } from '@/contexts/DreamRecordContext';
+import { dreamApi } from '@/services/dreamApi';
 import { ResizeMode, Video } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,6 +27,10 @@ const colors = {
 
 const FIXED_BUTTON_HEIGHT = 56;
 
+// [step 4 - 제작 중... -> 무드보드 영상]
+// 1. step 3에서 보낸 요청 응답 대기
+// 2. videoUrl을 Context에 저장
+// 3. videoUrl이 있으면 영상 재생, 없으면 로딩 문구 표시
 export default function RecordStep4Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -35,6 +40,13 @@ export default function RecordStep4Screen() {
     const [isPlaying, setIsPlaying] = useState(true);
     const [showNextButton, setShowNextButton] = useState(false);
     
+    // Context에 저장된 videoUrl 사용
+    // Step4에서 영상 생성 성공 시 setVideoUrl로 갱신됨
+    const {
+        currentDreamText: contextDreamText = '', // DreamRecordContext에 저장되어 있는 꿈 내용
+        setVideoUrl,
+    } = useDreamRecord();
+
     const { currentVideoUrl } = useDreamRecord();
     // 또는 const { currentRecord } = useDreamRecord(); currentRecord.videoUrl
     const videoUrl = currentVideoUrl;
@@ -50,6 +62,32 @@ export default function RecordStep4Screen() {
         }, 5000);
         return () => clearTimeout(timer);
     }, []);
+
+    useEffect(()=> {
+        const run = async () => {
+            const dreamIdParam = params.dreamId;
+            const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
+            
+            if (!dreamId || Number.isNaN(dreamId)) {
+                console.error('유효하지 않은 dreamId:', dreamIdParam);
+                return;
+            }
+
+            try {
+                const videoRes = await dreamApi.generateVideo(dreamId);
+                console.log('dreamApi.generateVideo 응답:', videoRes);
+                setVideoUrl(videoRes.mediaUrl ?? ''); 
+            } catch (e: any) {
+                console.error(
+                  '영상 생성 오류:',
+                  e?.response?.status,
+                  e?.response?.data || e
+                );
+                setVideoUrl('');
+              }
+        };
+            run();
+        }, [params.dreamId]);
 
     const handleSkip = () => {
         setShowNextButton(true);
@@ -75,7 +113,7 @@ export default function RecordStep4Screen() {
           pathname: '/record/step5',
           params: selectedDate ? { selectedDate } : {},
         } as any);
-      };      
+    };      
 
     return (
         <>

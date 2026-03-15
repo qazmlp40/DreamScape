@@ -47,6 +47,7 @@ const MOODS = [
 const screenWidth = Dimensions.get('window').width;
 const FIXED_BUTTON_HEIGHT = 56;
 
+// [step 5 - 꿈 요약 + 해몽]
 export default function RecordStep5Screen() {
   const {
     currentRecord,

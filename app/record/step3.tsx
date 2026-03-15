@@ -17,15 +17,24 @@ const colors = {
     background: '#FFFFFF',
 };
 
+// [step 3 - 키워드 기반 아이콘 화면]
+// step 2에서 전달받은 dreamId로 AI 영상 생성 요청 
+// videoUrl을 Context에 저장
 export default function RecordStep4Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
+    
+    const dreamId = params.dreamId as string | undefined;
 
     // 캐릭터 박스 클릭 시 다음 페이지로 이동
     const handleCharacterClick = () => {
         const selectedDate = params.selectedDate as string;
-        router.push(`/record/step4${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
+        router.push(
+            `/record/step4?dreamId=${dreamId}${
+              selectedDate ? `&selectedDate=${selectedDate}` : ''
+            }` as any
+        )      
     };
 
     return (
