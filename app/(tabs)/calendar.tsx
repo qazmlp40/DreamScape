@@ -1,3 +1,4 @@
+import NoteIcon from '@/assets/images/icons/note_mini.svg';
 import { Stack, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -370,7 +371,7 @@ export default function CalendarScreen() {
 
                     {/* 조건부 렌더링: 기록 있음 vs 없음 */}
                     {hasDreamRecord ? (
-                        // ✅ 기록이 있을 때
+                        // 기록이 있을 때
                         <>
                             {/* 요약 카드 */}
                             <View style={styles.infoCard}>
@@ -385,9 +386,18 @@ export default function CalendarScreen() {
                                             <View style={styles.cardEmojiEmpty} />
                                         )}
                                     </View>
-                                    <Text style={styles.cardText} numberOfLines={2}>
-                                        {selectedDream?.analysis?.summary || selectedDream?.dreamText || '기록된 꿈이 없습니다.'}
-                                    </Text>
+                                    <View >
+                                        {/* 꿈 요약 + 꿈 원문 임시 디자인 */}
+                                        <Text style={styles.cardText} numberOfLines={2}>
+                                            <Text>꿈 요약:</Text>
+                                            {selectedDream?.analysis?.summary || '요약 없음'}
+                                        </Text>
+
+                                        <Text style={styles.cardText} numberOfLines={3}>
+                                            <Text>꿈 원문:</Text>
+                                            {selectedDream?.dreamText || '작성한 꿈 내용이 없습니다.'}
+                                        </Text>
+                                    </View>
                                 </View>
                             </View>
 
@@ -409,46 +419,41 @@ export default function CalendarScreen() {
                                     </Text>
                                 </View>
                             </View>
-
-                            {/* CTA 버튼 */}
-                            <TouchableOpacity 
-                                style={styles.ctaBtn} 
-                                activeOpacity={0.8}
-                                onPress={handleVideoPress}
-                            >
-                                <Text style={styles.ctaBtnText}>꿈 영상 보기</Text>
-                            </TouchableOpacity>
                         </>
                     ) : (
-                        // 🔥 기록이 없을 때
+                        // 기록이 없을 때
                         <>
                             <View style={styles.emptyBox}>
-                                {/* 이미지 자리 (추후 추가) */}
-                                <View style={styles.emptyImageBox}>
-                                    {/* TODO: 이미지 추가 예정 */}
-                                </View>
-                                
-                                {/* 텍스트 */}
+                                <NoteIcon />
                                 <Text style={styles.emptyText}>아직 꿈을 기록하지 않았어요!</Text>
                             </View>
-                            
-                            {/* 꿈 기록하기 버튼 */}
-                            <TouchableOpacity 
-                                style={styles.recordBtn} 
-                                activeOpacity={0.8}
-                                onPress={handleRecordPress}
-                            >
-                                <Text style={styles.recordBtnText}>꿈 기록하기</Text>
-                            </TouchableOpacity>
                         </>
                     )}
                 </ScrollView>
             </SafeAreaView>
+            <View style={styles.fixedButtonContainer}>
+                {hasDreamRecord ? (
+                    <TouchableOpacity
+                    style={styles.ctaBtn}
+                    activeOpacity={0.8}
+                    onPress={handleVideoPress}
+                    >
+                    <Text style={styles.ctaBtnText}>꿈 영상 보기</Text>
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity
+                    style={styles.recordBtn}
+                    activeOpacity={0.8}
+                    onPress={handleRecordPress}
+                    >
+                    <Text style={styles.recordBtnText}>꿈 기록하기</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
         </View>
     );
 }
 
-// === 스타일시트 ===
 const styles = StyleSheet.create({
     // 🔥 최상단 컨테이너 (홈과 동일)
     mainContainer: {
@@ -497,6 +502,7 @@ const styles = StyleSheet.create({
     calendarCard: {
         width: CALENDAR_WIDTH,
         backgroundColor: '#FFF',
+        marginTop: scale(16),
         borderRadius: scale(16),
         paddingBottom: scale(12),
         ...Platform.select({
@@ -722,27 +728,24 @@ const styles = StyleSheet.create({
     // 빈 상태 박스
     emptyBox: {
         width: scale(380),
-        height: scale(205),
-        backgroundColor: '#FFFFFF',
-        borderRadius: scale(16),
-        paddingTop: scale(32),
-        paddingRight: scale(16),
-        paddingBottom: scale(32),
-        paddingLeft: scale(16),
-        alignItems: 'center',
+        paddingVertical: scale(32),
+        paddingHorizontal: scale(16),
         justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: scale(16),
+        backgroundColor: '#FFF',
         ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.08,
-                shadowRadius: 12,
-            },
-            android: {
-                elevation: 4,
-            },
+          ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.15,
+            shadowRadius: 1,
+          },
+          android: {
+            elevation: 2,
+          },
         }),
-    },
+      },
     
     emptyImageBox: {
         width: scale(109),
@@ -797,4 +800,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
     },
+
+    // CTA, 꿈 기록하기 버튼 - 고정된 위치
+    fixedButtonContainer: {
+        position: 'absolute',
+        marginHorizontal: scale(16),
+        bottom: scale(22),
+      },
 });

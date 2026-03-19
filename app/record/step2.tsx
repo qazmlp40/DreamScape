@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '@/constants/api';
 import { dreamApi } from '@/services/dreamApi';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions, Image, StyleSheet,
@@ -22,20 +22,23 @@ const colors = {
     inactive: '#9CA3AF',
 };
 
-    // [step 2 - 분석 중 ... 화면]
-    // 1. step 1에서 전달받은 dreamId 기준으로 요약/ 해몽 API 호출 
-    // 2. 분석 결과(summary / interpretation / tags)를 Contexet에 저장
-    // ※ 영상 생성은 Step4에서 따로 처리함
+// [step 2 - 분석 중... 화면]
+// 1) Step1에서 전달받은 dreamId로 요약/해몽 API를 호출한다
+// 2) 분석 결과(summary / interpretation / tags)를 Context와 local record에 저장한다
+// 3) 분석이 끝나면 Step3로 이동한다
+// ※ 영상 생성은 summary 기반이므로 Step4에서 요청한다
 export default function RecordStep2Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     // const { dreamText = '', setAnalysis, setVideoUrl } = useDreamRecord();
     const [isLoading, setIsLoading] = useState(true);
+    const hasRunRef = useRef(false);
 
     const {
       currentDreamText: contextDreamText = '', // Context에 임시 저장된 꿈 내용
       setAnalysis, // summary, interpretation, tags 저장
+      updateRecordByLocalId,
     } = useDreamRecord();
     
     const dreamTextParam = // Step1에서 URL params로 넘겨준 꿈 내용
@@ -46,51 +49,14 @@ export default function RecordStep2Screen() {
     const finalDreamText = contextDreamText || dreamTextParam || ''; // Step2에서 실제로 사용할 최종 꿈 내용
    // step2에서는 받아온 꿈 텍스트를 바로 쓰지 말고, context값 + params값 중 살아있는 걸 합친 finalDreamText를 최종 사용한다
 
-    // ** 수정 전 원래 코드
-    // useEffect(() => {
-    //     const fetchAnalysis = async () => {
-    //         if (!dreamText) {
-    //             // 꿈 텍스트가 없으면 3초 후 다음 화면으로
-    //             setTimeout(() => {
-    //                 const selectedDate = params.selectedDate as string;
-    //                 router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
-    //             }, 3000);
-    //             return;
-    //         }
-
-    //         try {
-    //             setIsLoading(true);
-    //             const result = await dreamApi.interpretDream(dreamText);
-                
-    //             // 백엔드 응답: { aiSummary: string, dreamId: number }
-    //             setAnalysis({
-    //                 summary: result.aiSummary ?? dreamText,
-    //                 interpretation: '',
-    //                 tags: [],
-    //             });
-    //         } catch (error) {
-    //             console.error('Analysis error:', error);
-    //             // 실패 시 원본 텍스트 사용
-    //             setAnalysis({
-    //                 summary: dreamText,
-    //                 interpretation: '',
-    //                 tags: [],
-    //             });
-    //         } finally {
-    //             setIsLoading(false);
-    //             // API 응답 후 다음 화면으로
-    //             const selectedDate = params.selectedDate as string;
-    //             router.push(`/record/step3${selectedDate ? `?selectedDate=${selectedDate}` : ''}` as any);
-    //         }
-    //     };
-
-    //     fetchAnalysis();
-    // }, [dreamText, params.selectedDate]);
-
     useEffect(() => {
+      if (hasRunRef.current) return;
+      hasRunRef.current = true;    
         const run = async () => {
           const dreamIdParam = params.dreamId;
           const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
+          const localIdParam = params.localId;
+          const localId = typeof localIdParam === 'string' ? localIdParam : '';
 
           console.log('[Step2] API_BASE_URL:', API_BASE_URL);
           console.log('[Step2] dreamIdParam:', dreamIdParam, '->', dreamId);
@@ -155,28 +121,28 @@ export default function RecordStep2Screen() {
               interpretation,
               tags,
             });
-      
-          //   // ✅ 영상 처리
-          //   if (videoResult.status === 'fulfilled') {
-          //     const videoRes = videoResult.value;
-          //     console.log('dreamApi.generateVideo 응답:', videoRes);
-          //     setVideoUrl(videoRes.mediaUrl ?? '');
-          //   } else {
-          //     console.log(
-          //       'video failed:',
-          //       videoResult.reason?.response?.status,
-          //       videoResult.reason?.response?.data
-          //     );
-          //     setVideoUrl(null); // 또는 ''
-          //   }
-          // } catch (e) {
-          //   console.error('제작 중 오류:', e);)
+            if (localId) {
+              updateRecordByLocalId(localId, {
+                dreamId,
+                analysis: {
+                  summary,
+                  interpretation,
+                  tags,
+                },
+              });
+              console.log('[Step2] local record에 dreamId/analysis 연결 완료:', {
+                localId,
+                dreamId,
+              });
+            } else {
+              console.warn('[Step2] localId가 없어서 record 연결 불가');
+            }
           } finally {
             setIsLoading(false);
             const selectedDate = params.selectedDate as string | undefined;
 
-            router.push(
-              `/record/step3?dreamId=${dreamId}${
+            router.replace(
+              `/record/step3?dreamId=${dreamId}&localId=${localId}${
                 selectedDate ? `&selectedDate=${selectedDate}` : ''
               }` as any
             );
@@ -184,7 +150,7 @@ export default function RecordStep2Screen() {
         };
       
         run();
-      }, [params.dreamId, params.selectedDate, finalDreamText]);
+      }, [params.dreamId, params.localId]);
 
     return (
         <View style={styles.container}>

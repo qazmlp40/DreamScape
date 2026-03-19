@@ -47,13 +47,15 @@ const MOODS = [
 const screenWidth = Dimensions.get('window').width;
 const FIXED_BUTTON_HEIGHT = 56;
 
-// [step 5 - 꿈 요약 + 해몽]
+// [step 5 - 꿈 요약 + 해몽 결과 화면]
+// 1) localId 또는 date 기준으로 현재 꿈 record를 찾아 화면에 표시한다
+// 2) 저장하기 버튼을 누르면 현재 화면을 이미지로 저장할 수 있는 모달을 띄운다
+// 3) 다음 버튼을 누르면 현재 작성 상태를 초기화하고 캘린더로 이동한다
 export default function RecordStep5Screen() {
   const {
     currentRecord,
-    saveRecord,
     resetCurrent,
-    getRecordById,
+    getRecordByLocalId,
     getRecordByDate,
   } = useDreamRecord();
 
@@ -102,7 +104,7 @@ export default function RecordStep5Screen() {
 
   // ✅ params로 저장된 record 먼저 찾기
   const record =
-    (params.id ? getRecordById(String(params.id)) : null) ??
+    (params.localId ? getRecordByLocalId(String(params.localId)) : null) ??
     (params.date ? getRecordByDate(String(params.date)) : null);
 
   // ✅ record를 먼저 쓰고, 없으면 currentRecord
@@ -131,84 +133,19 @@ export default function RecordStep5Screen() {
     displayRecord?.analysis?.interpretation ??
     '';
 
-  // (아래 handleSave/handleNext... 기존 그대로)
-
-  // 수정 전 (서버에 중복으로 저장되는 문제제)
-
-  // const handleSave = async () => {
-  //   try {
-  //     console.log('저장 시작:', {
-  //       date: params.selectedDate,
-  //       title: dreamTitle,
-  //       dreamText: dreamSummary,
-  //       mood: selectedMoodId,
-  //     });
-      
-  //     await dreamApi.saveDream({
-  //       date: params.selectedDate as string,
-  //       title: dreamTitle,
-  //       dreamText: dreamSummary,
-  //       mood: selectedMoodId,
-  //       summary: dreamSummary,
-  //       interpretation: dreamInterpretation,
-  //     });
-      
-  //     console.log('저장 성공');
-  //     setIsSaved(true);
-  //   } catch (error: any) {
-  //     console.error('저장 실패:', error.response?.data || error.message);
-  //     Alert.alert('오류', '저장에 실패했습니다.');
-  //   }
-  // };
-
-  // const handleNext = async () => {
-  //   try {
-  //     const selectedDate = params.selectedDate as string;
-  //     console.log('다음 버튼 저장:', {
-  //       date: selectedDate,
-  //       title: dreamTitle,
-  //       dreamText: dreamSummary,
-  //       mood: selectedMoodId,
-  //     });
-      
-  //     await dreamApi.saveDream({
-  //       date: selectedDate,
-  //       title: dreamTitle,
-  //       dreamText: dreamSummary,
-  //       mood: selectedMoodId,
-  //       summary: dreamSummary,
-  //       interpretation: dreamInterpretation,
-  //     });
-      
-  //     console.log('저장 성공');
-  //     saveRecord(selectedDate);
-  //     resetCurrent();
-  //     router.replace('/(tabs)/calendar');
-  //   } catch (error: any) {
-  //     console.error('저장 실패:', error.response?.data || error.message);
-  //     Alert.alert('오류', '저장에 실패했습니다.');
-  //   }
-  // };
-
   const handleSave = () => {
     // 서버 저장 X, 모달만 띄우기
     setIsSaved(true);
   };
-  
+
   const handleNext = () => {
-    const selectedDate = params.selectedDate as string;
-  
-    // 서버 저장 X, 로컬 저장 + 화면 이동만
-    saveRecord(selectedDate);
     resetCurrent();
     router.replace('/(tabs)/calendar');
   };
 
   const handleFinish = () => {
-    const selectedDate = params.selectedDate as string;
-    saveRecord(selectedDate);     // ✅ 선택된 날짜로 저장
-    resetCurrent();   // 선택: 현재 작성 중이던 값 초기화
-    router.replace('/(tabs)'); // 홈으로 이동
+    resetCurrent();
+    router.replace('/(tabs)');
   };
 
   const handleSaveImage = async () => {

@@ -27,34 +27,43 @@ const colors = {
 
 const FIXED_BUTTON_HEIGHT = 56;
 
-// [step 4 - 제작 중... -> 무드보드 영상]
-// 1. step 3에서 보낸 요청 응답 대기
-// 2. videoUrl을 Context에 저장
-// 3. videoUrl이 있으면 영상 재생, 없으면 로딩 문구 표시
+// [step 4 - 제작 중... / 무드보드 영상 화면]
+// 1) 전달받은 dreamId로 AI 영상 생성 API를 요청한다
+// 2) 생성된 videoUrl을 현재 local record에 저장한다
+// 3) videoUrl이 있으면 영상을 보여주고, 없으면 제작 중 UI를 보여준다
 export default function RecordStep4Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
 
-    const [isPlaying, setIsPlaying] = useState(true);
     const [showNextButton, setShowNextButton] = useState(false);
+
+    const dreamIdParam = params.dreamId;
+    const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
+
+    const localIdParam = params.localId;
+    const localId = typeof localIdParam === 'string' ? localIdParam : '';
     
-    // Context에 저장된 videoUrl 사용
-    // Step4에서 영상 생성 성공 시 setVideoUrl로 갱신됨
-    const {
-        currentDreamText: contextDreamText = '', // DreamRecordContext에 저장되어 있는 꿈 내용
-        setVideoUrl,
-    } = useDreamRecord();
+    // // Context에 저장된 videoUrl 사용
+    // // Step4에서 영상 생성 성공 시 setVideoUrl로 갱신됨
+    // const {
+    //     currentDreamText: contextDreamText = '', // DreamRecordContext에 저장되어 있는 꿈 내용
+    //     setVideoUrl,
+    // } = useDreamRecord();
 
-    const { currentVideoUrl } = useDreamRecord();
-    // 또는 const { currentRecord } = useDreamRecord(); currentRecord.videoUrl
-    const videoUrl = currentVideoUrl;
+    // const { currentVideoUrl } = useDreamRecord();
+    // // 또는 const { currentRecord } = useDreamRecord(); currentRecord.videoUrl
+    // const videoUrl = currentVideoUrl;
 
-    console.log('Step4 videoUrl:', videoUrl);
+    // console.log('Step4 videoUrl:', videoUrl);
+    const { getRecordByLocalId, updateRecordByLocalId } = useDreamRecord();
 
-    const DEMO_VIDEO_URL =
-    'https://video-product.cdn.minimax.io/inference_output/video/2025-12-13/2f5a39d1-3a71-494b-8be9-e21c24b2a217/output.mp4';
+    // 현재 dreamId와 같은 꿈 record 찾기
+    const currentRecord = localId ? getRecordByLocalId(localId) : undefined;
+
+    // 현재 꿈의 videoUrl만 사용 
+    const videoUrl = currentRecord?.videoUrl ?? null;
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -63,31 +72,71 @@ export default function RecordStep4Screen() {
         return () => clearTimeout(timer);
     }, []);
 
-    useEffect(()=> {
-        const run = async () => {
-            const dreamIdParam = params.dreamId;
-            const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
+    // useEffect(()=> {
+    //     const run = async () => {
+    //         const dreamIdParam = params.dreamId;
+    //         const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
             
+    //         if (!dreamId || Number.isNaN(dreamId)) {
+    //             console.error('유효하지 않은 dreamId:', dreamIdParam);
+    //             return;
+    //         }
+
+    //         try {
+    //             const videoRes = await dreamApi.generateVideo(dreamId);
+    //             console.log('dreamApi.generateVideo 응답:', videoRes);
+    //             setVideoUrl(videoRes.mediaUrl ?? ''); 
+    //         } catch (e: any) {
+    //             console.error(
+    //               '영상 생성 오류:',
+    //               e?.response?.status,
+    //               e?.response?.data || e
+    //             );
+    //             setVideoUrl('');
+    //           }
+    //     };
+    //         run();
+    //     }, [params.dreamId]);
+
+    useEffect(() => {
+        const run = async () => {
             if (!dreamId || Number.isNaN(dreamId)) {
                 console.error('유효하지 않은 dreamId:', dreamIdParam);
                 return;
             }
 
+            if (!localId) {
+                console.error('localId가 없습니다.');
+                return;
+            }
+    
+            // 이미 현재 꿈 videoUrl이 있으면 다시 요청 안 함
+            if (videoUrl) {
+                console.log('이미 현재 꿈의 videoUrl 존재:', videoUrl);
+                return;
+            }
+    
             try {
                 const videoRes = await dreamApi.generateVideo(dreamId);
                 console.log('dreamApi.generateVideo 응답:', videoRes);
-                setVideoUrl(videoRes.mediaUrl ?? ''); 
+    
+                if (localId) {
+                    updateRecordByLocalId(localId, {
+                      dreamId,
+                      videoUrl: videoRes.mediaUrl ?? undefined,
+                    });
+                }
             } catch (e: any) {
                 console.error(
-                  '영상 생성 오류:',
-                  e?.response?.status,
-                  e?.response?.data || e
+                    '영상 생성 오류:',
+                    e?.response?.status,
+                    e?.response?.data || e
                 );
-                setVideoUrl('');
-              }
+            }
         };
-            run();
-        }, [params.dreamId]);
+    
+        run();
+    }, [dreamId, videoUrl]);
 
     const handleSkip = () => {
         setShowNextButton(true);
@@ -109,10 +158,14 @@ export default function RecordStep4Screen() {
         }
       
         // ✅ 2) 기존 작성 플로우: selectedDate 유지
-        router.push({
-          pathname: '/record/step5',
-          params: selectedDate ? { selectedDate } : {},
-        } as any);
+        router.replace({
+            pathname: '/record/step5',
+            params: {
+              ...(selectedDate ? { selectedDate } : {}),
+              ...(localId ? { localId } : {}),
+              ...(dreamId ? { dreamId: String(dreamId) } : {}),
+            },
+          } as any);        
     };      
 
     return (

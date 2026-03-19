@@ -152,7 +152,7 @@ export default function RecordStep1Screen() {
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
     const scrollViewRef = React.useRef<KeyboardAwareScrollView>(null);
-     const { setMood, setDreamText, setAnalysis } = useDreamRecord();
+    const { setMood, setDreamText, setAnalysis, saveRecord, updateRecordByLocalId } = useDreamRecord();
 
     // 음성 텍스트가 전달되면 dreamContent에 설정
     useEffect(() => {
@@ -160,16 +160,16 @@ export default function RecordStep1Screen() {
             setDreamContent(params.voiceText);
         }
     }, [params.voiceText]);
-
-
+    
     // [step 1 - 꿈 기록 화면]
-    // saveDream 호출해서 dreamId 받기
+    // 1) 사용자가 입력한 감정/꿈 내용을 로컬 record로 먼저 저장해 localId를 만든다
+    // 2) saveDream 호출로 백엔드에 꿈을 저장하고 dreamId를 받는다
+    // 3) 방금 만든 local record에 dreamId를 연결한 뒤 Step2로 이동한다
     const submitDreamToServer = async (emotion: string, content: string, selectedDate?: string) => {
         setIsSubmitting(true);
         try {
           const date = selectedDate ?? new Date().toISOString().slice(0, 10);
       
-          // 1) 저장해서 dreamId 받기
           const saved = await dreamApi.saveDream({
             date,
             title: '',
@@ -179,26 +179,9 @@ export default function RecordStep1Screen() {
       
           const dreamId = saved.dreamId;
 
-        // ** step 2에서 interpretDream 중복 호출되니까 아래 코드는 임시 주석 처리
-        //   // 2) dreamId로 해몽 호출
-        //   const result = await dreamApi.interpretDream(dreamId);
-      
-        //   // 3) 응답을 상태에 저장 (DreamResponseDTO 기준)
-        //   setAnalysis({
-        //     summary: result.aiSummary ?? content,
-        //     interpretation: result.aiInterpretation ?? '',
-        //     tags: result.tags ?? [],
-        //   });
-        // 
-
           return { dreamId };
         } catch (error: any) {
           console.error('Dream submit error:', error);
-        //   setAnalysis({
-        //     summary: content,
-        //     interpretation: '',
-        //     tags: [],
-        //   });
           return null;
         } finally {
           setIsSubmitting(false);
@@ -209,25 +192,49 @@ export default function RecordStep1Screen() {
         if (!(selectedMood && dreamContent.trim())) {
             Alert.alert('입력 필요', '감정과 꿈 내용을 모두 입력해주세요.');
             return;
-        }
+          }
+        
+          const selectedDate = params.selectedDate as string | undefined;
+          const trimmedContent = dreamContent.trim();
+        
+          setMood(selectedMood);
+          setDreamText(trimmedContent);
+          
+        // 1) 로컬 record를 먼저 saveRecord()로 저장하고 localId를 만든다
+          const localId = saveRecord({
+            selectedDate,
+            title: '',
+            mood: selectedMood,
+            dreamText: trimmedContent,
+            analysis: null,
+            videoUrl: null,
+          });
 
-        const selectedDate = params.selectedDate as string;
-
-        setMood(selectedMood);
-        setDreamText(dreamContent.trim());
-
-        // 1) 꿈 저장 요청 후 dreamId 반환받기
-        const res = await submitDreamToServer(selectedMood, dreamContent.trim(), selectedDate);
-
-        if (!res?.dreamId) {
+        
+          if (!localId) {
+            Alert.alert('오류', '로컬 기록 저장에 실패했어요.');
+            return;
+          }
+        
+          // 2) 백엔드 저장 후 dreamId 받기
+          const res = await submitDreamToServer(selectedMood, trimmedContent, selectedDate);
+        
+          if (!res?.dreamId) {
             Alert.alert('오류', '꿈 저장에 실패했어요. 다시 시도해주세요.');
             return;
-        }
-        const dreamId = res.dreamId;
+          }
+        
+          const dreamId = res.dreamId;
 
-        // 2) dreamId를 Step2로 넘기기
-        router.push(
-            `/record/step2?dreamId=${dreamId}&dreamText=${encodeURIComponent(dreamContent.trim())}${selectedDate ? `&selectedDate=${selectedDate}` : ''}` as any
+          // 3) 방금 저장한 로컬 record에 dreamId 연결
+          updateRecordByLocalId(localId, { dreamId });
+
+        
+          // 4) Step2로 dreamId + localId 같이 넘기기
+          router.replace(
+            `/record/step2?dreamId=${dreamId}&localId=${localId}&dreamText=${encodeURIComponent(trimmedContent)}${
+              selectedDate ? `&selectedDate=${selectedDate}` : ''
+            }` as any
           );
     };
 

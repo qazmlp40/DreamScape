@@ -18,20 +18,21 @@ const colors = {
 };
 
 // [step 3 - 키워드 기반 아이콘 화면]
-// step 2에서 전달받은 dreamId로 AI 영상 생성 요청 
-// videoUrl을 Context에 저장
+// Step2에서 전달받은 dreamId, localId를 유지한 채
+// 사용자가 캐릭터를 누르면 Step4(영상 생성/결과 화면)로 이동한다
 export default function RecordStep4Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     
     const dreamId = params.dreamId as string | undefined;
+    const localId = params.localId as string | undefined;
 
     // 캐릭터 박스 클릭 시 다음 페이지로 이동
     const handleCharacterClick = () => {
         const selectedDate = params.selectedDate as string;
-        router.push(
-            `/record/step4?dreamId=${dreamId}${
+        router.replace(
+            `/record/step4?dreamId=${dreamId}&localId=${localId}${
               selectedDate ? `&selectedDate=${selectedDate}` : ''
             }` as any
         )      

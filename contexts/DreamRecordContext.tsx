@@ -2,7 +2,8 @@ import React, { createContext, ReactNode, useContext, useState } from 'react';
 
 // 타입 정의
 export interface DreamRecord {
-  id: string;
+  localId: string; // 프론트 기록용 - savedRecords 안에서 현재 꿈 record 찾을 때 사용
+  dreamId?: number; // 백엔드 API용 - summarize / interpret / generateVideo 같은 백엔드 API 요청에 사용
   date: string;
   title: string;
   mood: string;
@@ -13,6 +14,17 @@ export interface DreamRecord {
     tags: string[];
   };
   videoUrl?: string;
+}
+
+// 저장할 때 직접 넘길 payload 타입 
+export interface SaveRecordPayload {
+  selectedDate?: string;
+  title: string;
+  mood: string;
+  dreamText: string;
+  analysis?: DreamRecord['analysis'] | null;
+  videoUrl?: string | null;
+  dreamId?: number;
 }
 
 interface DreamRecordContextType {
@@ -36,14 +48,16 @@ interface DreamRecordContextType {
   setMood: (mood: string) => void;
   setDreamText: (text: string) => void;
   setAnalysis: (analysis: DreamRecord['analysis']) => void;
-  setVideoUrl: (url: string) => void;
+  setVideoUrl: (url: string | null) => void;
   
-  saveRecord: (selectedDate?: string) => void;
+  // 여기 수정
+  saveRecord: (payload: SaveRecordPayload) => string | null;
   resetCurrent: () => void;
-  
+
   getRecordByDate: (date: string) => DreamRecord | undefined;
-  getRecordById: (id: string) => DreamRecord | undefined;
-  updateRecord: (id: string, updates: Partial<DreamRecord>) => void;
+  getRecordByLocalId: (localId: string) => DreamRecord | undefined;
+  updateRecordByLocalId: (localId: string, updates: Partial<DreamRecord>) => void;
+  updateRecordByDreamId: (dreamId: number, updates: Partial<DreamRecord>) => void;
   getTodayRecord: () => DreamRecord | undefined;
   hasTodayRecord: () => boolean;
 }
@@ -62,21 +76,33 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
     return new Date().toISOString().split('T')[0];
   };
 
-  const saveRecord = (selectedDate?: string) => {
-    if (!currentMood || !currentDreamText) {
+  const saveRecord = (payload: SaveRecordPayload): string | null => {
+    const {
+      selectedDate,
+      title,
+      mood,
+      dreamText,
+      analysis = null,
+      videoUrl = null,
+      dreamId,
+    } = payload;
+
+    if (!mood || !dreamText.trim()) {
       console.warn('기분과 꿈 내용이 필요합니다.');
-      return;
+      return null;
     }
 
+    const newLocalId = Date.now().toString();
+
     const newRecord: DreamRecord = {
-      id: Date.now().toString(),
+      localId: newLocalId,
+      dreamId: dreamId ?? undefined,
       date: selectedDate || getTodayDate(),
-      // '꿈 제목'이 고정되어서 렌더링 되길래 기본값을 "" (공백)으로
-      title: currentTitle,
-      mood: currentMood,
-      dreamText: currentDreamText,
-      analysis: currentAnalysis || undefined,
-      videoUrl: currentVideoUrl || undefined,
+      title,
+      mood,
+      dreamText: dreamText.trim(),
+      analysis: analysis ?? undefined,
+      videoUrl: videoUrl ?? undefined,
     };
 
     setSavedRecords((prev) => {
@@ -85,6 +111,8 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
       console.log('💾 전체 레코드:', updated);
       return updated;
     });
+
+    return newLocalId;
   };
 
   const resetCurrent = () => {
@@ -99,16 +127,26 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
     return savedRecords.find((record) => record.date === date);
   };
 
-  const getRecordById = (id: string) => {
-    return savedRecords.find((record) => record.id === id);
+  const getRecordByLocalId = (localId: string) => {
+    return savedRecords.find((record) => record.localId === localId);
   };
 
-  const updateRecord = (id: string, updates: Partial<DreamRecord>) => {
+  const updateRecordByLocalId = (localId: string, updates: Partial<DreamRecord>) => {
     setSavedRecords((prev) => {
       const updated = prev.map((record) => 
-        record.id === id ? { ...record, ...updates } : record
+        record.localId === localId ? { ...record, ...updates } : record
       );
-      console.log('✅ 레코드 업데이트 완료:', { id, updates });
+      console.log('✅ 레코드 업데이트 완료:', { localId, updates });
+      return updated;
+    });
+  };
+
+  const updateRecordByDreamId = (dreamId: number, updates: Partial<DreamRecord>) => {
+    setSavedRecords((prev) => {
+      const updated = prev.map((record) =>
+        record.dreamId === dreamId ? { ...record, ...updates } : record
+      );
+      console.log('✅ dreamId 기준 레코드 업데이트 완료:', { dreamId, updates });
       return updated;
     });
   };
@@ -146,8 +184,9 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
     saveRecord,
     resetCurrent,
     getRecordByDate,
-    getRecordById,
-    updateRecord,
+    getRecordByLocalId,
+    updateRecordByLocalId,
+    updateRecordByDreamId,
     getTodayRecord,
     hasTodayRecord,
   };
