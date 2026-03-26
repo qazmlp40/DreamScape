@@ -48,7 +48,7 @@ public class MediaService {
             String videoUrl = getVedioUrl(fileId);
             log.info("videoUrl = " + videoUrl);
 
-            // 임시 return (테스트용)
+            // 디티오 return
             return MediaResponseDTO.builder()
                     .mediaUrl(videoUrl)
                     .build();
@@ -69,7 +69,7 @@ public class MediaService {
         JSONObject body = new JSONObject();
         body.put("model", "MiniMax-Hailuo-2.3");
         body.put("prompt", prompt);
-        body.put("duration", 6);
+        body.put("duration", 10);
 
         // 2. HTTP 요청 생성
         Request request = new Request.Builder()
@@ -115,7 +115,7 @@ public class MediaService {
     public String pollVideoStatus(String taskId) throws Exception {
 
         int max = 30; // 최대 30번 시도
-        int interval = 10000; // 5초마다
+        int interval = 10000; // 10초마다
 
         for (int i = 0; i < max; i++) {
             // get 요청

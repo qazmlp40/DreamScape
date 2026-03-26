@@ -29,7 +29,9 @@ public class SecurityConfig {
                                 "/t_user/login",
                                 "/t_user/delete/all",
                                 "/t_user/**",
-                                "api/media/++"
+                                // 인증없이 허용 (로컬에서 임시 추가)
+                                "/api/**",
+                                "api/media/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

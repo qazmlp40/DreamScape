@@ -70,10 +70,15 @@ public class AnalysisService {
 
 
     // 꿈 요약
-    public DreamResponseDTO summarizeText(String text){
+    public DreamResponseDTO summarizeText(Long dreamId, String text){
         // 입력값 검증
         if (text == null || text.trim().isEmpty()) {
             throw new IllegalArgumentException("꿈 텍스트는 비어있을 수 없습니다");
+        }
+
+        // dreamId null 체크 (로컬에서 추가)
+        if (dreamId == null) {
+            throw new IllegalArgumentException("dreamId는 필수입니다");
         }
 
         try {
@@ -87,15 +92,27 @@ public class AnalysisService {
             // 3. API 호출 및 응답 처리
             String summaryText = callOpenAIAPI(request);
 
-            // 4. Entity 생성 및 저장
-            DreamEntity dreamEntity = new DreamEntity();
-            dreamEntity.setRawText(text);
+            // 수정 전 코드
+//            // 4. Entity 생성 및 저장
+//            DreamEntity dreamEntity = new DreamEntity();
+//            dreamEntity.setRawText(text);
+//            dreamEntity.setAiSummary(summaryText);
+//
+//            // 5. DB 저장
+//            DreamEntity savedDream = dreamRepository.save(dreamEntity); // 레포지토리가 디비에 저장
+
+            // 로컬에서 수정 (기존 row 조회)
+            // 4. 기존 dreamId로 꿈 조회
+            DreamEntity dreamEntity = dreamRepository.findById(dreamId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 꿈입니다. id=" + dreamId));
+
+            // 5. 기존 꿈에 aiSummary 저장
             dreamEntity.setAiSummary(summaryText);
 
-            // 5. DB 저장
-            DreamEntity savedDream = dreamRepository.save(dreamEntity); // 레포지토리가 디비에 저장
+            // 6. DB 저장
+            DreamEntity savedDream = dreamRepository.save(dreamEntity);
 
-            // 6. 저장된 엔티티 정보 디티오로 옮기기 (프엔에 보내주는 값)
+            // 7. 저장된 엔티티 정보 디티오로 옮기기 (프엔에 보내주는 값)
             DreamResponseDTO responseDTO = new DreamResponseDTO();
             responseDTO.setAiSummary(savedDream.getAiSummary());
             responseDTO.setDreamId(savedDream.getDreamId());
