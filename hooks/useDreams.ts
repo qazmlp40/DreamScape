@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { DreamEntry } from '../types/dream';
-import { DreamService } from '../services/dreamService';
+import { DreamEntry } from '@/types/dream';
+import { DreamService } from '@/services/legacy/dreamService';
 
 export const useDreams = () => {
   const [dreams, setDreams] = useState<DreamEntry[]>([]);

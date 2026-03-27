@@ -1,14 +1,16 @@
+import AppModal from '@/components/app/AppModal';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import * as MediaLibrary from 'expo-media-library';
 import React, { useEffect, useState } from 'react';
 import {
     Dimensions,
     Pressable,
+    SafeAreaView,
     StyleSheet,
     Text,
     View
 } from 'react-native';
-// 영상 컴포넌트 임포트
-// 실제 프로젝트에서는 'react-native-video' 설치 필요
+import { useAppDialog } from '@/contexts/AppDialogContext';
 import { useDreamRecord } from '@/contexts/DreamRecordContext';
 import { dreamApi } from '@/services/dreamApi';
 import { ResizeMode, Video } from 'expo-av';
@@ -30,14 +32,14 @@ const FIXED_BUTTON_HEIGHT = 56;
 // [step 4 - 제작 중... / 무드보드 영상 화면]
 // 1) 전달받은 dreamId로 AI 영상 생성 API를 요청한다
 // 2) 생성된 videoUrl을 현재 local record에 저장한다
-// 3) videoUrl이 있으면 영상을 보여주고, 없으면 제작 중 UI를 보여준다
+// 3) videoUrl이 있으면 영상을 보여주고, 저장하기로 갤러리에 저장할 수 있다
 export default function RecordStep4Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { showDialog } = useAppDialog();
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
-
-    const [showNextButton, setShowNextButton] = useState(false);
+    const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
 
     const dreamIdParam = params.dreamId;
     const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
@@ -64,39 +66,6 @@ export default function RecordStep4Screen() {
 
     // 현재 꿈의 videoUrl만 사용 
     const videoUrl = currentRecord?.videoUrl ?? null;
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setShowNextButton(true);
-        }, 5000);
-        return () => clearTimeout(timer);
-    }, []);
-
-    // useEffect(()=> {
-    //     const run = async () => {
-    //         const dreamIdParam = params.dreamId;
-    //         const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
-            
-    //         if (!dreamId || Number.isNaN(dreamId)) {
-    //             console.error('유효하지 않은 dreamId:', dreamIdParam);
-    //             return;
-    //         }
-
-    //         try {
-    //             const videoRes = await dreamApi.generateVideo(dreamId);
-    //             console.log('dreamApi.generateVideo 응답:', videoRes);
-    //             setVideoUrl(videoRes.mediaUrl ?? ''); 
-    //         } catch (e: any) {
-    //             console.error(
-    //               '영상 생성 오류:',
-    //               e?.response?.status,
-    //               e?.response?.data || e
-    //             );
-    //             setVideoUrl('');
-    //           }
-    //     };
-    //         run();
-    //     }, [params.dreamId]);
 
     useEffect(() => {
         const run = async () => {
@@ -138,8 +107,30 @@ export default function RecordStep4Screen() {
         run();
     }, [dreamId, videoUrl]);
 
-    const handleSkip = () => {
-        setShowNextButton(true);
+    const handleSave = () => {
+        setIsSaveModalVisible(true);
+    };
+
+    const handleSaveVideo = async () => {
+        try {
+            if (!videoUrl) {
+                showDialog({ title: '영상 없음', message: '아직 저장할 꿈 영상이 없습니다.' });
+                return;
+            }
+
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+                showDialog({ title: '권한 필요', message: '영상을 저장하려면 갤러리 접근 권한이 필요합니다.' });
+                return;
+            }
+
+            setIsSaveModalVisible(false);
+            await MediaLibrary.saveToLibraryAsync(videoUrl);
+            showDialog({ title: '저장 완료', message: '영상이 갤러리에 저장되었습니다.' });
+        } catch (error) {
+            console.error('영상 저장 오류:', error);
+            showDialog({ title: '오류', message: '영상 저장에 실패했습니다.' });
+        }
     };
 
     const handleNext = () => {
@@ -149,11 +140,11 @@ export default function RecordStep4Screen() {
       
         // ✅ 1) 캘린더에서 온 경우: date/id를 최우선으로 넘김
         if (id) {
-          router.push({ pathname: '/record/step5', params: { id } } as any);
+          router.push({ pathname: '/record/step5', params: { mode: 'review', id } } as any);
           return;
         }
         if (date) {
-          router.push({ pathname: '/record/step5', params: { date } } as any);
+          router.push({ pathname: '/record/step5', params: { mode: 'review', date } } as any);
           return;
         }
       
@@ -161,6 +152,7 @@ export default function RecordStep4Screen() {
         router.replace({
             pathname: '/record/step5',
             params: {
+              mode: 'record',
               ...(selectedDate ? { selectedDate } : {}),
               ...(localId ? { localId } : {}),
               ...(dreamId ? { dreamId: String(dreamId) } : {}),
@@ -171,12 +163,11 @@ export default function RecordStep4Screen() {
     return (
         <>
             <Stack.Screen options={{ headerShown: false }} />
-            <View style={styles.container}>
-            {/* 우측 상단 건너뛰기 */}
+            <SafeAreaView style={styles.container}>
             <View style={styles.header}> 
                 <View />
-                <Pressable onPress={handleSkip}>
-                    <Text style={[styles.skipText, {marginRight: 16}]}>건너뛰기</Text>
+                <Pressable onPress={handleSave}>
+                    <Text style={styles.saveText}>저장하기</Text>
                 </Pressable>
             </View>
 
@@ -198,22 +189,31 @@ export default function RecordStep4Screen() {
                         onLoad={() => console.log('Video loaded')}
                         />
                     ) : (
-                        <Text style={{ color: colors.inactive }}>영상 불러오는 중...</Text>
+                        <Text style={styles.loadingText}>영상 불러오는 중...</Text>
                     )}
                 </View>
             </View>
-            {/* 하단 버튼: 영상 끝난 후에만 표시 */}
-            {showNextButton && (
-                <View style={[styles.buttonContainer, { paddingBottom: BOTTOM_INSET }]}> 
-                    <Pressable
-                        onPress={handleNext}
-                        style={styles.nextButton}
-                    >
-                        <Text style={styles.nextButtonText}>다음</Text>
-                    </Pressable>
-                </View>
-            )}
+
+            <View style={[styles.buttonContainer, { paddingBottom: BOTTOM_INSET }]}> 
+                <Pressable
+                    onPress={handleNext}
+                    style={styles.nextButton}
+                >
+                    <Text style={styles.nextButtonText}>다음</Text>
+                </Pressable>
             </View>
+
+            <AppModal
+                visible={isSaveModalVisible}
+                title="영상을 저장하시겠습니까?"
+                message="현재 꿈 영상을 갤러리에 저장할 수 있습니다."
+                buttons={[
+                    { text: '닫기', style: 'cancel', onPress: () => setIsSaveModalVisible(false) },
+                    { text: '영상 저장', onPress: handleSaveVideo },
+                ]}
+                onClose={() => setIsSaveModalVisible(false)}
+            />
+            </SafeAreaView>
         </>
     );
 }
@@ -227,34 +227,29 @@ const styles = StyleSheet.create({
     videoWrapper: {
         width: screenWidth - 40,
         aspectRatio: 16 / 9,       // 박스를 영상 비율로 고정
-        backgroundColor: 'transparent',
+        backgroundColor: '#000000',
         borderRadius: 12,
         overflow: 'hidden',
       },
     header: {
-        position: 'absolute',
-        top: 64,
-        left: 16,
-        width: 380,
-        height: 24,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        opacity: 1,
-        zIndex: 10,
-        paddingRight: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
     },
-    skipText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: colors.text,
+    saveText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#282828',
+        letterSpacing: -0.36,
     },
     centerContent: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 40,
-        paddingBottom: 100,
+        paddingBottom: 120,
     },
     characterBox: {
         marginBottom: 40,
@@ -276,12 +271,10 @@ const styles = StyleSheet.create({
     characterPlaceholder: {
         fontSize: 60,
     },
-    mainText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.text,
+    loadingText: {
+        fontSize: 14,
+        color: colors.inactive,
         textAlign: 'center',
-        lineHeight: 28,
     },
     buttonContainer: {
         position: 'absolute',

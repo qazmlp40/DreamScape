@@ -9,22 +9,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// ✅ DreamRecordContext 가져오기 (경로는 프로젝트에 맞게)
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 
-// ================= 공통 상수/스타일 =================
-
-const tapIcon = require('../../assets/images/tap_icon.png');
-
 const colors = {
-  primary: '#5B76EE',
   text: '#1F2937',
   background: '#FFFFFF',
-  cardBackground: '#F9FAFB',
   border: '#E5E7EB',
   inactive: '#9CA3AF',
   recordButtonColor: '#BB7CFF',
@@ -34,195 +26,99 @@ const FIXED_BUTTON_HEIGHT = 60;
 const IOS_SAFE_AREA_INSET = Platform.OS === 'ios' ? 34 : 0;
 const REQUIRED_BOTTOM_PADDING = 72 + FIXED_BUTTON_HEIGHT + 16 + 20;
 
-// =============== 1. 최상위: 조건부로 어떤 화면을 보여줄지 결정 ===============
-
 export default function TabsIndex() {
-  const { hasTodayRecord, savedRecords, getTodayRecord } = useDreamRecord();
+  const { hasTodayRecord, getTodayRecord, getTodayRecords, savedRecords } = useDreamRecord();
   const hasTodayDream = hasTodayRecord();
   const todayRecord = getTodayRecord();
-  
+  const todayRecords = getTodayRecords();
+
   console.log('🔍 디버깅:', {
     hasTodayDream,
     savedRecordsCount: savedRecords.length,
     todayRecord,
-    allRecords: savedRecords
+    allRecords: savedRecords,
   });
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.mainContainer}>
       <Stack.Screen options={{ headerShown: false }} />
-      {hasTodayDream ? <TodayDreamScreen /> : <HomeScreen />}
-    </View>
-  );
-}
-
-// =============== 2. 오늘 꿈 없을 때: HomeScreen ===============
-
-function HomeScreen() {
-  return (
-    <View style={homeStyles.mainContainer}>
-      <SafeAreaView style={homeStyles.safeContentArea}>
-        <View style={homeStyles.contentContainer}>
-          {/* --- 1. 꿈 상징 캐릭터 박스 --- */}
-          <View style={homeStyles.characterSection}>
-              <NoteIcon />
-            <View style={{marginTop: 31}}>
-              <Text style={homeStyles.character_text}>오늘의 꿈을 기록해보세요</Text>
-            </View>
-          </View>
-        </View>
-      </SafeAreaView>
-
-      {/* 꿈 기록하기 버튼 -> step1으로 이동 */}
-      <Link href="/record/step1" asChild>
-        <Pressable style={homeStyles.recordButton}>
-          <Text style={homeStyles.recordButtonText}>꿈 기록하기</Text>
-        </Pressable>
-      </Link>
-    </View>
-  );
-}
-
-const homeStyles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  safeContentArea: {
-    flex: 1,
-  },
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 0,
-    paddingBottom: REQUIRED_BOTTOM_PADDING,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 60,
-    marginLeft: -4,
-  },
-  characterSection: {
-    marginTop: 124,
-    marginBottom: 100,
-    alignItems: 'center',
-  },
-  character_text: {
-    color: '#1A1A1A',
-    fontSize: 20,
-    fontWeight: 500
-  },
-  characterPlaceholder: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.inactive,
-  },
-  characterPlaceholderSub: {
-    fontSize: 14,
-    color: colors.inactive,
-    marginTop: 4,
-  },
-  recordButton: {
-    backgroundColor: colors.recordButtonColor,
-    height: FIXED_BUTTON_HEIGHT,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'absolute',
-    bottom: IOS_SAFE_AREA_INSET - 20,
-    left: 18,
-    right: 18,
-    zIndex: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#BB7CFF',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  recordButtonText: {
-    color: colors.background,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-});
-
-// =============== 3. 오늘 꿈 있을 때: TodayDreamScreen ===============
-
-function TodayDreamScreen() {
-  const { getTodayRecord } = useDreamRecord();
-  const todayRecord = getTodayRecord();
-  const insets = useSafeAreaInsets();
-  const BOTTOM_INSET = insets.bottom || 20;
-
-  // 데모용 하드코딩 값
-  const DEMO_TITLE = '돈을 뿌리다 쓰러진 돼지';
-  const DEMO_SUMMARY =
-    '꿈에서 돼지가 하늘을 날며 돈을 뿌렸고, 돈에는 숫자가 적혀 있었습니다. 이후 돼지가 갑자기 쓰러졌고 꿈이 끝났습니다. 꿈을 꾼 후 기분이 이상했습니다.';
-  const DEMO_INTERPRETATION =
-    '예상치 못한 기회와 불안정한 성공을 의미한다.';
-
-  return (
-    <View style={todayStyles.mainContainer}>
-      <SafeAreaView style={todayStyles.safeContentArea}>
-        <ScrollView 
-          style={todayStyles.scrollView}
-          contentContainerStyle={todayStyles.scrollContent}
+      <SafeAreaView style={styles.safeContentArea}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={todayStyles.figmaCard}>
-            <Pigicon width={200} height={200}/>
+          <View style={styles.heroSection}>
+            <NoteIcon />
+            <Text style={styles.heroText}>오늘의 꿈을 기록해보세요</Text>
+            {hasTodayDream ? (
+              <Text style={styles.heroSubText}>기록된 꿈이 아래 카드에 추가돼요</Text>
+            ) : null}
           </View>
-          <View style={todayStyles.whiteCard}>
 
-            {/* 원래 작성되어있던 코드 */}
-            {/* <Text style={todayStyles.dreamTitle}>{todayRecord?.title || DEMO_TITLE}</Text>
-            <Text style={todayStyles.dreamSummary}>{todayRecord?.analysis?.summary || todayRecord?.dreamText || DEMO_SUMMARY}</Text> */}
-            
-            {/* 데모용 - 강제로 렌더링 시키기 코드 */}
-            <Text style={todayStyles.dreamTitle}>
-              {todayRecord?.title?.trim() ? todayRecord.title : DEMO_TITLE}
-            </Text>
-            <Text style={todayStyles.dreamSummary}>
-              {todayRecord?.analysis?.summary ?? DEMO_SUMMARY}
-            </Text>
-
-          </View>
-          <View style={todayStyles.newBox}>
-            <View style={todayStyles.innerBox}>
-              <Text style={todayStyles.innerText}>{todayRecord?.analysis?.interpretation || ''}</Text>
+          {hasTodayDream && todayRecord ? (
+            <View style={styles.summarySection}>
+              <View style={styles.countChip}>
+                <Text style={styles.countChipText}>오늘 기록 {todayRecords.length}개</Text>
+              </View>
+              {todayRecords
+                .slice()
+                .reverse()
+                .map((dream) => (
+                  <Link
+                    key={dream.localId}
+                    href={{
+                      pathname: '/record/step5',
+                      params: {
+                        mode: 'review',
+                        localId: dream.localId,
+                        ...(dream.dreamId ? { dreamId: String(dream.dreamId) } : {}),
+                        date: dream.date,
+                      },
+                    }}
+                    asChild
+                  >
+                    <Pressable style={styles.dreamCard}>
+                      <View style={styles.dreamCardHeader}>
+                        <View style={styles.symbolBadge}>
+                          <Pigicon width={44} height={44} />
+                        </View>
+                        <Text style={styles.dreamTitle} numberOfLines={1}>
+                          {dream.title?.trim() || '제목 없는 꿈'}
+                        </Text>
+                      </View>
+                      <Text style={styles.dreamSummary} numberOfLines={2}>
+                        {dream.analysis?.interpretation ||
+                          dream.analysis?.summary ||
+                          dream.dreamText ||
+                          '아직 해몽이 없습니다.'}
+                      </Text>
+                    </Pressable>
+                  </Link>
+                ))}
             </View>
-          </View>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
 
-      {/* 자세히 보기 버튼 */}
-      <Link
-        href={{
-          pathname: '/record/step5',
-          params: {
-            id: todayRecord?.id ?? '',
-            date: todayRecord?.date ?? '',
-          },
-        }}
-        asChild
-      >
-        <Pressable style={todayStyles.detailButton}>
-          <Text style={todayStyles.detailButtonText}>자세히 보기</Text>
-        </Pressable>
-      </Link>
+      {hasTodayDream && todayRecord ? (
+        <Link href="/record/step1" asChild>
+          <Pressable style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>꿈 더 기록하기</Text>
+          </Pressable>
+        </Link>
+      ) : (
+        <Link href="/record/step1" asChild>
+          <Pressable style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>꿈 기록하기</Text>
+          </Pressable>
+        </Link>
+      )}
     </View>
   );
 }
 
-const todayStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -235,49 +131,86 @@ const todayStyles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: FIXED_BUTTON_HEIGHT + 40,
+    paddingTop: 0,
+    paddingBottom: REQUIRED_BOTTOM_PADDING,
     alignItems: 'center',
   },
-  figmaCard: {
-    width: 200,
-    height: 200,
-    // padding: 119,
-    paddingHorizontal: 58,
-    flexDirection: 'column',
-    justifyContent: 'center',
+  heroSection: {
+    width: '100%',
     alignItems: 'center',
-    // gap: 10,
-    // backgroundColor: colors.cardBackground,
-    borderRadius: 12,
-    // borderWidth: 1,
-    // borderColor: colors.border,
-    marginBottom: 4,
-    alignSelf: 'center',
-     marginTop: 72,
+    marginTop: 124,
+    marginBottom: 48,
   },
-  whiteCard: {
+  heroText: {
+    color: '#1A1A1A',
+    fontSize: 20,
+    fontWeight: '500',
+    marginTop: 31,
+    textAlign: 'center',
+  },
+  heroSubText: {
+    color: '#8B8B8B',
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  summarySection: {
     width: '100%',
     maxWidth: 380,
-    minHeight: 220,
-    padding: 16,
-    paddingTop: 24, // ✅ 상단 여백 추가 (원하는 만큼 조정)
-    justifyContent: 'flex-start', // ✅ center → flex-start로 변경
-    alignItems: 'center',
-    gap: 24,
-    alignSelf: 'stretch',
+    gap: 12,
+  },
+  countChip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#F3E8FF',
+  },
+  countChipText: {
+    color: '#8B5CF6',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  dreamCard: {
+    width: '100%',
+    minHeight: 140,
+    padding: 20,
     borderRadius: 16,
     backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: colors.border,
-    marginTop: 32,
+    gap: 14,
   },
-  cardText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.inactive,
+  dreamCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
-  detailButton: {
+  symbolBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  dreamTitle: {
+    flex: 1,
+    color: '#000',
+    textAlign: 'left',
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 28,
+  },
+  dreamSummary: {
+    color: '#000',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  primaryButton: {
     backgroundColor: colors.recordButtonColor,
     height: FIXED_BUTTON_HEIGHT,
     borderRadius: 8,
@@ -300,48 +233,9 @@ const todayStyles = StyleSheet.create({
       },
     }),
   },
-  detailButtonText: {
+  primaryButtonText: {
     color: colors.background,
     fontSize: 18,
     fontWeight: '700',
-  },
-  dreamTitle: {
-    color: '#000',
-    textAlign: 'center',
-    fontSize: 26,
-    fontWeight: '600',
-    lineHeight: 36,
-    alignSelf: 'stretch',
-  },
-  dreamSummary: {
-    alignSelf: 'stretch',
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '400',
-    lineHeight: 24,
-  },
-  newBox: {
-    padding: 16,
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-    alignSelf: 'stretch',
-    borderRadius: 16,
-    backgroundColor: '#FFF',
-    marginTop: 10,
-    marginBottom: 32,
-    width: '100%',
-    maxWidth: 380,
-  },
-  innerBox: {
-    padding: 16,
-    alignItems: 'flex-start',
-    gap: 10,
-    alignSelf: 'stretch',
-  },
-  innerText: {
-    color: '#000',
-    fontSize: 14,
   },
 });

@@ -54,10 +54,12 @@ interface DreamRecordContextType {
   saveRecord: (payload: SaveRecordPayload) => string | null;
   resetCurrent: () => void;
 
+  getRecordsByDate: (date: string) => DreamRecord[];
   getRecordByDate: (date: string) => DreamRecord | undefined;
   getRecordByLocalId: (localId: string) => DreamRecord | undefined;
   updateRecordByLocalId: (localId: string, updates: Partial<DreamRecord>) => void;
   updateRecordByDreamId: (dreamId: number, updates: Partial<DreamRecord>) => void;
+  getTodayRecords: () => DreamRecord[];
   getTodayRecord: () => DreamRecord | undefined;
   hasTodayRecord: () => boolean;
 }
@@ -92,7 +94,7 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
 
-    const newLocalId = Date.now().toString();
+    const newLocalId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     const newRecord: DreamRecord = {
       localId: newLocalId,
@@ -106,10 +108,7 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
     };
 
     setSavedRecords((prev) => {
-      const updated = [...prev, newRecord];
-      console.log('✅ 저장 완료:', newRecord);
-      console.log('💾 전체 레코드:', updated);
-      return updated;
+      return [...prev, newRecord];
     });
 
     return newLocalId;
@@ -123,8 +122,13 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
     setCurrentVideoUrl(null);
   };
 
+  const getRecordsByDate = (date: string) => {
+    return savedRecords.filter((record) => record.date === date);
+  };
+
   const getRecordByDate = (date: string) => {
-    return savedRecords.find((record) => record.date === date);
+    const matchedRecords = getRecordsByDate(date);
+    return matchedRecords[matchedRecords.length - 1];
   };
 
   const getRecordByLocalId = (localId: string) => {
@@ -133,31 +137,32 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
 
   const updateRecordByLocalId = (localId: string, updates: Partial<DreamRecord>) => {
     setSavedRecords((prev) => {
-      const updated = prev.map((record) => 
+      return prev.map((record) => 
         record.localId === localId ? { ...record, ...updates } : record
       );
-      console.log('✅ 레코드 업데이트 완료:', { localId, updates });
-      return updated;
     });
   };
 
   const updateRecordByDreamId = (dreamId: number, updates: Partial<DreamRecord>) => {
     setSavedRecords((prev) => {
-      const updated = prev.map((record) =>
+      return prev.map((record) =>
         record.dreamId === dreamId ? { ...record, ...updates } : record
       );
-      console.log('✅ dreamId 기준 레코드 업데이트 완료:', { dreamId, updates });
-      return updated;
     });
   };
 
-  const getTodayRecord = () => {
+  const getTodayRecords = () => {
     const today = getTodayDate();
-    return savedRecords.find((record) => record.date === today);
+    return getRecordsByDate(today);
+  };
+
+  const getTodayRecord = () => {
+    const todayRecords = getTodayRecords();
+    return todayRecords[todayRecords.length - 1];
   };
 
   const hasTodayRecord = () => {
-    return getTodayRecord() !== undefined;
+    return getTodayRecords().length > 0;
   };
 
   const value: DreamRecordContextType = {
@@ -183,10 +188,12 @@ export const DreamRecordProvider = ({ children }: { children: ReactNode }) => {
     setVideoUrl: setCurrentVideoUrl,
     saveRecord,
     resetCurrent,
+    getRecordsByDate,
     getRecordByDate,
     getRecordByLocalId,
     updateRecordByLocalId,
     updateRecordByDreamId,
+    getTodayRecords,
     getTodayRecord,
     hasTodayRecord,
   };

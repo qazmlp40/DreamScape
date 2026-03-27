@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
-import { DreamService } from '../services/dreamService';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { useAppDialog } from '@/contexts/AppDialogContext';
+import { DreamService } from '@/services/legacy/dreamService';
 
 export const ServerStatus: React.FC = () => {
+  const { showDialog } = useAppDialog();
   const [connectionStatus, setConnectionStatus] = useState<{
     connected: boolean;
     message: string;
@@ -41,11 +43,10 @@ export const ServerStatus: React.FC = () => {
   };
 
   const showDetails = () => {
-    Alert.alert(
-      '서버 연결 상태',
-      `상태: ${connectionStatus.connected ? '연결됨' : '연결 안됨'}\n메시지: ${connectionStatus.message}`,
-      [{ text: '확인' }]
-    );
+    showDialog({
+      title: '서버 연결 상태',
+      message: `상태: ${connectionStatus.connected ? '연결됨' : '연결 안됨'}\n메시지: ${connectionStatus.message}`,
+    });
   };
 
   return (

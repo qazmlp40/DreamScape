@@ -1,5 +1,39 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DEV_MOCK_DREAMS } from '@/constants/api';
 import { api } from './api';
+
+type MockDreamRecord = {
+  dreamId: number;
+  userId: string;
+  title: string;
+  rawText: string;
+  mood: string;
+  aiSummary?: string;
+  aiInterpretation?: string;
+  tags?: string[];
+  mediaUrl?: string;
+  createdAt: string;
+};
+
+let mockDreamIdSeq = 1;
+const mockDreamStore = new Map<number, MockDreamRecord>();
+
+const getMockDream = (dreamId: number) => mockDreamStore.get(dreamId);
+
+export const getMockDreamById = (dreamId: number) => {
+  return mockDreamStore.get(dreamId) ?? null;
+};
+
+const buildMockSummary = (dreamText: string) => {
+  const trimmed = dreamText.trim();
+  if (!trimmed) return '기록된 꿈이 아직 없습니다.';
+  return trimmed.length > 60 ? `${trimmed.slice(0, 60)}...` : trimmed;
+};
+
+const buildMockInterpretation = (mood: string) => {
+  const moodLabel = mood || '알 수 없음';
+  return `${moodLabel} 감정이 중심이 된 꿈으로 보여요. 지금은 서버 없이 로컬 mock으로 해석 결과를 보여주고 있습니다.`;
+};
 
 export const dreamApi = {
   // ✅ 꿈 생성
@@ -12,23 +46,31 @@ export const dreamApi = {
     interpretation?: string;
   }): Promise<{ dreamId: number }> => { 
 
-    console.log('[dreamApi.saveDream] 호출:', data);
-
     const userId = await AsyncStorage.getItem('userId'); 
 
     if (!userId) {
       throw new Error('userId가 없습니다. 다시 로그인하세요.');
     }
 
-    console.log('[dreamApi.saveDream] 요청 URL:', `/api/dreams/${userId}`);
+    if (DEV_MOCK_DREAMS) {
+      const dreamId = mockDreamIdSeq++;
+      const mockDream: MockDreamRecord = {
+        dreamId,
+        userId,
+        title: data.title,
+        rawText: data.dreamText,
+        mood: data.mood,
+        createdAt: new Date().toISOString(),
+      };
+      mockDreamStore.set(dreamId, mockDream);
+      return { dreamId };
+    }
 
     const response = await api.post(`/api/dreams/${userId}`, { 
       title: data.title, 
       rawText: data.dreamText,
       mood: data.mood,
     });
-
-    console.log('[dreamApi.saveDream] 응답:', response.data);
     return response.data;
   },
 
@@ -39,6 +81,10 @@ export const dreamApi = {
     if (!userId) {
       throw new Error('userId가 없습니다. 다시 로그인하세요.');
     }
+
+    if (DEV_MOCK_DREAMS) {
+      return Array.from(mockDreamStore.values()).filter((dream) => dream.userId === userId);
+    }
   
     const response = await api.get(`/api/dreams/user/${userId}`); 
   
@@ -47,19 +93,31 @@ export const dreamApi = {
  
   // ✅ 날짜별 꿈 조회
   getDreamByDate: async (date: string) => {
+    if (DEV_MOCK_DREAMS) {
+      return Array.from(mockDreamStore.values()).find((dream) => dream.createdAt.slice(0, 10) === date) ?? null;
+    }
     const response = await api.get(`/api/dreams/${date}`);
     return response.data;
   },
 
   // ✅ 꿈 해몽 조회
   interpretDream: async (dreamId: number) => {
-    console.log('[dreamApi.interpretDream] 호출:', dreamId);
+    if (DEV_MOCK_DREAMS) {
+      const existing = getMockDream(dreamId);
+      const aiInterpretation = buildMockInterpretation(existing?.mood ?? '');
+      const tags = existing?.mood ? [existing.mood, 'mock'] : ['mock'];
+
+      if (existing) {
+        mockDreamStore.set(dreamId, { ...existing, aiInterpretation, tags });
+      }
+
+      const mockResponse = { aiInterpretation, tags };
+      return mockResponse;
+    }
 
     const response = await api.get(
       `/api/analysis/interpret/${dreamId}`
     );
-
-    console.log('[dreamApi.interpretDream] 응답:', response.data);
     return response.data;
   },
 
@@ -68,32 +126,67 @@ export const dreamApi = {
     interpretation?: string; 
     summary?: string;
   }) => {
+    if (DEV_MOCK_DREAMS) {
+      const existing = getMockDream(dreamId);
+      if (!existing) return null;
+      const updated = {
+        ...existing,
+        aiInterpretation: data.interpretation ?? existing.aiInterpretation,
+        aiSummary: data.summary ?? existing.aiSummary,
+      };
+      mockDreamStore.set(dreamId, updated);
+      return updated;
+    }
     const response = await api.put(`/api/dreams/${dreamId}`, data); 
     return response.data;
   },
 
   // ✅ AI 영상 생성
   generateVideo: async (dreamId: number) => {
-    console.log('[dreamApi.generateVideo] 호출:', dreamId);
+    if (DEV_MOCK_DREAMS) {
+      const existing = getMockDream(dreamId);
+      const mockResponse = {
+        mediaUrl: null,
+        message: 'mock video generation complete',
+      };
+
+      if (existing) {
+        mockDreamStore.set(dreamId, {
+          ...existing,
+          mediaUrl: mockResponse.mediaUrl ?? undefined,
+        });
+      }
+      return mockResponse;
+    }
 
     const response = await api.post(`/api/media/generate/video`, null, {
       params: { dreamId }, // @RequestParam 대응
     });
-
-    console.log('[dreamApi.generateVideo] 응답:',response.data);
     return response.data; // MediaResponseDTO
   },
 
   // ✅ 꿈 요약
   summarizeDream: async (dreamId: number, dreamText: string) => {
-    console.log('[dreamApi.summarizeDream] 호출:', { dreamId, dreamText });
+    if (DEV_MOCK_DREAMS) {
+      const existing = getMockDream(dreamId);
+      const aiSummary = buildMockSummary(dreamText);
+
+      if (existing) {
+        mockDreamStore.set(dreamId, {
+          ...existing,
+          aiSummary,
+          rawText: dreamText || existing.rawText,
+        });
+      }
+
+      const mockResponse = { dreamId, aiSummary, summary: aiSummary };
+      return mockResponse;
+    }
   
     const response = await api.post('/api/analysis/summarize', {
       dreamId,
       dreamText,
     });
-  
-    console.log('[dreamApi.summarizeDream] 응답:', response.data);
     return response.data; // DreamResponseDTO (aiSummary 포함)
   },
 };

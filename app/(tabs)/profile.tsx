@@ -2,9 +2,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { API_BASE_URL } from '../../constants/api';
+import { useAppDialog } from '../../contexts/AppDialogContext';
 
 const BASE_URL = API_BASE_URL; // TODO: constants/api.ts의 API_BASE_URL을 본인 백엔드 주소로 맞추면 여기만 따라옴.
 
@@ -26,100 +26,6 @@ function useScale() {
   const s = (px: number) => px * (width / BASE_WIDTH);
   return { s, width };
 }
-
-/* ------------------ 공통 버튼 타입 ------------------ */
-
-interface ButtonProps {
-  onPress?: () => void;
-  disabled?: boolean;
-  title?: string;
-}
-
-/* ------------------ CompleteBtn 컴포넌트 (통합) ------------------ */
-
-const CompleteBtn = ({ onPress, disabled = false, title }: ButtonProps) => {
-  const { s } = useScale();
-
-  return (
-    <TouchableOpacity
-      activeOpacity={disabled ? 1 : 0.8}
-      style={[
-        completeBtnStyles.button,
-        disabled ? completeBtnStyles.button_disabled : completeBtnStyles.button_active,
-        { height: s(60) },
-      ]}
-      onPress={disabled ? undefined : onPress}
-    >
-      <Text style={completeBtnStyles.text}>{title}</Text>
-    </TouchableOpacity>
-  );
-};
-
-const completeBtnStyles = StyleSheet.create({
-  button: {
-    width: '100%',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  button_active: {
-    backgroundColor: '#BB7CFF',
-  },
-  button_disabled: {
-    backgroundColor: '#CACACA',
-  },
-  text: {
-    fontSize: 18,
-    fontFamily: 'Roboto-Regular',
-    color: '#FFF',
-    textAlign: 'center',
-    fontWeight: '700',
-  },
-});
-
-/* ------------------ Profile_CancleBtn 컴포넌트 (통합) ------------------ */
-
-const Profile_CancleBtn = ({ onPress, disabled = false, title }: ButtonProps) => {
-  const { s } = useScale();
-
-  return (
-    <TouchableOpacity
-      activeOpacity={disabled ? 1 : 0.8}
-      style={[
-        cancelBtnStyles.button,
-        disabled ? cancelBtnStyles.button_disabled : cancelBtnStyles.button_active,
-        { height: s(60) },
-      ]}
-      onPress={disabled ? undefined : onPress}
-    >
-      <Text style={cancelBtnStyles.text}>{title}</Text>
-    </TouchableOpacity>
-  );
-};
-
-const cancelBtnStyles = StyleSheet.create({
-  button: {
-    width: '100%',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#BB7CFF',
-  },
-  button_active: {
-    backgroundColor: '#FFF',
-  },
-  button_disabled: {
-    backgroundColor: '#CACACA',
-  },
-  text: {
-    fontSize: 18,
-    fontFamily: 'Roboto-Regular',
-    color: '#BB7CFF',
-    textAlign: 'center',
-    fontWeight: '700',
-  },
-});
 
 /* ------------------ Profile_Menu_Btn 컴포넌트 (통합) ------------------ */
 
@@ -264,22 +170,12 @@ const Profile_Icon = () => {
 /* ------------------ Profile 메인 컴포넌트 ------------------ */
 
 const Profile = () => {
-  const [isLogoutPopupVisible, setLogoutPopupVisible] = useState(false);
-  const [isWithdrawPopupVisible, setWithdrawPopupVisible] = useState(false);
-
-  const showLogoutPopup = () => {
-    setLogoutPopupVisible(true);
-  };
-
-  const showWithdrawPopup = () => {
-    setWithdrawPopupVisible(true);
-  };
+  const { showDialog } = useAppDialog();
 
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('userId');
-      setLogoutPopupVisible(false);
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('로그아웃 처리 오류:', error);
@@ -290,7 +186,7 @@ const Profile = () => {
     try {
       const userId = await AsyncStorage.getItem('userId');
       if (!userId) {
-        Alert.alert('오류', '회원 정보를 찾을 수 없습니다. 다시 로그인 해주세요.');
+        showDialog({ title: '오류', message: '회원 정보를 찾을 수 없습니다. 다시 로그인 해주세요.' });
         return;
       }
 
@@ -306,7 +202,6 @@ const Profile = () => {
 
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('userId');
-      setWithdrawPopupVisible(false);
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('회원탈퇴 처리 중 오류:', error);
@@ -332,66 +227,33 @@ const Profile = () => {
           <Profile_Menu_Btn
             label={' 로그아웃'}
             icon={<Logout_Icon />}
-            onPress={showLogoutPopup}
+            onPress={() =>
+              showDialog({
+                title: '로그아웃',
+                message: '로그아웃 하시겠습니까?',
+                buttons: [
+                  { text: '취소', style: 'cancel' },
+                  { text: '로그아웃', onPress: handleLogout },
+                ],
+              })
+            }
           />
           <Profile_Menu_Btn
             label={' 계정 탈퇴'}
             icon={<Delete_Account_Icon />}
-            onPress={showWithdrawPopup}
+            onPress={() =>
+              showDialog({
+                title: '계정 탈퇴',
+                message: '탈퇴 시 이전 내용은 복구되지 않습니다.',
+                buttons: [
+                  { text: '취소', style: 'cancel' },
+                  { text: '탈퇴하기', style: 'destructive', onPress: handleWithdraw },
+                ],
+              })
+            }
           />
         </View>
       </View>
-
-      {/* 로그아웃 팝업 */}
-      {isLogoutPopupVisible && (
-        <View style={styles.popup_overlay}>
-          <View style={[styles.popup_box, { width: s(348), height: s(160) }]}>
-            <View style={[styles.text_box, { marginTop: s(32) }]}>
-              <Text style={styles.text1}>'로그아웃' 하시겠습니까?</Text>
-            </View>
-            <View
-              style={[
-                styles.btn_container,
-                { width: s(152), position: 'absolute', bottom: s(10) },
-              ]}
-            >
-              <CompleteBtn title={'로그아웃'} onPress={handleLogout} />
-              <Profile_CancleBtn
-                title={'취소'}
-                onPress={() => {
-                  setLogoutPopupVisible(false);
-                }}
-              />
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* 회원탈퇴 팝업 */}
-      {isWithdrawPopupVisible && (
-        <View style={styles.popup_overlay}>
-          <View style={[styles.popup_box, { width: s(348), height: s(160) }]}>
-            <View style={[styles.text_box, { marginTop: s(20) }]}>
-              <Text style={styles.text1}>'계정탈퇴' 하시겠습니까?</Text>
-              <Text style={styles.text2}>탈퇴시, 이전 내용은 복구되지 않습니다!</Text>
-            </View>
-            <View
-              style={[
-                styles.btn_container,
-                { width: s(152), position: 'absolute', bottom: s(10) },
-              ]}
-            >
-              <CompleteBtn title={'탈퇴하기'} onPress={() => router.replace('/(auth)/login')} />
-              <Profile_CancleBtn
-                title={'취소'}
-                onPress={() => {
-                  setWithdrawPopupVisible(false);
-                }}
-              />
-            </View>
-          </View>
-        </View>
-      )}
     </SafeAreaView>
   );
 };
@@ -415,45 +277,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'yellow',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  popup_overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  popup_box: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    alignItems: 'center',
-  },
-  text_box: {
-    width: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text1: {
-    fontFamily: 'Roboto-Regular',
-    fontSize: 20,
-    textAlign: 'center',
-    color: '#232527',
-    fontWeight: '700',
-  },
-  text2: {
-    fontFamily: 'Roboto-Medium',
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#808991',
-    fontWeight: '500',
-  },
-  btn_container: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
   },
 });

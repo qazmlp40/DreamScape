@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
     Dimensions,
     Image,
     ImageSourcePropType,
@@ -20,9 +19,10 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '../../constants/api';
+import { useAppDialog } from '../../contexts/AppDialogContext';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 import IMAGES from '../assets/images';
-import { clamp } from '../utils/responsive';
+import { clamp } from '@/utils/responsive';
 
 // 화면 크기
 const { width: screenWidth } = Dimensions.get('window');
@@ -149,6 +149,7 @@ export default function RecordStep1Screen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { showDialog } = useAppDialog();
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
     const scrollViewRef = React.useRef<KeyboardAwareScrollView>(null);
@@ -190,7 +191,7 @@ export default function RecordStep1Screen() {
 
     const handleNext = async () => {
         if (!(selectedMood && dreamContent.trim())) {
-            Alert.alert('입력 필요', '감정과 꿈 내용을 모두 입력해주세요.');
+            showDialog({ title: '입력 필요', message: '감정과 꿈 내용을 모두 입력해주세요.' });
             return;
           }
         
@@ -212,7 +213,7 @@ export default function RecordStep1Screen() {
 
         
           if (!localId) {
-            Alert.alert('오류', '로컬 기록 저장에 실패했어요.');
+            showDialog({ title: '오류', message: '로컬 기록 저장에 실패했어요.' });
             return;
           }
         
@@ -220,7 +221,7 @@ export default function RecordStep1Screen() {
           const res = await submitDreamToServer(selectedMood, trimmedContent, selectedDate);
         
           if (!res?.dreamId) {
-            Alert.alert('오류', '꿈 저장에 실패했어요. 다시 시도해주세요.');
+            showDialog({ title: '오류', message: '꿈 저장에 실패했어요. 다시 시도해주세요.' });
             return;
           }
         

@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
     Animated,
     Dimensions,
     Image,
@@ -16,6 +15,7 @@ import {
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppDialog } from '../contexts/AppDialogContext';
 import { useDreamRecord } from '../contexts/DreamRecordContext';
 import IMAGES from './assets/images';
 
@@ -146,13 +146,15 @@ const headerStyles = StyleSheet.create({
 });
 
 export default function DreamEditScreen() {
+    const { showDialog } = useAppDialog();
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
-    const { getRecordByDate, getRecordById, updateRecord } = useDreamRecord();
+    const { getRecordByDate, getRecordByLocalId, updateRecordByLocalId } = useDreamRecord();
     
     const dreamDate = params.date as string;
-    const dreamId = params.id as string;
+    const dreamId = params.dreamId as string | undefined;
+    const localId = params.localId as string | undefined;
     
     const [dreamData, setDreamData] = useState<any>(null);
     const [dreamText, setDreamText] = useState('');
@@ -163,12 +165,12 @@ export default function DreamEditScreen() {
     const contentAnimation = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        console.log('DreamEdit - Params:', { dreamDate, dreamId });
+        console.log('DreamEdit - Params:', { dreamDate, dreamId, localId });
         
         let foundDream = null;
-        if (dreamId) {
-            foundDream = getRecordById(dreamId);
-            console.log('Found dream by ID:', foundDream);
+        if (localId) {
+            foundDream = getRecordByLocalId(localId);
+            console.log('Found dream by localId:', foundDream);
         } else if (dreamDate) {
             foundDream = getRecordByDate(dreamDate);
             console.log('Found dream by date:', foundDream);
@@ -182,11 +184,11 @@ export default function DreamEditScreen() {
         } else if (dreamDate) {
             // 선택한 날짜에 꿈 기록이 없는 경우
             console.log('No dream found for date, creating empty data');
-            setDreamData({ id: '', date: dreamDate, mood: '1', dreamText: '', analysis: null });
+            setDreamData({ localId: '', date: dreamDate, mood: '1', dreamText: '', analysis: null });
             setDreamText('');
             setIsModified(false);
         }
-    }, [dreamDate, dreamId, getRecordByDate, getRecordById]);
+    }, [dreamDate, dreamId, localId, getRecordByDate, getRecordByLocalId]);
 
     // 음성 텍스트가 전달되면 dreamText에 설정
     useEffect(() => {
@@ -195,7 +197,7 @@ export default function DreamEditScreen() {
             setIsModified(true);
             // 음성 텍스트가 있어도 dreamData가 없으면 기본 데이터 생성
             if (!dreamData && dreamDate) {
-                setDreamData({ id: '', date: dreamDate, mood: '1', dreamText: '', analysis: null });
+                setDreamData({ localId: '', date: dreamDate, mood: '1', dreamText: '', analysis: null });
             }
         }
     }, [params.voiceText, dreamData, dreamDate]);
@@ -246,43 +248,43 @@ export default function DreamEditScreen() {
 
     const handleBack = () => {
         if (isModified) {
-            Alert.alert(
-                '변경사항 저장',
-                '수정한 내용을 저장하지 않고 나가시겠습니까?',
-                [
+            showDialog({
+                title: '변경사항 저장',
+                message: '수정한 내용을 저장하지 않고 나가시겠습니까?',
+                buttons: [
                     { text: '취소', style: 'cancel' },
-                    { text: '나가기', style: 'destructive', onPress: () => router.back() },
-                ]
-            );
+                    { text: '나가기', onPress: () => router.back() },
+                ],
+            });
         } else {
             router.back();
         }
     };
 
     const handleMicPress = () => {
-        const returnPath = `/dream-edit?date=${dreamDate}${dreamId ? `&id=${dreamId}` : ''}`;
+        const returnPath = `/dream-edit?date=${dreamDate}${dreamId ? `&dreamId=${dreamId}` : ''}${localId ? `&localId=${localId}` : ''}`;
         router.push(`/voice-record?returnPath=${encodeURIComponent(returnPath)}`);
     };
 
     const handleComplete = () => {
         if (!dreamText.trim()) {
-            Alert.alert('알림', '꿈 내용을 입력해주세요.');
+            showDialog({ title: '알림', message: '꿈 내용을 입력해주세요.' });
             return;
         }
 
-        if (dreamData?.id) {
+        if (dreamData?.localId) {
             // 기존 레코드 업데이트
-            updateRecord(dreamData.id, {
+            updateRecordByLocalId(dreamData.localId, {
                 dreamText,
                 mood: dreamData.mood, // ✅ 기존 유지
               });              
         }
 
-        Alert.alert(
-            '수정 완료',
-            '꿈 내용이 수정되었습니다.',
-            [{ text: '확인', onPress: () => router.push('/(tabs)/calendar') }]
-        );
+        showDialog({
+            title: '수정 완료',
+            message: '꿈 내용이 수정되었습니다.',
+            buttons: [{ text: '확인', onPress: () => router.push('/(tabs)/calendar') }],
+        });
     };
 
     const getEmotionIcon = () => {

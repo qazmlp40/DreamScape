@@ -1,5 +1,5 @@
-import { DreamEntry } from '../types/dream';
-import { API_CONFIG } from '../config';
+import { DreamEntry } from '@/types/dream';
+import { API_CONFIG } from '@/services/legacy/config';
 import axios from 'axios';
 
 // Axios 인스턴스 생성

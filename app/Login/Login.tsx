@@ -8,7 +8,7 @@
  * 4. 에러 메시지 개선 - 타임아웃/연결 실패 시 구체적인 메시지 표시
  * 5. 중복 요청 방지 - loading 상태로 중복 클릭 방지
  */
-import { API_BASE_URL } from '@/constants/api';
+import { API_BASE_URL, DEV_MOCK_AUTH } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { router, Stack } from 'expo-router';
@@ -138,6 +138,14 @@ const Login: React.FC = () => {
 
     try {
       setLoading(true);
+
+      if (DEV_MOCK_AUTH) {
+        await AsyncStorage.setItem('accessToken', 'dev-access-token');
+        await AsyncStorage.setItem('userId', '1');
+        console.log('DEV_MOCK_AUTH 로그인 우회');
+        router.replace('/(tabs)');
+        return;
+      }
       
       // 10초 타임아웃 설정
       const controller = new AbortController();
