@@ -12,6 +12,7 @@ import { API_BASE_URL, DEV_MOCK_AUTH } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { router, Stack } from 'expo-router';
+import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
@@ -22,7 +23,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import GoogleIcon from './Icons/google.svg';
 import Logo from './Icons/logo';
+
+WebBrowser.maybeCompleteAuthSession();
 
 /* ------------------ useScale 훅 ------------------ */
 
@@ -201,7 +205,20 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   }, [userID, userPW, isDisabled, loading]);
-
+  
+  const handleGoogleLogin = async () => {
+    try {
+      // 1) 구글 인증창 열기
+      // 2) 구글 인증 성공 후 idToken 같은 값 받기
+      // 3) 백엔드에 전달
+      // 4) 백엔드 JWT 응답 받기
+      // 5) AsyncStorage 저장
+      // 6) router.replace("/(tabs)")
+    } catch (error) {
+      console.log("구글 로그인 에러:", error);
+    }
+  };
+  
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -211,7 +228,7 @@ const Login: React.FC = () => {
         </View>
 
         <View style={[styles.input_container, { marginTop: s(32), marginHorizontal: s(32) }]}>
-          <Input value={userID} setValue={setUserID} placeholder="아이디" />
+          <Input value={userID} setValue={setUserID} placeholder="이메일" />
           <View style={{ height: 32 }} />
           <Input
             value={userPW}
@@ -240,6 +257,19 @@ const Login: React.FC = () => {
         >
           {/* 완료 버튼 - 로딩 중일 때 "처리중..." 표시 */}
           <CompleteBtn onPress={handleLogin} disabled={isDisabled || loading} title={loading ? "처리중..." : "완료"} />
+        </View>
+        <View style={[styles.google_container, {marginTop: s(44)}]}>
+          <View style={styles.google_divider_container}>
+            <View style={[styles.divider,{width: s(125), marginRight: s(16)}]}/>
+            <Text style={styles.google_text1}>간편 로그인</Text>
+            <View style={[styles.divider,{width: s(125), marginLeft: s(16)}]}/>
+          </View>
+          <View style={[styles.google_btn_container, {marginTop: s(32)}]}>
+            <TouchableOpacity onPress={handleGoogleLogin}>
+              <GoogleIcon/>
+            </TouchableOpacity>
+            <Text style={[styles.google_text2, {marginTop: s(8)}]}>구글</Text>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -343,4 +373,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '700',
   },
+  divider:{
+    height: 1,
+    backgroundColor: '#999',
+  },
+  google_text1: {
+    color: '#474747',
+    fontSize: 14,
+    fontWeight: 400
+  },
+  google_text2: {
+    color: '#000',
+    fontSize: 14,
+    fontWeight: 400
+  },
+  google_container: {
+    width: "100%",
+  },
+  google_divider_container: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  google_btn_container: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });
+ 

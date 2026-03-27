@@ -182,32 +182,46 @@ const Profile = () => {
     }
   };
 
+
   const handleWithdraw = async () => {
     try {
       const userId = await AsyncStorage.getItem('userId');
-      if (!userId) {
-        showDialog({ title: '오류', message: '회원 정보를 찾을 수 없습니다. 다시 로그인 해주세요.' });
+      const accessToken = await AsyncStorage.getItem('accessToken');
+  
+      if (!userId || !accessToken) {
+        showDialog({
+          title: '오류',
+          message: '회원 정보를 찾을 수 없습니다. 다시 로그인 해주세요.',
+        });
         return;
       }
-
-      const res = await fetch(`${BASE_URL}/api/users/${userId}`, {
+  
+      const res = await fetch(`${BASE_URL}/t_user/${userId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
-
+  
       if (!res.ok) {
-        console.error('회원탈퇴 요청 실패:', res.status);
+        showDialog({
+          title: '탈퇴 실패',
+          message: `회원탈퇴 요청에 실패했습니다. (${res.status})`,
+        });
         return;
       }
-
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('userId');
+  
+      await AsyncStorage.multiRemove(['accessToken', 'userId']);
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('회원탈퇴 처리 중 오류:', error);
+      showDialog({
+        title: '오류',
+        message: '회원탈퇴 중 문제가 발생했습니다.',
+      });
     }
   };
-
   const { s } = useScale();
 
   return (
