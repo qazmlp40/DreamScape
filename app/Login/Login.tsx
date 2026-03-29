@@ -11,9 +11,11 @@
 import { API_BASE_URL, DEV_MOCK_AUTH } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
 import { router, Stack } from 'expo-router';
 import * as WebBrowser from "expo-web-browser";
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -120,10 +122,35 @@ const Login: React.FC = () => {
 
   const [pwError, setPwError] = useState(false);
   const [globalErr, setGlobalErr] = useState('');
+  const [googleErr, setGoogleErr] = useState('');
 
   const isDisabled = userID.trim() == '' || userPW.trim() == '';
 
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // 구글 로그인 후 리다이렉트 주소
+  const redirectUri = makeRedirectUri({
+    scheme: 'dreamappnew',
+  });
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: '임시 ANDROID_CLIENT_ID',
+    iosClientId: '임시 IOS_CLIENT_ID',
+    webClientId: '임시 WEB_CLIENT_ID',
+    redirectUri,
+  });
+
+  // 앱 로그인 완료 처리 (구글 로그인이랑 그냥 로그인 공통으로 쓰는거)
+  const completeLogin = async (token: string, userId?: string | number) => {
+    await AsyncStorage.setItem('accessToken', token);
+  
+    if (userId !== undefined) {
+      await AsyncStorage.setItem('userId', String(userId));
+    }
+  
+    router.replace('/(tabs)');
+  };
 
   // 로그인 처리 함수
   const handleLogin = useCallback(async () => {
@@ -144,10 +171,10 @@ const Login: React.FC = () => {
       setLoading(true);
 
       if (DEV_MOCK_AUTH) {
-        await AsyncStorage.setItem('accessToken', 'dev-access-token');
-        await AsyncStorage.setItem('userId', '1');
+        // await AsyncStorage.setItem('accessToken', 'dev-access-token');
+        // await AsyncStorage.setItem('userId', '1');
+        await completeLogin('dev-access-token', '1');
         console.log('DEV_MOCK_AUTH 로그인 우회');
-        router.replace('/(tabs)');
         return;
       }
       
@@ -167,22 +194,8 @@ const Login: React.FC = () => {
 
       // 성공 판정: token 유무로 체크
       if (res.ok && data?.accessToken) {
-        const token = data.accessToken;
-
-        // 토큰 저장
-        await AsyncStorage.setItem('accessToken', token);
-
-        // userId 저장
-        if (data.userId) {
-          await AsyncStorage.setItem('userId', String(data.userId));
-          console.log('userId 저장 완료:', data.userId);
-        }
-
-        console.log('로그인 성공, 토큰 저장 완료:', token);
-
-        // 로그인 성공 -> 페이지 이동
-        router.replace('/(tabs)');
-        setLoading(false);
+        await completeLogin(data.accessToken, data.userId);
+        console.log('로그인 성공');
         return;
       }
 
@@ -206,18 +219,41 @@ const Login: React.FC = () => {
     }
   }, [userID, userPW, isDisabled, loading]);
   
+  // 구글 로그인 시작 버튼
   const handleGoogleLogin = async () => {
     try {
-      // 1) 구글 인증창 열기
-      // 2) 구글 인증 성공 후 idToken 같은 값 받기
-      // 3) 백엔드에 전달
-      // 4) 백엔드 JWT 응답 받기
-      // 5) AsyncStorage 저장
-      // 6) router.replace("/(tabs)")
+      setGoogleErr('');
+      setGoogleLoading(true);
+  
+      await promptAsync(); // 구글 로그인 창 열기
     } catch (error) {
-      console.log("구글 로그인 에러:", error);
+      console.log('구글 로그인 에러:', error);
+      setGoogleErr('구글 로그인 창을 여는 데 실패했습니다.');
+    } finally {
+      setGoogleLoading(false);
     }
   };
+
+  // 구글 로그인 성공 후 응답 처리
+  const handleGoogleAuthSuccess = async (googleResult: any) => {
+    console.log('구글 인증 성공 응답:', googleResult);
+
+    const idToken = googleResult?.authentication?.idToken;
+    const accessToken = googleResult?.authentication?.accessToken;
+  
+    console.log('idToken:', idToken);
+    console.log('accessToken:', accessToken);
+
+    // 토큰 꺼내기 (idToken/ accessToken)
+    // 백엔드 api 호출 
+    // completeLogin(data.accessToken, data.userId) : 성공 처리 함수 호출 
+  };
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      handleGoogleAuthSuccess(response);
+    }
+  }, [response]);
   
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -265,7 +301,7 @@ const Login: React.FC = () => {
             <View style={[styles.divider,{width: s(125), marginLeft: s(16)}]}/>
           </View>
           <View style={[styles.google_btn_container, {marginTop: s(32)}]}>
-            <TouchableOpacity onPress={handleGoogleLogin}>
+            <TouchableOpacity onPress={handleGoogleLogin} disabled={!request || googleLoading}>
               <GoogleIcon/>
             </TouchableOpacity>
             <Text style={[styles.google_text2, {marginTop: s(8)}]}>구글</Text>

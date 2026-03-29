@@ -313,13 +313,9 @@ const Signup: React.FC = () => {
 
       console.log("[Signup] 파싱된 응답:", data);
 
-      const responseMessage = data?.message?.trim();
-      const isAppLevelFailure =
-        !!responseMessage &&
-        responseMessage !== "회원가입이 완료되었습니다." &&
-        responseMessage !== "회원가입 성공";
+      const responseMessage = data?.message?.trim() || text?.trim();
 
-      if (!res.ok || isAppLevelFailure) {
+      if (!res.ok) {
         setGlobalErr(responseMessage || "회원가입에 실패했습니다.");
         return;
       }
