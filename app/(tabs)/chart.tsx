@@ -34,13 +34,13 @@ interface DreamKeywordItem {
 
 // 감정 이모지 PNG 파일들
 const emotionImages = {
-  happy: require("../../assets/images/emotion_icon/happy_icon.png"),
-  sad: require("../../assets/images/emotion_icon/Sad_icon.png"),
-  anger: require("../../assets/images/emotion_icon/anger_icon.png"),
-  fear: require("../../assets/images/emotion_icon/Scared_icon.png"),
-  mixed: require("../../assets/images/emotion_icon/Ambiguous_icon.png"),
-  touched: require("../../assets/images/emotion_icon/Impressed_icon.png"),
-  excited: require("../../assets/images/emotion_icon/Excitement_icon.png"),
+  happy: require("../../assets/images/icons/emotion_icon/happy_icon.png"),
+  sad: require("../../assets/images/icons/emotion_icon/Sad_icon.png"),
+  anger: require("../../assets/images/icons/emotion_icon/anger_icon.png"),
+  fear: require("../../assets/images/icons/emotion_icon/Scared_icon.png"),
+  mixed: require("../../assets/images/icons/emotion_icon/Ambiguous_icon.png"),
+  touched: require("../../assets/images/icons/emotion_icon/Impressed_icon.png"),
+  excited: require("../../assets/images/icons/emotion_icon/Excitement_icon.png"),
 };
 
 /* ----------------------- useScale (내장) ----------------------- */
