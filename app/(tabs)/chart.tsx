@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import { API_BASE_URL } from "@/constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Image,
@@ -25,9 +27,19 @@ type EmotionKey =
   | "touched"
   | "excited";
 
+// interface DreamKeywordItem {
+//   dreamSummary: string;
+//   interpretation: string;
+// }
+
 interface DreamKeywordItem {
-  dreamSummary: string;
-  interpretation: string;
+  keyword: string;
+  count: number;
+}
+
+interface DreamChartResponse {
+  moodDistribution: Record<string, number>;
+  topKeywords: DreamKeywordItem[];
 }
 
 /* ----------------------- Mock Data ----------------------- */
@@ -273,31 +285,19 @@ interface KeywordCloudProps {
   items: DreamKeywordItem[];
 }
 
+// 키워드 클라우드 컴포넌트 (백엔드 연동 버전)
 const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
   const { s } = useScale();
 
-  // 키워드 빈도 계산 (동일한 dreamSummary 수 세기)
-  const keywordFreq = items.reduce(
-    (acc, item) => {
-      acc[item.dreamSummary] = (acc[item.dreamSummary] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  const sortedKeywords = [...items].sort((a, b) => b.count - a.count);
+  const maxFreq = Math.max(...sortedKeywords.map((item) => item.count), 1);
+  const minFreq = Math.min(...sortedKeywords.map((item) => item.count), 1);
 
-  const uniqueKeywords = Object.entries(keywordFreq).sort(
-    (a, b) => b[1] - a[1],
-  );
-  const maxFreq = Math.max(...uniqueKeywords.map(([, freq]) => freq), 1);
-  const minFreq = Math.min(...uniqueKeywords.map(([, freq]) => freq), 1);
-
-  // 크기 범위: 12pt ~ 24pt
   const getTagFontSize = (freq: number) => {
     const ratio = (freq - minFreq) / (maxFreq - minFreq || 1);
     return s(12 + ratio * 12);
   };
 
-  // 불투명도 범위: 0.6 ~ 1.0
   const getTagOpacity = (freq: number) => {
     const ratio = (freq - minFreq) / (maxFreq - minFreq || 1);
     return 0.6 + ratio * 0.4;
@@ -315,13 +315,13 @@ const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
       </Text>
 
       <View style={keywordStyles.cloudContainer}>
-        {uniqueKeywords.map(([keyword, freq], index) => (
+        {sortedKeywords.map((item, index) => (
           <View
-            key={index}
+            key={`${item.keyword}-${index}`}
             style={[
               keywordStyles.cloudTag,
               {
-                opacity: getTagOpacity(freq),
+                opacity: getTagOpacity(item.count),
               },
             ]}
           >
@@ -329,12 +329,12 @@ const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
               style={[
                 keywordStyles.cloudTagText,
                 {
-                  fontSize: getTagFontSize(freq),
+                  fontSize: getTagFontSize(item.count),
                 },
               ]}
               numberOfLines={1}
             >
-              {keyword}
+              {item.keyword}
             </Text>
           </View>
         ))}
@@ -596,6 +596,31 @@ const Chart = () => {
 
   const { savedRecords } = useDreamRecord();
 
+  const [chartData, setChartData] = useState<Record<EmotionKey, number>>({
+    happy: 0,
+    sad: 0,
+    anger: 0,
+    fear: 0,
+    mixed: 0,
+    touched: 0,
+    excited: 0,
+  });
+  
+  const [topKeywords, setTopKeywords] = useState<DreamKeywordItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [chartError, setChartError] = useState("");
+
+  // 백엔드 <-> 프론트 키 매핑
+  const moodLabelToEmotionKey: Record<string, EmotionKey> = {
+    행복: "happy",
+    슬픔: "sad",
+    분노: "anger",
+    공포: "fear",
+    미묘: "mixed",
+    감동: "touched",
+    신남: "excited",
+  };
+
   // ✅ 2) helpers / MONTH_KEYS는 그 다음
   const pad2 = (n: number) => String(n).padStart(2, "0");
   const toMonthKey = (d: Date) =>
@@ -676,22 +701,6 @@ const Chart = () => {
   // ✅ 날짜가 속한 "월의 몇 주차"인지 (1~5)
   const getWeekNoInMonth = (d: Date) => Math.ceil(d.getDate() / 7);
 
-  // ✅ 선택된 monthKey 기준으로 해당 달의 주차 전체 만들기
-  //   const getWeeksInMonth = (year: number, monthIndex0: number) => {
-  //     const lastDay = new Date(year, monthIndex0 + 1, 0).getDate();
-  //     return Math.ceil(lastDay / 7);
-  //   };
-
-  //   const weeksInSelectedMonth = getWeeksInMonth(year, monthIndexForRange);
-
-  //   const WEEK_KEYS_FOR_MONTH = Array.from({ length: weeksInSelectedMonth }, (_, i) => {
-  //     const weekNo = i + 1;
-  //     return `${year}-${pad2(monthIndexForRange + 1)}-${weekNo}`;
-  //   });
-
-  // // 휠에 보여줄 주차 라벨
-  // const WEEKS = WEEK_KEYS_FOR_MONTH.map((key) => `${Number(key.split('-')[2])}주차`);
-
   // ✅ 선택된 monthKey 기준으로 "데이터가 있는 주차"만 만들기
   const weekNoSet = new Set<number>();
 
@@ -733,6 +742,110 @@ const Chart = () => {
   const selectedMonth = MONTHS[selectedMonthIndex];
   const selectedWeek = WEEKS[safeWeekIndex];
 
+  // baseDate 계산 함수 (월간/ 주간 선택값 기준으로 서버에 보낼 날짜 생성)
+  const selectedBaseDate = useMemo(() => {
+    if (!isWeekly) {
+      const [yearStr, monthStr] = monthKey.split("-");
+      const yearNum = Number(yearStr);
+      const monthNum = Number(monthStr); // 1~12
+  
+      const lastDay = new Date(yearNum, monthNum, 0); // 해당 월 마지막 날
+      const yyyy = lastDay.getFullYear();
+      const mm = String(lastDay.getMonth() + 1).padStart(2, "0");
+      const dd = String(lastDay.getDate()).padStart(2, "0");
+  
+      return `${yyyy}-${mm}-${dd}`;
+    }
+  
+    const [yearStr, monthStr, weekNoStr] = weekKey.split("-");
+    const yearNum = Number(yearStr);
+    const monthNum = Number(monthStr) - 1;
+    const weekNoNum = Number(weekNoStr);
+  
+    const startDay = 1 + (weekNoNum - 1) * 7;
+    const endDate = new Date(yearNum, monthNum, startDay + 6);
+  
+    const yyyy = endDate.getFullYear();
+    const mm = String(endDate.getMonth() + 1).padStart(2, "0");
+    const dd = String(endDate.getDate()).padStart(2, "0");
+  
+    return `${yyyy}-${mm}-${dd}`;
+  }, [isWeekly, monthKey, weekKey]);
+
+  // API 호출 
+  const fetchChartData = async () => {
+    try {
+      setLoading(true);
+      setChartError("");
+  
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (!userIdStr) {
+        setChartError("userId가 없습니다.");
+        return;
+      }
+  
+      const userId = Number(userIdStr);
+  
+      const rangeType = isWeekly ? "WEEKLY" : "MONTHLY";
+  
+      const res = await fetch(
+        `${API_BASE_URL}/api/chart/dream-chart?userId=${userId}&rangeType=${rangeType}&baseDate=${selectedBaseDate}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      const data: DreamChartResponse = await res.json();
+
+      console.log("[Chart] response data:", data);
+      console.log("[Chart] moodDistribution:", data?.moodDistribution);
+      console.log("[Chart] topKeywords:", data?.topKeywords);
+
+      const moodDistribution = data?.moodDistribution ?? {};
+      const nextEmotionData: Record<EmotionKey, number> = {
+        happy: 0,
+        sad: 0,
+        anger: 0,
+        fear: 0,
+        mixed: 0,
+        touched: 0,
+        excited: 0,
+      };
+  
+      Object.entries(moodDistribution).forEach(([label, count]) => {
+        const emotionKey = moodLabelToEmotionKey[label];
+        if (emotionKey) {
+          nextEmotionData[emotionKey] = Number(count);
+        }
+      });
+  
+      setChartData(nextEmotionData);
+      setTopKeywords(data?.topKeywords ?? []);
+    } catch (error) {
+      console.error("차트 조회 실패:", error);
+      setChartError("차트 데이터를 불러오지 못했습니다.");
+      setChartData({
+        happy: 0,
+        sad: 0,
+        anger: 0,
+        fear: 0,
+        mixed: 0,
+        touched: 0,
+        excited: 0,
+      });
+      setTopKeywords([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchChartData();
+  }, [isWeekly, selectedMonthIndex, safeWeekIndex]);
+
   // 해당 주차 기간 계산 (현재 주차 번호 사용)
   const weekNo = Number(weekKey.split("-")[2]);
   const { startDay, endDay } = getWeekRange(year, monthIndexForRange, weekNo);
@@ -758,39 +871,7 @@ const Chart = () => {
     "7": "mixed",
   };
 
-  // ✅ 선택된 월/주 기준으로 감정 통계 계산
-  const calculateEmotionData = (): Record<EmotionKey, number> => {
-    const emotionCounts: Record<EmotionKey, number> = { ...emptyEmotionData };
-
-    // monthKey는 이미 위에서 계산했지? ex) "2025-02"
-    const [selYearStr, selMonthStr] = monthKey.split("-");
-    const selYear = Number(selYearStr);
-    const selMonth = Number(selMonthStr); // 1~12
-
-    // 주간 모드면 선택된 주차만 필터
-    const selWeekNo = isWeekly ? Number(weekKey.split("-")[2]) : null;
-
-    savedRecords.forEach((record) => {
-      const d = safeDate(record.date);
-      if (!d) return;
-
-      // ✅ 선택된 "월" 필터
-      if (d.getFullYear() !== selYear) return;
-      if (d.getMonth() + 1 !== selMonth) return;
-
-      // ✅ 주간 모드면 선택 "주차" 필터
-      if (selWeekNo !== null) {
-        const w = getWeekNoInMonth(d);
-        if (w !== selWeekNo) return;
-      }
-
-      const emotionKey = moodToEmotion[String(record.mood)];
-      if (emotionKey) emotionCounts[emotionKey]++;
-    });
-
-    return emotionCounts;
-  };
-  const currentEmotionData = calculateEmotionData();
+  const currentEmotionData = chartData;
 
   // 최다 감정 계산
   const values = EMOTIONS.map((e) => currentEmotionData[e.key]);
@@ -807,38 +888,6 @@ const Chart = () => {
   const displayValue = selectedEmotion
     ? currentEmotionData[selectedEmotion]
     : maxValue;
-
-  const generateKeywordItems = (): DreamKeywordItem[] => {
-    const [selYearStr, selMonthStr] = monthKey.split("-");
-    const selYear = Number(selYearStr);
-    const selMonth = Number(selMonthStr);
-
-    const selWeekNo = isWeekly ? Number(weekKey.split("-")[2]) : null;
-
-    return savedRecords
-      .filter((record) => {
-        const d = safeDate(record.date);
-        if (!d) return false;
-
-        if (d.getFullYear() !== selYear) return false;
-        if (d.getMonth() + 1 !== selMonth) return false;
-
-        if (selWeekNo !== null) {
-          const w = getWeekNoInMonth(d);
-          if (w !== selWeekNo) return false;
-        }
-
-        return true;
-      })
-      .slice(0, 3)
-      .map((record) => ({
-        dreamSummary: record.title || "꿈 기록",
-        interpretation:
-          record.analysis?.interpretation || "해석 정보가 없습니다.",
-      }));
-  };
-
-  const keywordItems = generateKeywordItems();
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -1092,7 +1141,7 @@ const Chart = () => {
               ? "이번 주 가장 많이 나온 꿈 키워드 TOP3"
               : "이번 달 가장 많이 나온 꿈 키워드 TOP3"
           }
-          items={keywordItems}
+          items={topKeywords}
         />
       </View>
 

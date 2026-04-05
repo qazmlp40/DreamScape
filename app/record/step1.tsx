@@ -1,4 +1,5 @@
 import { dreamApi } from '@/services/dreamApi';
+import { clamp } from '@/utils/responsive';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -22,7 +23,6 @@ import { API_BASE_URL } from '../../constants/api';
 import { useAppDialog } from '../../contexts/AppDialogContext';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 import IMAGES from '../assets/images';
-import { clamp } from '@/utils/responsive';
 
 // 화면 크기
 const { width: screenWidth } = Dimensions.get('window');
@@ -175,7 +175,7 @@ export default function RecordStep1Screen() {
             date,
             title: '',
             dreamText: content,
-            mood: emotion,
+            mood: convertMoodToKorean(emotion),
           });
       
           const dreamId = saved.dreamId;
@@ -186,6 +186,28 @@ export default function RecordStep1Screen() {
           return null;
         } finally {
           setIsSubmitting(false);
+        }
+      };
+
+      // 서버로 보낼 때는 한글로 변환
+      const convertMoodToKorean = (moodId: string) => {
+        switch (moodId) {
+          case "1":
+            return "행복";
+          case "2":
+            return "슬픔";
+          case "3":
+            return "분노";
+          case "4":
+            return "신남";
+          case "5":
+            return "감동";
+          case "6":
+            return "공포";
+          case "7":
+            return "미묘";
+          default:
+            return "미묘";
         }
       };
 
@@ -217,7 +239,7 @@ export default function RecordStep1Screen() {
             return;
           }
         
-          // 2) 백엔드 저장 후 dreamId 받기
+          // 백엔드 저장 후 dreamId 받기 (DreamEntity 생성)
           const res = await submitDreamToServer(selectedMood, trimmedContent, selectedDate);
         
           if (!res?.dreamId) {
@@ -227,16 +249,11 @@ export default function RecordStep1Screen() {
         
           const dreamId = res.dreamId;
 
-          // 3) 방금 저장한 로컬 record에 dreamId 연결
-          updateRecordByLocalId(localId, { dreamId });
+            // API 호출 (DreamAnalysisEntity 생성)
+            await dreamApi.summarizeDream(dreamId, trimmedContent);
 
-        
-          // 4) Step2로 dreamId + localId 같이 넘기기
-          router.replace(
-            `/record/step2?dreamId=${dreamId}&localId=${localId}&dreamText=${encodeURIComponent(trimmedContent)}${
-              selectedDate ? `&selectedDate=${selectedDate}` : ''
-            }` as any
-          );
+            updateRecordByLocalId(localId, { dreamId });
+            router.replace(`/record/step2?dreamId=${dreamId}&localId=${localId}&dreamText=${encodeURIComponent(trimmedContent)}...`);
     };
 
     const handleMicPress = async () => {
