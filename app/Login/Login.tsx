@@ -135,9 +135,9 @@ const Login: React.FC = () => {
   });
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: '임시 ANDROID_CLIENT_ID',
-    iosClientId: '임시 IOS_CLIENT_ID',
-    webClientId: '임시 WEB_CLIENT_ID',
+    androidClientId: '1055735554939-l7tql4ejtfms9nk948udj0aqgr646slr.apps.googleusercontent.com',
+    iosClientId: '1055735554939-inpkgnvt1lioop0bljkeat4r89ofk6sc.apps.googleusercontent.com',
+    webClientId: '1055735554939-crgjlopdub02tr5lg5cuoofgjlre0jg3.apps.googleusercontent.com',
     redirectUri,
   });
 

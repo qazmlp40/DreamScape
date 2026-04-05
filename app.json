@@ -8,7 +8,8 @@
     "scheme": "dreamappnew",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.dreamappnew"
     },
     "android": {
       "adaptiveIcon": {
