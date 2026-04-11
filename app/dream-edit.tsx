@@ -16,8 +16,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppDialog } from '../contexts/AppDialogContext';
-import { useDreamRecord } from '../contexts/DreamRecordContext';
-import IMAGES from './assets/images';
+import { dreamApi } from '../services/dreamApi';
+import {
+    ambiguous_icon,
+    anger_icon,
+    excitement_icon,
+    happy_icon,
+    impressed_icon,
+    sad_icon,
+    scared_icon,
+} from './assets/images';
 
 
 // 📐 반응형 유틸리티
@@ -42,28 +50,18 @@ const HEADER_CONTENT_HEIGHT = 56;
 const HEADER_HEIGHT = HEADER_CONTENT_HEIGHT; // 상단 여백 + 헤더
 const BOTTOM_PADDING = 24; // 하단 버튼 화면 끝에서 24px
 const BUTTON_HEIGHT = 60;
-const TEXTBOX_BUTTON_GAP = 20; // 텍스트박스와 버튼 사이 20px
 const KEYBOARD_TEXTBOX_TOP = 16; // 키보드 올라왔을 때 헤더에서 16px
 
 // 🔥 감정 이모지 아이콘
 const moodIcons: { [key: string]: any } = {
-    '1': IMAGES.happy_icon,
-    '2': IMAGES.sad_icon,
-    '3': IMAGES.anger_icon,
-    '4': IMAGES.excitement_icon,
-    '5': IMAGES.impressed_icon,
-    '6': IMAGES.scared_icon,
-    '7': IMAGES.ambiguous_icon,
+    '1': happy_icon,
+    '2': sad_icon,
+    '3': anger_icon,
+    '4': excitement_icon,
+    '5': impressed_icon,
+    '6': scared_icon,
+    '7': ambiguous_icon,
 };
-
-// 🔥 더미 데이터
-const dummyDreams = [
-    { id: '1', date: '2025-12-01', emotion: 'happy', content: '바다에서 돌고래와 함께 수영하는 꿈을 꿨어요. 푸른 바다 속에서 돌고래들과 자유롭게 헤엄치며 놀았습니다.', keywords: ['바다', '돌고래', '자유'] },
-    { id: '2', date: '2025-12-03', emotion: 'excited', content: '놀이공원에서 롤러코스터를 타는 꿈을 꿨어요. 빠른 속도로 날아다니며 스릴을 느꼈습니다.', keywords: ['놀이공원', '스릴', '재미'] },
-    { id: '3', date: '2025-12-05', emotion: 'impressed', content: '우주에서 지구를 내려다보는 꿈을 꿨어요. 푸른 지구가 우주 속에서 빛나고 있었고, 그 아름다움에 감동했습니다.', keywords: ['우주', '지구', '경이로움'] },
-    { id: '4', date: '2025-12-07', emotion: 'sad', content: '어릴 적 살던 집이 사라지는 꿈을 꿨어요. 추억이 담긴 집이 허물어지는 모습을 보며 슬퍼졌습니다.', keywords: ['추억', '상실', '그리움'] },
-    { id: '5', date: '2025-12-09', emotion: 'surprised', content: '갑자기 하늘에서 눈이 내리는 꿈을 꿨어요. 여름인데 갑자기 하얀 눈이 내려서 놀랐습니다.', keywords: ['눈', '겨울', '놀라움'] },
-];
 
 /**
  * 커스텀 헤더 (흰색 + 마이크 음성인식)
@@ -150,45 +148,98 @@ export default function DreamEditScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
-    const { getRecordByDate, getRecordByLocalId, updateRecordByLocalId } = useDreamRecord();
     
     const dreamDate = params.date as string;
     const dreamId = params.dreamId as string | undefined;
-    const localId = params.localId as string | undefined;
     
     const [dreamData, setDreamData] = useState<any>(null);
     const [dreamText, setDreamText] = useState('');
     const [isModified, setIsModified] = useState(false);
-    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     
     // 🔥 애니메이션 값
     const contentAnimation = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        console.log('DreamEdit - Params:', { dreamDate, dreamId, localId });
-        
-        let foundDream = null;
-        if (localId) {
-            foundDream = getRecordByLocalId(localId);
-            console.log('Found dream by localId:', foundDream);
-        } else if (dreamDate) {
-            foundDream = getRecordByDate(dreamDate);
-            console.log('Found dream by date:', foundDream);
-        }
-        
-        if (foundDream) {
-            console.log('Setting dream data:', foundDream);
-            setDreamData(foundDream);
-            setDreamText(foundDream.dreamText);
-            setIsModified(false);
-        } else if (dreamDate) {
-            // 선택한 날짜에 꿈 기록이 없는 경우
-            console.log('No dream found for date, creating empty data');
-            setDreamData({ localId: '', date: dreamDate, mood: '1', dreamText: '', analysis: null });
-            setDreamText('');
-            setIsModified(false);
-        }
-    }, [dreamDate, dreamId, localId, getRecordByDate, getRecordByLocalId]);
+        const loadDream = async () => {
+            console.log('DreamEdit - Params:', { dreamDate, dreamId });
+
+            if (!dreamId) {
+                if (dreamDate) {
+                    setDreamData({ dreamId: undefined, date: dreamDate, mood: '1', dreamText: '', analysis: null });
+                    setDreamText('');
+                    setIsModified(false);
+                }
+                return;
+            }
+
+            try {
+                const foundDream = await dreamApi.getDreamById(Number(dreamId));
+
+                if (foundDream) {
+                    const normalizedDream = {
+                        dreamId: Number(foundDream.dreamId ?? foundDream.id ?? dreamId),
+                        date: String(foundDream.date ?? foundDream.dreamDate ?? foundDream.createdAt ?? dreamDate ?? '').slice(0, 10),
+                        mood: (() => {
+                            const mood = String(foundDream.mood ?? foundDream.emotion ?? '7').trim();
+                            switch (mood) {
+                                case '1':
+                                case '행복':
+                                case '행복함':
+                                case 'happy':
+                                    return '1';
+                                case '2':
+                                case '슬픔':
+                                case 'sad':
+                                    return '2';
+                                case '3':
+                                case '분노':
+                                case 'anger':
+                                    return '3';
+                                case '4':
+                                case '신남':
+                                case '흥분':
+                                case 'excited':
+                                    return '4';
+                                case '5':
+                                case '감동':
+                                case 'touched':
+                                    return '5';
+                                case '6':
+                                case '공포':
+                                case 'fear':
+                                case 'scared':
+                                    return '6';
+                                default:
+                                    return '7';
+                            }
+                        })(),
+                        title: String(foundDream.title ?? foundDream.dreamTitle ?? ''),
+                        dreamText: String(foundDream.rawText ?? foundDream.content ?? ''),
+                        analysis: {
+                            summary: String(foundDream.aiSummary ?? foundDream.summary ?? ''),
+                            interpretation: String(foundDream.aiInterpretation ?? foundDream.interpretation ?? foundDream.analysisText ?? ''),
+                            tags: foundDream.tags ?? [],
+                        },
+                    };
+
+                    setDreamData(normalizedDream);
+                    setDreamText(normalizedDream.dreamText);
+                    setIsModified(false);
+                    return;
+                }
+            } catch (error) {
+                console.error('DreamEdit fetch error:', error);
+            }
+
+            if (dreamDate) {
+                setDreamData({ dreamId: Number(dreamId), date: dreamDate, mood: '1', dreamText: '', analysis: null });
+                setDreamText('');
+                setIsModified(false);
+            }
+        };
+
+        loadDream();
+    }, [dreamDate, dreamId]);
 
     // 음성 텍스트가 전달되면 dreamText에 설정
     useEffect(() => {
@@ -207,7 +258,6 @@ export default function DreamEditScreen() {
         const keyboardWillShow = Keyboard.addListener(
             Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
             (e) => {
-                setIsKeyboardVisible(true);
                 Animated.timing(contentAnimation, {
                     toValue: 1,
                     duration: Platform.OS === 'ios' ? 250 : 100,
@@ -219,7 +269,6 @@ export default function DreamEditScreen() {
         const keyboardWillHide = Keyboard.addListener(
             Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
             () => {
-                setIsKeyboardVisible(false);
                 Animated.timing(contentAnimation, {
                     toValue: 0,
                     duration: Platform.OS === 'ios' ? 250 : 100,
@@ -232,7 +281,7 @@ export default function DreamEditScreen() {
             keyboardWillShow.remove();
             keyboardWillHide.remove();
         };
-    }, []);
+    }, [contentAnimation]);
 
     // 🔥 키보드 닫기
     const dismissKeyboard = () => {
@@ -262,29 +311,52 @@ export default function DreamEditScreen() {
     };
 
     const handleMicPress = () => {
-        const returnPath = `/dream-edit?date=${dreamDate}${dreamId ? `&dreamId=${dreamId}` : ''}${localId ? `&localId=${localId}` : ''}`;
+        const returnPath = `/dream-edit?date=${dreamDate}${dreamId ? `&dreamId=${dreamId}` : ''}`;
         router.push(`/voice-record?returnPath=${encodeURIComponent(returnPath)}`);
     };
 
-    const handleComplete = () => {
+    const handleComplete = async () => {
         if (!dreamText.trim()) {
             showDialog({ title: '알림', message: '꿈 내용을 입력해주세요.' });
             return;
         }
 
-        if (dreamData?.localId) {
-            // 기존 레코드 업데이트
-            updateRecordByLocalId(dreamData.localId, {
-                dreamText,
-                mood: dreamData.mood, // ✅ 기존 유지
-              });              
+        if (!dreamData?.dreamId) {
+            showDialog({ title: '오류', message: '수정할 꿈 정보를 찾지 못했어요.' });
+            return;
         }
 
-        showDialog({
-            title: '수정 완료',
-            message: '꿈 내용이 수정되었습니다.',
-            buttons: [{ text: '확인', onPress: () => router.push('/(tabs)/calendar') }],
-        });
+        try {
+            await dreamApi.updateDream(dreamData.dreamId, {
+                title: dreamData.title ?? '',
+                dreamText: dreamText.trim(),
+                mood: dreamData.mood,
+                summary: dreamData.analysis?.summary,
+                interpretation: dreamData.analysis?.interpretation,
+            });
+
+            setDreamData((prev: any) => (
+                prev
+                    ? {
+                        ...prev,
+                        dreamText: dreamText.trim(),
+                    }
+                    : prev
+            ));
+            setIsModified(false);
+
+            showDialog({
+                title: '수정 완료',
+                message: '꿈 내용이 수정되었습니다.',
+                buttons: [{ text: '확인', onPress: () => router.push('/(tabs)/calendar') }],
+            });
+        } catch (error) {
+            console.error('Dream update error:', error);
+            showDialog({
+                title: '오류',
+                message: '꿈 수정에 실패했어요. 잠시 후 다시 시도해주세요.',
+            });
+        }
     };
 
     const getEmotionIcon = () => {

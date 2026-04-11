@@ -100,6 +100,15 @@ export const dreamApi = {
     return response.data;
   },
 
+  getDreamById: async (dreamId: number) => {
+    if (DEV_MOCK_DREAMS) {
+      return getMockDreamById(dreamId);
+    }
+
+    const response = await api.get(`/api/dreams/${dreamId}`);
+    return response.data;
+  },
+
   // ✅ 꿈 해몽 조회
   interpretDream: async (dreamId: number) => {
     if (DEV_MOCK_DREAMS) {
@@ -123,6 +132,9 @@ export const dreamApi = {
 
   // ✅ 꿈 수정
   updateDream: async (dreamId: number, data: { 
+    title?: string;
+    dreamText?: string;
+    mood?: string;
     interpretation?: string; 
     summary?: string;
   }) => {
@@ -131,13 +143,23 @@ export const dreamApi = {
       if (!existing) return null;
       const updated = {
         ...existing,
+        title: data.title ?? existing.title,
+        rawText: data.dreamText ?? existing.rawText,
+        mood: data.mood ?? existing.mood,
         aiInterpretation: data.interpretation ?? existing.aiInterpretation,
         aiSummary: data.summary ?? existing.aiSummary,
       };
       mockDreamStore.set(dreamId, updated);
       return updated;
     }
-    const response = await api.put(`/api/dreams/${dreamId}`, data); 
+    const payload = {
+      title: data.title,
+      rawText: data.dreamText,
+      mood: data.mood,
+      interpretation: data.interpretation,
+      summary: data.summary,
+    };
+    const response = await api.put(`/api/dreams/${dreamId}`, payload); 
     return response.data;
   },
 

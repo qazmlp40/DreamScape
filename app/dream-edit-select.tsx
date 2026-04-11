@@ -1,6 +1,7 @@
 import NoteIcon from "@/assets/images/icons/note_mini.svg";
+import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
+import React, { useCallback, useState } from "react";
 import {
   Image,
   Pressable,
@@ -10,8 +11,16 @@ import {
   Text,
   View,
 } from "react-native";
-import { useDreamRecord } from "../contexts/DreamRecordContext";
-import IMAGES from "./assets/images";
+import { dreamApi } from "../services/dreamApi";
+import {
+  ambiguous_icon,
+  anger_icon,
+  excitement_icon,
+  happy_icon,
+  impressed_icon,
+  sad_icon,
+  scared_icon,
+} from "./assets/images";
 
 const colors = {
   text: "#1F2937",
@@ -22,23 +31,136 @@ const colors = {
   inactive: "#9CA3AF",
 };
 
+type EditableDream = {
+  id: string;
+  dreamId?: number;
+  date: string;
+  title: string;
+  mood: string;
+  dreamText: string;
+  interpretation: string;
+};
+
 const moodIcons: { [key: string]: any } = {
-  "1": IMAGES.happy_icon,
-  "2": IMAGES.sad_icon,
-  "3": IMAGES.anger_icon,
-  "4": IMAGES.excitement_icon,
-  "5": IMAGES.impressed_icon,
-  "6": IMAGES.scared_icon,
-  "7": IMAGES.ambiguous_icon,
+  "1": happy_icon,
+  "2": sad_icon,
+  "3": anger_icon,
+  "4": excitement_icon,
+  "5": impressed_icon,
+  "6": scared_icon,
+  "7": ambiguous_icon,
+};
+
+const normalizeMood = (moodValue: unknown) => {
+  const value = String(moodValue ?? "").trim();
+
+  switch (value) {
+    case "1":
+    case "행복":
+    case "행복함":
+    case "happy":
+      return "1";
+    case "2":
+    case "슬픔":
+    case "sad":
+      return "2";
+    case "3":
+    case "분노":
+    case "anger":
+      return "3";
+    case "4":
+    case "신남":
+    case "흥분":
+    case "excited":
+      return "4";
+    case "5":
+    case "감동":
+    case "touched":
+      return "5";
+    case "6":
+    case "공포":
+    case "fear":
+    case "scared":
+      return "6";
+    case "7":
+    case "미묘":
+    case "알 수 없음":
+    case "mixed":
+    case "ambiguous":
+      return "7";
+    default:
+      return "7";
+  }
+};
+
+const extractDate = (dream: any) => {
+  const rawDate =
+    dream?.date ??
+    dream?.dreamDate ??
+    dream?.createdAt ??
+    dream?.updatedAt ??
+    "";
+
+  return typeof rawDate === "string" ? rawDate.slice(0, 10) : "";
+};
+
+const normalizeDream = (dream: any): EditableDream | null => {
+  const dreamId = Number(
+    dream?.dreamId ?? dream?.id ?? dream?.dream_id ?? dream?.dreamID,
+  );
+  const date = extractDate(dream);
+
+  if (!date) {
+    return null;
+  }
+
+  return {
+    id: String(dreamId || dream?.id || `${date}-${Math.random()}`),
+    dreamId: Number.isFinite(dreamId) ? dreamId : undefined,
+    date,
+    title: String(dream?.title ?? dream?.dreamTitle ?? "").trim(),
+    mood: normalizeMood(dream?.mood ?? dream?.emotion),
+    dreamText: String(dream?.rawText ?? dream?.content ?? "").trim(),
+    interpretation: String(
+      dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? "",
+    ).trim(),
+  };
 };
 
 export default function DreamEditSelectScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const selectedDate = typeof params.date === "string" ? params.date : "";
-  const { getRecordsByDate } = useDreamRecord();
+  const [dreams, setDreams] = useState<EditableDream[]>([]);
 
-  const dreams = selectedDate ? getRecordsByDate(selectedDate).slice().reverse() : [];
+  const loadDreams = useCallback(async () => {
+    if (!selectedDate) {
+      setDreams([]);
+      return;
+    }
+
+    try {
+      const response = await dreamApi.getDreams();
+      const nextDreams = Array.isArray(response)
+        ? response
+            .map(normalizeDream)
+            .filter((dream): dream is EditableDream => Boolean(dream))
+            .filter((dream) => dream.date === selectedDate)
+            .reverse()
+        : [];
+
+      setDreams(nextDreams);
+    } catch (error) {
+      console.error("수정용 꿈 목록 조회 실패:", error);
+      setDreams([]);
+    }
+  }, [selectedDate]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDreams();
+    }, [loadDreams]),
+  );
 
   const formatSelectedDate = () => {
     if (!selectedDate) return "꿈 선택";
@@ -46,12 +168,11 @@ export default function DreamEditSelectScreen() {
     return `${date.getMonth() + 1}월 ${date.getDate()}일의 꿈`;
   };
 
-  const handleDreamPress = (localId: string, dreamId?: number) => {
+  const handleDreamPress = (dreamId?: number) => {
     router.push({
       pathname: "/dream-edit",
       params: {
         date: selectedDate,
-        localId,
         ...(dreamId ? { dreamId: String(dreamId) } : {}),
       },
     } as any);
@@ -82,9 +203,9 @@ export default function DreamEditSelectScreen() {
           <View style={styles.cardList}>
             {dreams.map((dream) => (
               <Pressable
-                key={dream.localId}
+                key={dream.id}
                 style={styles.card}
-                onPress={() => handleDreamPress(dream.localId, dream.dreamId)}
+                onPress={() => handleDreamPress(dream.dreamId)}
               >
                 <View style={styles.cardHeader}>
                   <View style={styles.iconWrapper}>
@@ -95,11 +216,11 @@ export default function DreamEditSelectScreen() {
                     )}
                   </View>
                   <Text style={styles.cardTitle} numberOfLines={1}>
-                    {dream.title?.trim() || "제목 없는 꿈"}
+                    {dream.title || "제목 없는 꿈"}
                   </Text>
                 </View>
                 <Text style={styles.cardText} numberOfLines={2}>
-                  {dream.analysis?.interpretation || dream.dreamText || "꿈 내용을 확인해보세요."}
+                  {dream.interpretation || dream.dreamText || "꿈 내용을 확인해보세요."}
                 </Text>
               </Pressable>
             ))}

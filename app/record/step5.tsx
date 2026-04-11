@@ -1,7 +1,6 @@
 import AppModal from "@/components/app/AppModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { ResizeMode, Video } from "expo-av";
 import * as MediaLibrary from "expo-media-library";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -21,8 +20,16 @@ import { captureRef } from "react-native-view-shot";
 import { API_BASE_URL, DEV_MOCK_DREAMS } from "../../constants/api";
 import { useAppDialog } from "../../contexts/AppDialogContext";
 import { useDreamRecord } from "../../contexts/DreamRecordContext";
-import { dreamApi, getMockDreamById } from "../../services/dreamApi";
-import IMAGES from "../assets/images";
+import { getMockDreamById } from "../../services/dreamApi";
+import {
+  ambiguous_icon,
+  anger_icon,
+  excitement_icon,
+  happy_icon,
+  impressed_icon,
+  sad_icon,
+  scared_icon,
+} from "../assets/images";
 
 const colors = {
   text: "#1F2937",
@@ -39,13 +46,13 @@ const FIXED_BUTTON_HEIGHT = 56;
 const DREAM_VIDEO_FEEDBACK_STORAGE_KEY = "dreamVideoFeedback";
 
 const MOODS = [
-  { id: "1", name: "행복함", image: IMAGES.happy_icon },
-  { id: "2", name: "슬픔", image: IMAGES.sad_icon },
-  { id: "3", name: "분노", image: IMAGES.anger_icon },
-  { id: "4", name: "흥분", image: IMAGES.excitement_icon },
-  { id: "5", name: "감동", image: IMAGES.impressed_icon },
-  { id: "6", name: "공포", image: IMAGES.scared_icon },
-  { id: "7", name: "알 수 없음", image: IMAGES.ambiguous_icon },
+  { id: "1", name: "행복함", image: happy_icon },
+  { id: "2", name: "슬픔", image: sad_icon },
+  { id: "3", name: "분노", image: anger_icon },
+  { id: "4", name: "흥분", image: excitement_icon },
+  { id: "5", name: "감동", image: impressed_icon },
+  { id: "6", name: "공포", image: scared_icon },
+  { id: "7", name: "알 수 없음", image: ambiguous_icon },
 ];
 
 export default function RecordStep5Screen() {
@@ -54,7 +61,6 @@ export default function RecordStep5Screen() {
     resetCurrent,
     getRecordByLocalId,
     getRecordByDate,
-    updateRecordByLocalId,
   } = useDreamRecord();
 
   const router = useRouter();
@@ -73,7 +79,6 @@ export default function RecordStep5Screen() {
     mood?: string;
     summary?: string;
     interpretation?: string;
-    videoUrl?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -92,7 +97,6 @@ export default function RecordStep5Screen() {
                 mood: mockDream.mood,
                 summary: mockDream.aiSummary ?? mockDream.rawText,
                 interpretation: mockDream.aiInterpretation,
-                videoUrl: mockDream.mediaUrl ?? undefined,
               }
             : null,
         );
@@ -115,7 +119,6 @@ export default function RecordStep5Screen() {
             data.aiSummary ?? data.summary ?? data.rawText ?? data.content,
           interpretation:
             data.aiInterpretation ?? data.interpretation ?? data.analysisText,
-          videoUrl: data.mediaUrl ?? data.videoUrl,
         });
       } catch (error) {
         console.error("꿈 데이터 불러오기 실패:", error);
@@ -161,34 +164,7 @@ export default function RecordStep5Screen() {
     (m) => m.id === selectedMoodId || m.name === selectedMoodId,
   );
 
-  const dreamVideoUrl =
-    remoteRecord?.videoUrl ?? displayRecord?.videoUrl ?? null;
   const localDreamId = displayRecord?.dreamId;
-
-  useEffect(() => {
-    const run = async () => {
-      if (!localDreamId || !displayRecord?.localId || dreamVideoUrl) {
-        return;
-      }
-
-      try {
-        const videoRes = await dreamApi.generateVideo(localDreamId);
-        updateRecordByLocalId(displayRecord.localId, {
-          dreamId: localDreamId,
-          videoUrl: videoRes.mediaUrl ?? undefined,
-        });
-      } catch (error) {
-        console.error("꿈 영상 생성 실패:", error);
-      }
-    };
-
-    run();
-  }, [
-    dreamVideoUrl,
-    displayRecord?.localId,
-    localDreamId,
-    updateRecordByLocalId,
-  ]);
 
   const handleSave = () => {
     // 서버 저장 X, 모달만 띄우기
@@ -251,37 +227,6 @@ export default function RecordStep5Screen() {
     }
   };
 
-  const handleSaveVideo = async () => {
-    if (!dreamVideoUrl) {
-      showDialog({
-        title: "영상 없음",
-        message: "아직 저장할 꿈 영상이 없습니다.",
-      });
-      return;
-    }
-
-    try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        showDialog({
-          title: "권한 필요",
-          message: "영상을 저장하려면 갤러리 접근 권한이 필요합니다.",
-        });
-        return;
-      }
-
-      setIsSaved(false);
-      await MediaLibrary.saveToLibraryAsync(dreamVideoUrl);
-      showDialog({
-        title: "저장 완료",
-        message: "영상이 갤러리에 저장되었습니다.",
-      });
-    } catch (error) {
-      console.error("영상 저장 오류:", error);
-      showDialog({ title: "오류", message: "영상 저장에 실패했습니다." });
-    }
-  };
-
   const handleSaveImage = async () => {
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -332,22 +277,24 @@ export default function RecordStep5Screen() {
           {/* Title */}
           <Text style={styles.title}>{dreamTitle || "제목 없는 꿈"}</Text>
 
-          <View style={styles.videoSection}>
-            <View style={styles.videoBox}>
-              {dreamVideoUrl ? (
-                <Video
-                  source={{ uri: dreamVideoUrl }}
-                  style={styles.videoPreview}
-                  resizeMode={ResizeMode.CONTAIN}
-                  useNativeControls
-                />
-              ) : (
-                <Text style={styles.videoPlaceholderText}>
-                  {localDreamId
-                    ? "꿈 영상을 준비하고 있어요."
-                    : "아직 생성된 꿈 영상이 없습니다."}
-                </Text>
-              )}
+          <View style={styles.heroSection}>
+            <View style={styles.heroCard}>
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>Dream Mood</Text>
+              </View>
+              <View style={styles.iconHeroBox}>
+                {selectedMood ? (
+                  <Image source={selectedMood.image} style={styles.heroIcon} />
+                ) : (
+                  <Text style={styles.heroPlaceholder}>?</Text>
+                )}
+              </View>
+              <Text style={styles.heroMoodName}>
+                {selectedMood?.name || "꿈의 분위기"}
+              </Text>
+              <Text style={styles.heroCaption}>
+                지금 꿈에서 가장 강하게 남은 감정과 분위기를 담았어요
+              </Text>
             </View>
           </View>
 
@@ -386,11 +333,10 @@ export default function RecordStep5Screen() {
 
         <AppModal
           visible={isSaved}
-          title="무엇을 저장할까요?"
-          message="해몽 이미지를 저장하거나 꿈 영상을 저장할 수 있습니다."
+          title="해몽 이미지를 저장할까요?"
+          message="현재 화면을 이미지로 저장할 수 있습니다."
           buttons={[
             { text: "해몽 이미지 저장", onPress: handleSaveImage },
-            { text: "꿈 영상 저장", onPress: handleSaveVideo },
             { text: "닫기", style: "cancel" },
           ]}
           onClose={() => setIsSaved(false)}
@@ -521,25 +467,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: FIXED_BUTTON_HEIGHT + 40,
   },
-  videoBox: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#000000",
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  videoPreview: {
-    width: "100%",
-    height: "100%",
-  },
-  characterText: {
-    fontSize: 14,
-    color: colors.background,
-  },
   inputContainer: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -597,14 +524,73 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     flexWrap: "wrap",
   },
-  videoSection: {
+  heroSection: {
     marginBottom: 28,
+    alignItems: "center",
   },
-  videoPlaceholderText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    textAlign: "center",
+  heroCard: {
+    width: "100%",
+    borderRadius: 28,
     paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 22,
+    alignItems: "center",
+    backgroundColor: "#FCFAFF",
+    borderWidth: 1,
+    borderColor: "#F1E4FF",
+    shadowColor: "#D8B4FE",
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
+  },
+  heroBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#F3E8FF",
+    marginBottom: 14,
+  },
+  heroBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.purple,
+    letterSpacing: 0.2,
+  },
+  iconHeroBox: {
+    width: 168,
+    height: 168,
+    borderRadius: 84,
+    backgroundColor: "#F7EDFF",
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  heroIcon: {
+    width: 116,
+    height: 116,
+    resizeMode: "contain",
+  },
+  heroPlaceholder: {
+    fontSize: 40,
+    fontWeight: "700",
+    color: colors.purple,
+  },
+  heroMoodName: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  heroCaption: {
+    fontSize: 14,
+    color: colors.inactive,
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 8,
   },
   buttonContainer: {
     position: "absolute",

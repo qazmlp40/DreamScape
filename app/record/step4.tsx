@@ -105,7 +105,7 @@ export default function RecordStep4Screen() {
         };
     
         run();
-    }, [dreamId, videoUrl]);
+    }, [dreamId, dreamIdParam, localId, updateRecordByLocalId, videoUrl]);
 
     const handleSave = () => {
         setIsSaveModalVisible(true);
@@ -182,7 +182,7 @@ export default function RecordStep4Screen() {
                         <Video
                         source={{ uri: videoUrl }}
                         style={styles.video}
-                        resizeMode={ResizeMode.CONTAIN}
+                        resizeMode={ResizeMode.COVER}
                         shouldPlay
                         useNativeControls
                         onError={(e) => console.log('Video error:', e)}
@@ -225,10 +225,10 @@ const styles = StyleSheet.create({
         backgroundColor: colors.background,
     },
     videoWrapper: {
-        width: screenWidth - 40,
-        aspectRatio: 16 / 9,       // 박스를 영상 비율로 고정
+        width: screenWidth - 24,
+        aspectRatio: 16 / 9,
         backgroundColor: '#000000',
-        borderRadius: 12,
+        borderRadius: 16,
         overflow: 'hidden',
       },
     header: {
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 40,
+        paddingHorizontal: 12,
         paddingBottom: 120,
     },
     characterBox: {
@@ -307,6 +307,6 @@ const styles = StyleSheet.create({
     video: {
         width: '100%',
         height: '100%',
-        borderRadius: 12,
+        borderRadius: 16,
     },
 });

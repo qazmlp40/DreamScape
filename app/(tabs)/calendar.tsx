@@ -1,6 +1,7 @@
 import NoteIcon from "@/assets/images/icons/note_mini.svg";
+import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
     Dimensions,
     Image,
@@ -15,8 +16,16 @@ import {
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import Svg, { Path } from "react-native-svg";
 import { useAppDialog } from "../../contexts/AppDialogContext";
-import { useDreamRecord } from "../../contexts/DreamRecordContext";
-import IMAGES from "../assets/images";
+import { dreamApi } from "../../services/dreamApi";
+import {
+  ambiguous_icon,
+  anger_icon,
+  excitement_icon,
+  happy_icon,
+  impressed_icon,
+  sad_icon,
+  scared_icon,
+} from "../assets/images";
 
 // 🇰🇷 한글 로케일 설정
 LocaleConfig.locales["ko"] = {
@@ -68,7 +77,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 412;
 const BASE_HEIGHT = 917;
 
-const scaleWidth = (size: number) => (SCREEN_WIDTH / BASE_WIDTH) * size;
 const scaleHeight = (size: number) => (SCREEN_HEIGHT / BASE_HEIGHT) * size;
 const scale = (size: number) => (SCREEN_WIDTH / BASE_WIDTH) * size;
 
@@ -111,6 +119,17 @@ type DreamMarking = {
   selectedColor?: string;
 };
 
+type CalendarDream = {
+  id: string;
+  dreamId?: number;
+  date: string;
+  title: string;
+  mood: string;
+  dreamText: string;
+  summary: string;
+  interpretation: string;
+};
+
 interface CustomDayProps {
   date?: DateData;
   state?: string;
@@ -135,60 +154,93 @@ const today = new Date();
 const INITIAL_SELECTED_DATE = formatDateToString(today);
 
 const moodIcons: { [key: string]: any } = {
-  "1": IMAGES.happy_icon,
-  "2": IMAGES.sad_icon,
-  "3": IMAGES.anger_icon,
-  "4": IMAGES.excitement_icon,
-  "5": IMAGES.impressed_icon,
-  "6": IMAGES.scared_icon,
-  "7": IMAGES.ambiguous_icon,
+  "1": happy_icon,
+  "2": sad_icon,
+  "3": anger_icon,
+  "4": excitement_icon,
+  "5": impressed_icon,
+  "6": scared_icon,
+  "7": ambiguous_icon,
 };
 
-// 더미 데이터 - 2025년 12월
-const dummyDreams = [
-  {
-    date: "2025-12-01",
-    emotion: "happy",
-    summary: "바다에서 돌고래와 함께 수영하는 꿈",
-    keywords: ["바다", "돌고래", "자유"],
-  },
-  {
-    date: "2025-12-03",
-    emotion: "excited",
-    summary: "놀이공원에서 롤러코스터를 타는 꿈",
-    keywords: ["놀이공원", "스릴", "재미"],
-  },
-  {
-    date: "2025-12-05",
-    emotion: "impressed",
-    summary: "우주에서 지구를 내려다보는 꿈",
-    keywords: ["우주", "지구", "경이로움"],
-  },
-  {
-    date: "2025-12-07",
-    emotion: "sad",
-    summary: "어릴 적 살던 집이 사라지는 꿈",
-    keywords: ["추억", "상실", "그리움"],
-  },
-  {
-    date: "2025-12-09",
-    emotion: "surprised",
-    summary: "갑자기 하늘에서 눈이 내리는 꿈",
-    keywords: ["눈", "겨울", "놀라움"],
-  },
-  {
-    date: "2025-12-15",
-    emotion: "happy",
-    summary: "친구들과 함께 파티하는 꿈",
-    keywords: ["친구", "파티", "즐거움"],
-  },
-  {
-    date: "2025-12-20",
-    emotion: "excited",
-    summary: "새로운 도시를 탐험하는 꿈",
-    keywords: ["모험", "탐험", "새로움"],
-  },
-];
+const normalizeMood = (moodValue: unknown) => {
+  const value = String(moodValue ?? "").trim();
+
+  switch (value) {
+    case "1":
+    case "행복":
+    case "행복함":
+    case "happy":
+      return "1";
+    case "2":
+    case "슬픔":
+    case "sad":
+      return "2";
+    case "3":
+    case "분노":
+    case "anger":
+      return "3";
+    case "4":
+    case "신남":
+    case "흥분":
+    case "excited":
+      return "4";
+    case "5":
+    case "감동":
+    case "touched":
+      return "5";
+    case "6":
+    case "공포":
+    case "fear":
+    case "scared":
+      return "6";
+    case "7":
+    case "미묘":
+    case "알 수 없음":
+    case "mixed":
+    case "ambiguous":
+      return "7";
+    default:
+      return "7";
+  }
+};
+
+const extractDate = (dream: any) => {
+  const rawDate =
+    dream?.date ??
+    dream?.dreamDate ??
+    dream?.createdAt ??
+    dream?.updatedAt ??
+    "";
+
+  return typeof rawDate === "string" ? rawDate.slice(0, 10) : "";
+};
+
+const normalizeDream = (dream: any): CalendarDream | null => {
+  const dreamId = Number(
+    dream?.dreamId ?? dream?.id ?? dream?.dream_id ?? dream?.dreamID,
+  );
+  const date = extractDate(dream);
+
+  if (!date) {
+    return null;
+  }
+
+  return {
+    id: String(dreamId || dream?.id || `${date}-${Math.random()}`),
+    dreamId: Number.isFinite(dreamId) ? dreamId : undefined,
+    date,
+    title: String(dream?.title ?? dream?.dreamTitle ?? "").trim(),
+    mood: normalizeMood(dream?.mood ?? dream?.emotion),
+    dreamText: String(dream?.rawText ?? dream?.content ?? "").trim(),
+    summary: String(
+      dream?.aiSummary ?? dream?.summary ?? dream?.rawText ?? dream?.content ?? "",
+    ).trim(),
+    interpretation: String(
+      dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? "",
+    ).trim(),
+  };
+};
 
 // ✏️ 편집 아이콘 컴포넌트
 const EditIcon = ({ size = 24, color = "#000000" }) => (
@@ -265,14 +317,34 @@ const CustomDay: React.FC<CustomDayProps> = ({
 export default function CalendarScreen() {
   const router = useRouter();
   const { showDialog } = useAppDialog();
-  const { savedRecords, getRecordByDate, getRecordsByDate } = useDreamRecord();
+  const [dreams, setDreams] = useState<CalendarDream[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(
     INITIAL_SELECTED_DATE,
   );
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
-  const selectedDreams = getRecordsByDate(selectedDate);
-  const selectedDream = getRecordByDate(selectedDate);
+  const selectedDreams = dreams.filter((dream) => dream.date === selectedDate);
+  const selectedDream = selectedDreams[selectedDreams.length - 1];
   const hasDreamRecord = selectedDreams.length > 0;
+
+  const loadDreams = useCallback(async () => {
+    try {
+      const response = await dreamApi.getDreams();
+      const nextDreams = Array.isArray(response)
+        ? response.map(normalizeDream).filter(Boolean)
+        : [];
+
+      setDreams(nextDreams as CalendarDream[]);
+    } catch (error) {
+      console.error("캘린더 꿈 목록 조회 실패:", error);
+      setDreams([]);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDreams();
+    }, [loadDreams]),
+  );
 
   const handleEditPress = () => {
     if (!hasDreamRecord) {
@@ -301,10 +373,10 @@ export default function CalendarScreen() {
 
   const handleCardPress = (localId?: string) => {
     const targetDream = localId
-      ? selectedDreams.find((dream) => dream.localId === localId)
-      : getRecordByDate(selectedDate);
+      ? selectedDreams.find((dream) => dream.id === localId)
+      : selectedDream;
 
-    if (!targetDream) {
+    if (!targetDream?.dreamId) {
       return;
     }
 
@@ -313,10 +385,8 @@ export default function CalendarScreen() {
       params: {
         mode: "review",
         date: selectedDate,
-        localId: targetDream.localId,
-        ...(targetDream.dreamId
-          ? { dreamId: String(targetDream.dreamId) }
-          : {}),
+        id: String(targetDream.dreamId),
+        dreamId: String(targetDream.dreamId),
       },
     } as any);
   };
@@ -324,7 +394,7 @@ export default function CalendarScreen() {
   const processedMarkedDates = useMemo(() => {
     const dates: { [key: string]: DreamMarking } = {};
 
-    savedRecords.forEach((record) => {
+    dreams.forEach((record) => {
       dates[record.date] = {
         hasDream: true,
         emotionImage: moodIcons[record.mood],
@@ -339,7 +409,7 @@ export default function CalendarScreen() {
     };
 
     return dates;
-  }, [selectedDate, savedRecords]);
+  }, [dreams, selectedDate]);
 
   const handleDayPress = (day: DateData) => {
     if (isFutureDateString(day.dateString)) {
@@ -362,10 +432,6 @@ export default function CalendarScreen() {
     const newDate = new Date(currentMonth);
     newDate.setMonth(newDate.getMonth() + 1);
     setCurrentMonth(newDate);
-  };
-
-  const selectedMarking = processedMarkedDates[selectedDate] || {
-    hasDream: false,
   };
 
   const formatSelectedDate = () => {
@@ -487,9 +553,9 @@ export default function CalendarScreen() {
                   .reverse()
                   .map((dream) => (
                     <TouchableOpacity
-                      key={dream.localId}
+                      key={dream.id}
                       activeOpacity={0.8}
-                      onPress={() => handleCardPress(dream.localId)}
+                      onPress={() => handleCardPress(dream.id)}
                       style={styles.interpretationCard}
                     >
                       <View style={styles.interpretationHeader}>
@@ -511,7 +577,9 @@ export default function CalendarScreen() {
                         </Text>
                       </View>
                       <Text style={styles.interpretationText} numberOfLines={2}>
-                        {dream.analysis?.interpretation ||
+                        {dream.interpretation ||
+                          dream.summary ||
+                          dream.dreamText ||
                           "아직 해몽이 없습니다."}
                       </Text>
                     </TouchableOpacity>

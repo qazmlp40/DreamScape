@@ -1,7 +1,8 @@
 import Pigicon from '@/assets/images/icons/dream_symbol/pig.svg';
 import NoteIcon from '@/assets/images/icons/note.svg';
+import { useFocusEffect } from '@react-navigation/native';
 import { Link, Stack } from 'expo-router';
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -12,7 +13,7 @@ import {
   View,
 } from 'react-native';
 
-import { useDreamRecord } from '../../contexts/DreamRecordContext';
+import { dreamApi } from '../../services/dreamApi';
 
 const colors = {
   text: '#1F2937',
@@ -26,18 +27,86 @@ const FIXED_BUTTON_HEIGHT = 60;
 const IOS_SAFE_AREA_INSET = Platform.OS === 'ios' ? 34 : 0;
 const REQUIRED_BOTTOM_PADDING = 72 + FIXED_BUTTON_HEIGHT + 16 + 20;
 
-export default function TabsIndex() {
-  const { hasTodayRecord, getTodayRecord, getTodayRecords, savedRecords } = useDreamRecord();
-  const hasTodayDream = hasTodayRecord();
-  const todayRecord = getTodayRecord();
-  const todayRecords = getTodayRecords();
+type HomeDream = {
+  id: string;
+  dreamId?: number;
+  date: string;
+  title: string;
+  dreamText: string;
+  summary: string;
+  interpretation: string;
+};
 
-  console.log('🔍 디버깅:', {
-    hasTodayDream,
-    savedRecordsCount: savedRecords.length,
-    todayRecord,
-    allRecords: savedRecords,
-  });
+const formatDateToString = (d: Date) => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const extractDate = (dream: any) => {
+  const rawDate =
+    dream?.date ??
+    dream?.dreamDate ??
+    dream?.createdAt ??
+    dream?.updatedAt ??
+    '';
+
+  return typeof rawDate === 'string' ? rawDate.slice(0, 10) : '';
+};
+
+const normalizeDream = (dream: any): HomeDream | null => {
+  const dreamId = Number(
+    dream?.dreamId ?? dream?.id ?? dream?.dream_id ?? dream?.dreamID,
+  );
+  const date = extractDate(dream);
+
+  if (!date) {
+    return null;
+  }
+
+  return {
+    id: String(dreamId || dream?.id || `${date}-${Math.random()}`),
+    dreamId: Number.isFinite(dreamId) ? dreamId : undefined,
+    date,
+    title: String(dream?.title ?? dream?.dreamTitle ?? '').trim(),
+    dreamText: String(dream?.rawText ?? dream?.content ?? '').trim(),
+    summary: String(
+      dream?.aiSummary ?? dream?.summary ?? dream?.rawText ?? dream?.content ?? '',
+    ).trim(),
+    interpretation: String(
+      dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? '',
+    ).trim(),
+  };
+};
+
+export default function TabsIndex() {
+  const [dreams, setDreams] = useState<HomeDream[]>([]);
+  const todayString = formatDateToString(new Date());
+
+  const loadDreams = useCallback(async () => {
+    try {
+      const response = await dreamApi.getDreams();
+      const nextDreams = Array.isArray(response)
+        ? response.map(normalizeDream).filter(Boolean)
+        : [];
+
+      setDreams(nextDreams as HomeDream[]);
+    } catch (error) {
+      console.error('홈 꿈 목록 조회 실패:', error);
+      setDreams([]);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDreams();
+    }, [loadDreams]),
+  );
+
+  const todayRecords = dreams.filter((dream) => dream.date === todayString);
+  const hasTodayDream = todayRecords.length > 0;
+  const todayRecord = todayRecords[todayRecords.length - 1];
 
   return (
     <View style={styles.mainContainer}>
@@ -71,7 +140,7 @@ export default function TabsIndex() {
                       pathname: '/record/step5',
                       params: {
                         mode: 'review',
-                        localId: dream.localId,
+                        ...(dream.dreamId ? { id: String(dream.dreamId) } : {}),
                         ...(dream.dreamId ? { dreamId: String(dream.dreamId) } : {}),
                         date: dream.date,
                       },
@@ -88,8 +157,8 @@ export default function TabsIndex() {
                         </Text>
                       </View>
                       <Text style={styles.dreamSummary} numberOfLines={2}>
-                        {dream.analysis?.interpretation ||
-                          dream.analysis?.summary ||
+                        {dream.interpretation ||
+                          dream.summary ||
                           dream.dreamText ||
                           '아직 해몽이 없습니다.'}
                       </Text>
