@@ -1,14 +1,26 @@
 package signup.dreamscape.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import signup.dreamscape.Security.JwtAuthenticationFilter;
+import signup.dreamscape.Security.JwtProvider;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtProvider jwtProvider;
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtProvider);
+    }
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -17,8 +29,14 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
-                .csrf(csrf -> csrf.disable())   // csrf 비활성화
+                .csrf(csrf -> csrf.disable())
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -29,14 +47,14 @@ public class SecurityConfig {
                                 "/t_user/login",
                                 "/t_user/delete/all",
                                 "/t_user/**",
-                                "api/media/++"
+                                "/api/media/**",
+                                "/t_user/refresh"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-               // .formLogin(Customizer.withDefaults())  // formLogin 기본 활성화 제거 안하려면 주석 처리
-               // .httpBasic(Customizer.withDefaults()) // 필요하면 httpBasic도 추가
 
-        ;
+                .addFilterBefore(jwtAuthenticationFilter(),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

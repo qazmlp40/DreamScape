@@ -31,15 +31,15 @@ public class UserService {
         this.jwtProvider = jwtProvider;
     }
 
-    // 1️⃣ 회원가입 (+토큰 자동 발급)
+    // 1️⃣ 회원가입
     public UserResponseDTO signup(UserRequestDTO requestDTO) {
+
         if (userRepository.findByEmail(requestDTO.getEmail()).isPresent()) {
             return UserResponseDTO.builder()
-                    .userId(null)
-                    .userNickName(null)
                     .email(requestDTO.getEmail())
                     .message("이미 존재하는 이메일입니다.")
                     .accessToken(null)
+                    .refreshToken(null)
                     .build();
         }
 
@@ -58,7 +58,19 @@ public class UserService {
 
         userRepository.save(user);
 
-        String token = jwtProvider.createToken(user.getEmail());
+        String accessToken = jwtProvider.createAccessToken(
+                user.getUserId(),
+                user.getEmail()
+        );
+
+        String refreshToken = jwtProvider.createRefreshToken(
+                user.getUserId(),
+                user.getEmail()
+        );
+
+        // DB에 RefreshToken 저장
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
 
         return UserResponseDTO.builder()
                 .userId(user.getUserId())
@@ -70,23 +82,31 @@ public class UserService {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .message("회원가입 성공!")
-                .accessToken(token)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .build();
     }
 
-    // 2️⃣ 로그인 (JWT 토큰 발급 포함)
+    // 2️⃣ 로그인
     public UserResponseDTO login(String email, String password) {
-        System.out.println("Login attempt - email: " + email + ", password: " + password);
 
         return userRepository.findByEmail(email)
-                .filter(user -> {
-                    boolean matches = passwordEncoder.matches(password, user.getPassword());
-                    System.out.println("비밀번호가 일치합니까? " + matches);
-                    return matches;
-                })
+                .filter(user -> passwordEncoder.matches(password, user.getPassword()))
                 .map(user -> {
-                    System.out.println("로그인에 성공하였습니다. : " + email);
-                    String token = jwtProvider.createToken(email);
+
+                    String accessToken = jwtProvider.createAccessToken(
+                            user.getUserId(),
+                            user.getEmail()
+                    );
+
+                    String refreshToken = jwtProvider.createRefreshToken(
+                            user.getUserId(),
+                            user.getEmail()
+                    );
+
+                    // RefreshToken 저장
+                    user.setRefreshToken(refreshToken);
+                    userRepository.save(user);
 
                     return UserResponseDTO.builder()
                             .userId(user.getUserId())
@@ -98,27 +118,21 @@ public class UserService {
                             .createdAt(user.getCreatedAt())
                             .updatedAt(user.getUpdatedAt())
                             .message("로그인 성공!")
-                            .accessToken(token)
+                            .accessToken(accessToken)
+                            .refreshToken(refreshToken)
                             .build();
                 })
-                .orElseGet(() -> {
-                    System.out.println("로그인에 실패했습니다. : " + email);
-                    return UserResponseDTO.builder()
-                            .userId(null)
-                            .userNickName(null)
-                            .name(null)
-                            .email(email)
-                            .message("이메일 또는 비밀번호가 잘못되었습니다.")
-                            .accessToken(null)
-                            .build();
-                });
+                .orElseGet(() -> UserResponseDTO.builder()
+                        .email(email)
+                        .message("이메일 또는 비밀번호가 잘못되었습니다.")
+                        .accessToken(null)
+                        .refreshToken(null)
+                        .build());
     }
 
-    // 3 전체 회원 조회
+    // 3️⃣ 전체 회원 조회
     public List<UserResponseDTO> getAllUsers() {
-        List<UserEntity> users = userRepository.findAll();
-
-        return users.stream()
+        return userRepository.findAll().stream()
                 .map(user -> UserResponseDTO.builder()
                         .userId(user.getUserId())
                         .userNickName(user.getUserNickName())
@@ -129,13 +143,13 @@ public class UserService {
                         .createdAt(user.getCreatedAt())
                         .updatedAt(user.getUpdatedAt())
                         .message("회원 조회 성공")
-                        .accessToken(null) // 조회 시에는 토큰 필요 없다고 가정
                         .build())
                 .collect(Collectors.toList());
     }
 
-    // 4️userId로 단일 회원 조회
+    // 4️⃣ 단일 회원 조회
     public UserResponseDTO getUserById(Long userId) {
+
         Optional<UserEntity> optionalUser = userRepository.findById(userId);
 
         return optionalUser
@@ -149,31 +163,21 @@ public class UserService {
                         .createdAt(user.getCreatedAt())
                         .updatedAt(user.getUpdatedAt())
                         .message("회원 조회 성공")
-                        .accessToken(null)
                         .build())
                 .orElseGet(() -> UserResponseDTO.builder()
-                        .userId(null)
-                        .userNickName(null)
-                        .name(null)
-                        .email(null)
                         .message("해당 ID의 회원을 찾을 수 없습니다.")
-                        .accessToken(null)
                         .build());
     }
 
-    // 회원 탈퇴 (단일 삭제)
+    // 5️⃣ 회원 삭제
     @Transactional
     public UserResponseDTO deleteUserById(Long userId) {
+
         Optional<UserEntity> optionalUser = userRepository.findById(userId);
 
         if (optionalUser.isEmpty()) {
             return UserResponseDTO.builder()
-                    .userId(null)
-                    .userNickName(null)
-                    .name(null)
-                    .email(null)
                     .message("해당 ID의 회원을 찾을 수 없습니다.")
-                    .accessToken(null)
                     .build();
         }
 
@@ -182,19 +186,129 @@ public class UserService {
 
         return UserResponseDTO.builder()
                 .userId(user.getUserId())
-                .userNickName(user.getUserNickName())
-                .name(user.getName())
                 .email(user.getEmail())
-                .message("회원 탈퇴(삭제) 완료")
-                .accessToken(null)
+                .message("회원 삭제 완료")
                 .build();
     }
 
-    // 전체 회원 삭제 (관리자용)
+    // 6️⃣ 전체 삭제
     @Transactional
     public String deleteAllUsers() {
         userRepository.deleteAll();
-        return "모든 회원이 삭제되었습니다.";
+        return "모든 회원 삭제 완료";
     }
 
+    // 7️⃣ 이메일로 회원 조회 (JWT /me 용)
+    public UserResponseDTO getUserByEmail(String email) {
+
+        return userRepository.findByEmail(email)
+                .map(user -> UserResponseDTO.builder()
+                        .userId(user.getUserId())
+                        .userNickName(user.getUserNickName())
+                        .name(user.getName())
+                        .email(user.getEmail())
+                        .profileImage(user.getProfileImage())
+                        .socialProvider(user.getSocialProvider())
+                        .createdAt(user.getCreatedAt())
+                        .updatedAt(user.getUpdatedAt())
+                        .message("내 정보 조회 성공")
+                        .build())
+                .orElseGet(() -> UserResponseDTO.builder()
+                        .email(email)
+                        .message("해당 이메일의 사용자를 찾을 수 없습니다.")
+                        .build());
+    }
+
+    // 8️⃣ RefreshToken으로 AccessToken 재발급
+    public UserResponseDTO refreshAccessToken(String refreshToken) {
+
+        // 1. refreshToken 유효성 검사
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return UserResponseDTO.builder()
+                    .message("RefreshToken이 비어 있습니다.")
+                    .accessToken(null)
+                    .refreshToken(null)
+                    .build();
+        }
+
+        if (!jwtProvider.validateToken(refreshToken)) {
+            return UserResponseDTO.builder()
+                    .message("유효하지 않은 RefreshToken 입니다.")
+                    .accessToken(null)
+                    .refreshToken(null)
+                    .build();
+        }
+
+        // 2. 토큰에서 이메일 추출
+        String email = jwtProvider.getEmail(refreshToken);
+
+        // 3. DB에서 사용자 조회
+        Optional<UserEntity> optionalUser = userRepository.findByEmail(email);
+
+        if (optionalUser.isEmpty()) {
+            return UserResponseDTO.builder()
+                    .email(email)
+                    .message("사용자를 찾을 수 없습니다.")
+                    .accessToken(null)
+                    .refreshToken(null)
+                    .build();
+        }
+
+        UserEntity user = optionalUser.get();
+
+        // 4. DB에 저장된 refreshToken과 비교
+        if (user.getRefreshToken() == null || !user.getRefreshToken().equals(refreshToken)) {
+            return UserResponseDTO.builder()
+                    .email(email)
+                    .message("RefreshToken이 일치하지 않습니다.")
+                    .accessToken(null)
+                    .refreshToken(null)
+                    .build();
+        }
+
+        // 5. 새 AccessToken 발급
+        String newAccessToken = jwtProvider.createAccessToken(
+                user.getUserId(),
+                user.getEmail()
+        );
+
+        return UserResponseDTO.builder()
+                .userId(user.getUserId())
+                .userNickName(user.getUserNickName())
+                .name(user.getName())
+                .email(user.getEmail())
+                .profileImage(user.getProfileImage())
+                .socialProvider(user.getSocialProvider())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .message("AccessToken 재발급 성공")
+                .accessToken(newAccessToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+    // 9️⃣ 로그아웃
+    @Transactional
+    public UserResponseDTO logout(String email) {
+
+        Optional<UserEntity> optionalUser = userRepository.findByEmail(email);
+
+        if (optionalUser.isEmpty()) {
+            return UserResponseDTO.builder()
+                    .email(email)
+                    .message("사용자를 찾을 수 없습니다.")
+                    .build();
+        }
+
+        UserEntity user = optionalUser.get();
+
+        // RefreshToken 무효화
+        user.setRefreshToken(null);
+        userRepository.save(user);
+
+        return UserResponseDTO.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .message("로그아웃 성공")
+                .build();
+    }
 }
