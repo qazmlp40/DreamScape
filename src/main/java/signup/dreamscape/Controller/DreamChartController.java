@@ -1,8 +1,8 @@
-package com.example.dreamscape.Controller;
+package signup.dreamscape.Controller;
 
-import com.example.dreamscape.DTO.DreamChartRequestDTO;
-import com.example.dreamscape.DTO.DreamChartResponseDTO;
-import com.example.dreamscape.Service.DreamChartService;
+import signup.dreamscape.DTO.DreamChartRequestDTO;
+import signup.dreamscape.DTO.DreamChartResponseDTO;
+import signup.dreamscape.Service.DreamChartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

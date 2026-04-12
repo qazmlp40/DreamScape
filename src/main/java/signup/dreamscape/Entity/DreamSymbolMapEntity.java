@@ -1,4 +1,4 @@
-package com.example.dreamscape.Entity;
+package signup.dreamscape.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;

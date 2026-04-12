@@ -1,10 +1,10 @@
-package com.example.dreamscape.Service;
+package signup.dreamscape.Service;
 
-import com.example.dreamscape.DTO.DreamChartRequestDTO;
-import com.example.dreamscape.DTO.DreamChartResponseDTO;
-import com.example.dreamscape.DTO.DreamKeywordResponseDTO;
-import com.example.dreamscape.Repository.DreamAnalysisRepository;
-import com.example.dreamscape.Repository.DreamSymbolMapRepository;
+import signup.dreamscape.DTO.DreamChartRequestDTO;
+import signup.dreamscape.DTO.DreamChartResponseDTO;
+import signup.dreamscape.DTO.DreamKeywordResponseDTO;
+import signup.dreamscape.Repository.DreamAnalysisRepository;
+import signup.dreamscape.Repository.DreamSymbolMapRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;

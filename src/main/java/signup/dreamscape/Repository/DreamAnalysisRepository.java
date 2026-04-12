@@ -1,11 +1,10 @@
-package com.example.dreamscape.Repository;
+package signup.dreamscape.Repository;
 
-import com.example.dreamscape.Entity.DreamAnalysisEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import signup.dreamscape.Entity.DreamAnalysisEntity;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 

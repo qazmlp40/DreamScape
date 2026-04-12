@@ -1,4 +1,4 @@
-package com.example.dreamscape.DTO;
+package signup.dreamscape.DTO;
 
 import lombok.*;
 
