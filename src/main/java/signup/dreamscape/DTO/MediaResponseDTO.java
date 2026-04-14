@@ -9,4 +9,5 @@ import lombok.*;
 @Builder
 public class MediaResponseDTO {
     private String mediaUrl;
+    private Long mediaId;
 }

@@ -8,8 +8,11 @@ import okhttp3.*;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import signup.dreamscape.DTO.MediaResponseDTO;
+import signup.dreamscape.DTO.RatingRequestDTO;
 import signup.dreamscape.Entity.DreamEntity;
+import signup.dreamscape.Entity.DreamMediaEntity;
 import signup.dreamscape.Repository.DreamMediaRepository;
 import signup.dreamscape.Repository.DreamRepository;
 
@@ -48,8 +51,18 @@ public class MediaService {
             String videoUrl = getVedioUrl(fileId);
             log.info("videoUrl = " + videoUrl);
 
+            // ------- 추가/수정 -------
+            // 5. DB에 저장
+            DreamMediaEntity savedMedia = dreamMediaRepository.save(
+                    DreamMediaEntity.builder()
+                            .dreamId(dreamId)
+                            .mediaUrl(videoUrl)
+                            .build()
+            );
+
             // 임시 return (테스트용)
             return MediaResponseDTO.builder()
+                    .mediaId(savedMedia.getMediaId())
                     .mediaUrl(videoUrl)
                     .build();
 
@@ -169,5 +182,17 @@ public class MediaService {
 
             return videoUrl;
         }
+    }
+
+    @Transactional // 자동으로 DB에 UPDATE 쿼리 날림
+    public void updateRating(RatingRequestDTO dto) {
+
+        // 1. 프론트에서 받은 mediaId로 DreamMediaEntity 가져오기
+        DreamMediaEntity media = dreamMediaRepository.findById(dto.getMediaId())
+                .orElseThrow(() -> new IllegalArgumentException("영상을 찾을 수 없습니다. ID : " + dto.getMediaId()));
+
+        // 2. 가져온 DreamMediaEntity에 별점과 코멘트를 업데이트
+        media.setRating(dto.getRating());
+        media.setComment(dto.getComment());
     }
 }

@@ -20,4 +20,10 @@ public class DreamMediaEntity {
 
     @Column
     private String mediaUrl;
+
+    @Column
+    private Integer rating; // 별점 (1~5점)
+
+    @Column
+    private String comment;
 }
