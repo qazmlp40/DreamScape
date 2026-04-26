@@ -100,7 +100,7 @@ const Login: React.FC = () => {
 
   const redirectUri = makeRedirectUri({
     scheme: 'dreamappnew',
-    path: 'oauth/success',
+    path: 'oauth',
   });
 
   const completeLogin = async (
