@@ -97,6 +97,7 @@ const Login: React.FC = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const isDisabled = userID.trim() === '' || userPW.trim() === '';
+
   const redirectUri = makeRedirectUri({
     scheme: 'dreamappnew',
     path: 'oauth/success',
@@ -181,6 +182,8 @@ const Login: React.FC = () => {
       setGoogleLoading(true);
 
       const authUrl = `${API_BASE_URL}/oauth2/authorization/google`;
+
+      // OAuth 로그인 후 앱 딥링크로 결과 받기
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
       if (result.type !== 'success' || !('url' in result) || !result.url) {
@@ -190,19 +193,24 @@ const Login: React.FC = () => {
         return;
       }
 
+      // 딥링크 URL에서 토큰 추출
       const { queryParams } = Linking.parse(result.url);
+
       const accessToken =
         typeof queryParams?.accessToken === 'string'
           ? queryParams.accessToken
           : typeof queryParams?.token === 'string'
             ? queryParams.token
             : undefined;
+
       const refreshToken =
         typeof queryParams?.refreshToken === 'string' ? queryParams.refreshToken : undefined;
+
       const userId =
         typeof queryParams?.userId === 'string' || typeof queryParams?.userId === 'number'
           ? queryParams.userId
           : undefined;
+
       const errorMessage =
         typeof queryParams?.error === 'string' ? queryParams.error : undefined;
 
