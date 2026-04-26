@@ -1,111 +1,76 @@
 import AppModal from '@/components/app/AppModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ResizeMode, Video } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import * as MediaLibrary from 'expo-media-library';
 import React, { useEffect, useState } from 'react';
 import {
-    Dimensions,
+    Image,
+    Modal,
     Pressable,
     SafeAreaView,
     StyleSheet,
     Text,
+    TextInput,
     View
 } from 'react-native';
-import { useAppDialog } from '@/contexts/AppDialogContext';
-import { useDreamRecord } from '@/contexts/DreamRecordContext';
-import { dreamApi } from '@/services/dreamApi';
-import { ResizeMode, Video } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { width: screenWidth } = Dimensions.get('window');
+import { useAppDialog } from '@/contexts/AppDialogContext';
 
 const colors = {
     text: '#1F2937',
     background: '#FFFFFF',
-    cardBackground: '#F3F4F6',
     border: '#E5E7EB',
     buttonColor: '#BB7CFF',
     inactive: '#9CA3AF',
+    purple: '#BB7CFF',
 };
 
 const FIXED_BUTTON_HEIGHT = 56;
+const DREAM_VIDEO_FEEDBACK_STORAGE_KEY = 'dreamVideoFeedback';
 
-// [step 4 - 제작 중... / 무드보드 영상 화면]
-// 1) 전달받은 dreamId로 AI 영상 생성 API를 요청한다
-// 2) 생성된 videoUrl을 현재 local record에 저장한다
-// 3) videoUrl이 있으면 영상을 보여주고, 저장하기로 갤러리에 저장할 수 있다
 export default function RecordStep4Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const { showDialog } = useAppDialog();
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
+
     const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
+    const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
+    const [hasTimerElapsed, setHasTimerElapsed] = useState(false);
+    const [selectedRating, setSelectedRating] = useState(0);
+    const [feedbackReason, setFeedbackReason] = useState('');
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
     const dreamIdParam = params.dreamId;
     const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
-
-    const localIdParam = params.localId;
-    const localId = typeof localIdParam === 'string' ? localIdParam : '';
-    
-    // // Context에 저장된 videoUrl 사용
-    // // Step4에서 영상 생성 성공 시 setVideoUrl로 갱신됨
-    // const {
-    //     currentDreamText: contextDreamText = '', // DreamRecordContext에 저장되어 있는 꿈 내용
-    //     setVideoUrl,
-    // } = useDreamRecord();
-
-    // const { currentVideoUrl } = useDreamRecord();
-    // // 또는 const { currentRecord } = useDreamRecord(); currentRecord.videoUrl
-    // const videoUrl = currentVideoUrl;
-
-    // console.log('Step4 videoUrl:', videoUrl);
-    const { getRecordByLocalId, updateRecordByLocalId } = useDreamRecord();
-
-    // 현재 dreamId와 같은 꿈 record 찾기
-    const currentRecord = localId ? getRecordByLocalId(localId) : undefined;
-
-    // 현재 꿈의 videoUrl만 사용 
-    const videoUrl = currentRecord?.videoUrl ?? null;
+    const localId = typeof params.localId === 'string' ? params.localId : null;
+    const remoteDreamId = typeof params.id === 'string' ? params.id : null;
+    const selectedDate = typeof params.selectedDate === 'string' ? params.selectedDate : null;
+    const dateParam = typeof params.date === 'string' ? params.date : null;
+    const videoUrlParam =
+        typeof params.videoUrl === 'string' && params.videoUrl.trim()
+            ? params.videoUrl
+            : null;
 
     useEffect(() => {
-        const run = async () => {
-            if (!dreamId || Number.isNaN(dreamId)) {
-                console.error('유효하지 않은 dreamId:', dreamIdParam);
-                return;
-            }
+        setHasTimerElapsed(false);
+        setIsRatingModalVisible(false);
+        setSelectedRating(0);
+        setFeedbackReason('');
 
-            if (!localId) {
-                console.error('localId가 없습니다.');
-                return;
-            }
-    
-            // 이미 현재 꿈 videoUrl이 있으면 다시 요청 안 함
-            if (videoUrl) {
-                console.log('이미 현재 꿈의 videoUrl 존재:', videoUrl);
-                return;
-            }
-    
-            try {
-                const videoRes = await dreamApi.generateVideo(dreamId);
-                console.log('dreamApi.generateVideo 응답:', videoRes);
-    
-                if (localId) {
-                    updateRecordByLocalId(localId, {
-                      dreamId,
-                      videoUrl: videoRes.mediaUrl ?? undefined,
-                    });
-                }
-            } catch (e: any) {
-                console.error(
-                    '영상 생성 오류:',
-                    e?.response?.status,
-                    e?.response?.data || e
-                );
-            }
-        };
-    
-        run();
-    }, [dreamId, dreamIdParam, localId, updateRecordByLocalId, videoUrl]);
+        const timer = setTimeout(() => {
+            setHasTimerElapsed(true);
+            setIsRatingModalVisible(true);
+        }, 6000);
+
+        return () => clearTimeout(timer);
+    }, [dreamIdParam, localId, remoteDreamId]);
+
+    const navigateToHome = () => {
+        setIsRatingModalVisible(false);
+        router.replace('/(tabs)');
+    };
 
     const handleSave = () => {
         setIsSaveModalVisible(true);
@@ -113,168 +78,259 @@ export default function RecordStep4Screen() {
 
     const handleSaveVideo = async () => {
         try {
-            if (!videoUrl) {
-                showDialog({ title: '영상 없음', message: '아직 저장할 꿈 영상이 없습니다.' });
-                return;
-            }
-
-            const { status } = await MediaLibrary.requestPermissionsAsync();
-            if (status !== 'granted') {
-                showDialog({ title: '권한 필요', message: '영상을 저장하려면 갤러리 접근 권한이 필요합니다.' });
-                return;
-            }
-
             setIsSaveModalVisible(false);
-            await MediaLibrary.saveToLibraryAsync(videoUrl);
-            showDialog({ title: '저장 완료', message: '영상이 갤러리에 저장되었습니다.' });
+            showDialog({ title: '안내', message: '목 버전에서는 영상 저장 기능이 아직 비활성화되어 있어요.' });
         } catch (error) {
             console.error('영상 저장 오류:', error);
             showDialog({ title: '오류', message: '영상 저장에 실패했습니다.' });
         }
     };
 
-    const handleNext = () => {
-        const date = params.date as string | undefined;
-        const id = params.id as string | undefined;
-        const selectedDate = params.selectedDate as string | undefined; // 작성 플로우일 수도 있으니 유지
-      
-        // ✅ 1) 캘린더에서 온 경우: date/id를 최우선으로 넘김
-        if (id) {
-          router.push({ pathname: '/record/step5', params: { mode: 'review', id } } as any);
-          return;
+    const handleSkipRating = () => {
+        setSelectedRating(0);
+        setFeedbackReason('');
+        navigateToHome();
+    };
+
+    const handleSubmitRating = async () => {
+        if (!selectedRating || isSubmittingFeedback) {
+            return;
         }
-        if (date) {
-          router.push({ pathname: '/record/step5', params: { mode: 'review', date } } as any);
-          return;
+
+        setIsSubmittingFeedback(true);
+
+        try {
+            const storedFeedback = await AsyncStorage.getItem(
+                DREAM_VIDEO_FEEDBACK_STORAGE_KEY,
+            );
+            const feedbackList = storedFeedback ? JSON.parse(storedFeedback) : [];
+
+            feedbackList.push({
+                dreamId: Number.isFinite(dreamId) ? dreamId : null,
+                remoteDreamId,
+                localId,
+                date: dateParam ?? selectedDate ?? null,
+                rating: selectedRating,
+                reason: feedbackReason.trim(),
+                createdAt: new Date().toISOString(),
+            });
+
+            await AsyncStorage.setItem(
+                DREAM_VIDEO_FEEDBACK_STORAGE_KEY,
+                JSON.stringify(feedbackList),
+            );
+
+            navigateToHome();
+        } catch (error) {
+            console.error('꿈 영상 평가 저장 실패:', error);
+            showDialog({
+                title: '오류',
+                message: '평가를 저장하지 못했어요. 잠시 후 다시 시도해주세요.',
+            });
+        } finally {
+            setIsSubmittingFeedback(false);
         }
-      
-        // ✅ 2) 기존 작성 플로우: selectedDate 유지
-        router.replace({
-            pathname: '/record/step5',
-            params: {
-              mode: 'record',
-              ...(selectedDate ? { selectedDate } : {}),
-              ...(localId ? { localId } : {}),
-              ...(dreamId ? { dreamId: String(dreamId) } : {}),
-            },
-          } as any);        
-    };      
+    };
 
     return (
         <>
             <Stack.Screen options={{ headerShown: false }} />
             <SafeAreaView style={styles.container}>
-            <View style={styles.header}> 
-                <View />
-                <Pressable onPress={handleSave}>
-                    <Text style={styles.saveText}>저장하기</Text>
-                </Pressable>
-            </View>
-
-            {/* 중앙 콘텐츠 */}
-            <View style={styles.centerContent}>
-                {/* 캐릭터 클릭 전 */}
-                {/* 삭제됨 */}
-                {/* 영상 재생 중 */}
-                {/* ✅ 실제 영상 */}
-                <View style={styles.videoWrapper}>
-                    {videoUrl ? (
-                        <Video
-                        source={{ uri: videoUrl }}
-                        style={styles.video}
-                        resizeMode={ResizeMode.COVER}
-                        shouldPlay
-                        useNativeControls
-                        onError={(e) => console.log('Video error:', e)}
-                        onLoad={() => console.log('Video loaded')}
-                        />
-                    ) : (
-                        <Text style={styles.loadingText}>영상 불러오는 중...</Text>
-                    )}
+                <View style={styles.centerContent}>
+                    <View style={styles.videoWrapper}>
+                        {videoUrlParam ? (
+                            <Video
+                                source={{ uri: videoUrlParam }}
+                                style={styles.video}
+                                resizeMode={ResizeMode.COVER}
+                                shouldPlay
+                                isLooping
+                                rate={0.5}
+                                shouldCorrectPitch
+                            />
+                        ) : (
+                            <>
+                                <Image
+                                    source={require('../../assets/images/icons/making_image.png')}
+                                    style={styles.mockImage}
+                                    resizeMode="contain"
+                                />
+                                <Text style={styles.loadingText}>꿈 영상을 만드는 중...</Text>
+                            </>
+                        )}
+                    </View>
                 </View>
-            </View>
 
-            <View style={[styles.buttonContainer, { paddingBottom: BOTTOM_INSET }]}> 
-                <Pressable
-                    onPress={handleNext}
-                    style={styles.nextButton}
+                <Modal
+                    visible={isRatingModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={handleSkipRating}
                 >
-                    <Text style={styles.nextButtonText}>다음</Text>
-                </Pressable>
-            </View>
+                    <View style={styles.ratingOverlay}>
+                        <View style={styles.ratingCard}>
+                            <Text style={styles.ratingTitle}>
+                                꿈 영상이 실제 꿈과 얼마나 비슷했나요?
+                            </Text>
+                            <Text style={styles.ratingSubtitle}>
+                                한 번의 평가가 DreamScape 개선에 큰 도움이 돼요.
+                            </Text>
 
-            <AppModal
-                visible={isSaveModalVisible}
-                title="영상을 저장하시겠습니까?"
-                message="현재 꿈 영상을 갤러리에 저장할 수 있습니다."
-                buttons={[
-                    { text: '닫기', style: 'cancel', onPress: () => setIsSaveModalVisible(false) },
-                    { text: '영상 저장', onPress: handleSaveVideo },
-                ]}
-                onClose={() => setIsSaveModalVisible(false)}
-            />
+                            <View style={styles.starRow}>
+                                {[1, 2, 3, 4, 5].map((star) => {
+                                    const isActive = star <= selectedRating;
+
+                                    return (
+                                        <Pressable
+                                            key={star}
+                                            style={styles.starButton}
+                                            onPress={() => setSelectedRating(star)}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.starText,
+                                                    isActive ? styles.starTextActive : null,
+                                                ]}
+                                            >
+                                                ★
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+
+                            <Text style={styles.ratingCaption}>
+                                {selectedRating
+                                    ? `${selectedRating}점으로 평가했어요`
+                                    : '1점에서 5점 사이로 선택해주세요'}
+                            </Text>
+
+                            {selectedRating > 0 && selectedRating <= 3 ? (
+                                <View style={styles.reasonSection}>
+                                    <Text style={styles.reasonLabel}>
+                                        아쉬웠던 점이 있다면 알려주세요
+                                    </Text>
+                                    <TextInput
+                                        value={feedbackReason}
+                                        onChangeText={setFeedbackReason}
+                                        placeholder="예: 꿈 내용과 장면 흐름이 조금 달랐어요."
+                                        placeholderTextColor="#9CA3AF"
+                                        multiline
+                                        maxLength={200}
+                                        style={styles.reasonInput}
+                                        textAlignVertical="top"
+                                    />
+                                </View>
+                            ) : null}
+
+                            <View style={styles.ratingActions}>
+                                <Pressable
+                                    style={styles.ratingSkipButton}
+                                    onPress={handleSkipRating}
+                                >
+                                    <Text style={styles.ratingSkipButtonText}>건너뛰기</Text>
+                                </Pressable>
+                                <Pressable
+                                    style={[
+                                        styles.ratingSubmitButton,
+                                        !selectedRating || isSubmittingFeedback
+                                            ? styles.ratingSubmitButtonDisabled
+                                            : null,
+                                    ]}
+                                    onPress={handleSubmitRating}
+                                    disabled={!selectedRating || isSubmittingFeedback}
+                                >
+                                    <Text style={styles.ratingSubmitButtonText}>
+                                        {isSubmittingFeedback ? '저장 중...' : '제출하고 이동'}
+                                    </Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+
+                {hasTimerElapsed && !isRatingModalVisible ? (
+                    <>
+                        <View style={[styles.headerOverlay, { top: insets.top + 8 }]}>
+                            <View />
+                            <Pressable onPress={handleSave}>
+                                <Text style={styles.saveText}>저장하기</Text>
+                            </Pressable>
+                        </View>
+
+                        <View style={[styles.buttonContainer, { paddingBottom: BOTTOM_INSET }]}>
+                            <Pressable
+                                onPress={navigateToHome}
+                                style={styles.nextButton}
+                            >
+                                <Text style={styles.nextButtonText}>다음</Text>
+                            </Pressable>
+                        </View>
+                    </>
+                ) : null}
+
+                <AppModal
+                    visible={isSaveModalVisible}
+                    title="영상을 저장하시겠습니까?"
+                    message="현재 꿈 영상을 갤러리에 저장할 수 있습니다."
+                    buttons={[
+                        { text: '닫기', style: 'cancel', onPress: () => setIsSaveModalVisible(false) },
+                        { text: '영상 저장', onPress: handleSaveVideo },
+                    ]}
+                    onClose={() => setIsSaveModalVisible(false)}
+                />
             </SafeAreaView>
         </>
     );
 }
 
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: '#000000',
+    },
+    centerContent: {
+        flex: 1,
+        backgroundColor: '#000000',
     },
     videoWrapper: {
-        width: screenWidth - 24,
-        aspectRatio: 16 / 9,
+        width: '100%',
+        height: '100%',
         backgroundColor: '#000000',
-        borderRadius: 16,
         overflow: 'hidden',
-      },
-    header: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+    },
+    video: {
+        width: '100%',
+        height: '100%',
+    },
+    mockImage: {
+        width: 220,
+        height: 220,
+    },
+    loadingText: {
+        fontSize: 14,
+        color: '#FFFFFF',
+        textAlign: 'center',
+        marginTop: 20,
+    },
+    headerOverlay: {
+        position: 'absolute',
+        left: 16,
+        right: 16,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        zIndex: 10,
+        elevation: 10,
     },
     saveText: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#282828',
+        color: '#FFFFFF',
         letterSpacing: -0.36,
-    },
-    centerContent: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingBottom: 120,
-    },
-    characterBox: {
-        marginBottom: 40,
-        alignItems: 'center',
-    },
-    characterCircle: {
-        width: Math.min(120, Math.round(screenWidth * 0.3)),
-        height: Math.min(120, Math.round(screenWidth * 0.3)),
-        borderRadius: 60,
-        backgroundColor: '#87CEEB',
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    characterPlaceholder: {
-        fontSize: 60,
-    },
-    loadingText: {
-        fontSize: 14,
-        color: colors.inactive,
-        textAlign: 'center',
     },
     buttonContainer: {
         position: 'absolute',
@@ -283,7 +339,9 @@ const styles = StyleSheet.create({
         right: 0,
         paddingHorizontal: 20,
         paddingTop: 16,
-        backgroundColor: colors.background,
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        zIndex: 10,
+        elevation: 10,
     },
     nextButton: {
         height: FIXED_BUTTON_HEIGHT,
@@ -297,16 +355,109 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
     },
-    videoText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#000',
-        textAlign: 'center',
-        marginBottom: 24,
+    ratingOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(17, 24, 39, 0.55)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
     },
-    video: {
+    ratingCard: {
         width: '100%',
-        height: '100%',
-        borderRadius: 16,
+        maxWidth: 360,
+        borderRadius: 24,
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 20,
+        paddingTop: 24,
+        paddingBottom: 20,
+    },
+    ratingTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: colors.text,
+        textAlign: 'center',
+        lineHeight: 28,
+    },
+    ratingSubtitle: {
+        marginTop: 10,
+        fontSize: 14,
+        color: colors.inactive,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+    starRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
+        marginTop: 24,
+    },
+    starButton: {
+        padding: 4,
+    },
+    starText: {
+        fontSize: 38,
+        color: '#D1D5DB',
+    },
+    starTextActive: {
+        color: '#FACC15',
+    },
+    ratingCaption: {
+        marginTop: 10,
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.purple,
+        textAlign: 'center',
+    },
+    reasonSection: {
+        marginTop: 20,
+    },
+    reasonLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.text,
+        marginBottom: 8,
+    },
+    reasonInput: {
+        minHeight: 92,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        fontSize: 14,
+        color: colors.text,
+        backgroundColor: '#F9FAFB',
+    },
+    ratingActions: {
+        marginTop: 20,
+        gap: 10,
+    },
+    ratingSkipButton: {
+        height: 48,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    ratingSkipButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    ratingSubmitButton: {
+        height: 52,
+        borderRadius: 12,
+        backgroundColor: colors.buttonColor,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    ratingSubmitButtonDisabled: {
+        backgroundColor: '#D8B4FE',
+    },
+    ratingSubmitButtonText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#FFFFFF',
     },
 });
