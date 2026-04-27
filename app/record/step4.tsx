@@ -1,5 +1,9 @@
-import AppModal from '@/components/app/AppModal';
+import EmptyStateCard from '@/components/app/EmptyStateCard';
+import FixedBottomButton from '@/components/app/FixedBottomButton';
+import RecordHeader from '@/components/app/RecordHeader';
+import SaveConfirmModal from '@/components/app/SaveConfirmModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { dreamApi } from '@/services/dreamApi';
 import { ResizeMode, Video } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -7,13 +11,11 @@ import {
     Image,
     Modal,
     Pressable,
-    SafeAreaView,
     StyleSheet,
     Text,
     TextInput,
     View
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppDialog } from '@/contexts/AppDialogContext';
 
 const colors = {
@@ -25,15 +27,30 @@ const colors = {
     purple: '#BB7CFF',
 };
 
-const FIXED_BUTTON_HEIGHT = 56;
 const DREAM_VIDEO_FEEDBACK_STORAGE_KEY = 'dreamVideoFeedback';
+
+const getParamValue = (value: unknown) => {
+    if (Array.isArray(value)) {
+        return value[0];
+    }
+
+    return typeof value === 'string' && value.trim() ? value : undefined;
+};
+
+const getParamNumber = (value: unknown) => {
+    const rawValue = getParamValue(value);
+    if (!rawValue) {
+        return undefined;
+    }
+
+    const numberValue = Number(rawValue);
+    return Number.isFinite(numberValue) ? numberValue : undefined;
+};
 
 export default function RecordStep4Screen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const { showDialog } = useAppDialog();
-    const insets = useSafeAreaInsets();
-    const BOTTOM_INSET = insets.bottom || 20;
 
     const [isSaveModalVisible, setIsSaveModalVisible] = useState(false);
     const [isRatingModalVisible, setIsRatingModalVisible] = useState(false);
@@ -41,31 +58,95 @@ export default function RecordStep4Screen() {
     const [selectedRating, setSelectedRating] = useState(0);
     const [feedbackReason, setFeedbackReason] = useState('');
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+    const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
+    const [isVideoLoading, setIsVideoLoading] = useState(false);
+    const [videoError, setVideoError] = useState<string | null>(null);
+    const [videoReloadKey, setVideoReloadKey] = useState(0);
 
-    const dreamIdParam = params.dreamId;
-    const dreamId = typeof dreamIdParam === 'string' ? Number(dreamIdParam) : NaN;
-    const localId = typeof params.localId === 'string' ? params.localId : null;
-    const remoteDreamId = typeof params.id === 'string' ? params.id : null;
-    const selectedDate = typeof params.selectedDate === 'string' ? params.selectedDate : null;
-    const dateParam = typeof params.date === 'string' ? params.date : null;
-    const videoUrlParam =
-        typeof params.videoUrl === 'string' && params.videoUrl.trim()
-            ? params.videoUrl
-            : null;
+    const dreamIdParam = getParamValue(params.dreamId) ?? getParamValue(params.id);
+    const dreamId = getParamNumber(dreamIdParam);
+    const localId = getParamValue(params.localId) ?? null;
+    const remoteDreamId = getParamValue(params.id) ?? null;
+    const selectedDate = getParamValue(params.selectedDate) ?? null;
+    const dateParam = getParamValue(params.date) ?? null;
+    const videoUrlParam = getParamValue(params.videoUrl) ?? null;
 
     useEffect(() => {
         setHasTimerElapsed(false);
         setIsRatingModalVisible(false);
         setSelectedRating(0);
         setFeedbackReason('');
-
-        const timer = setTimeout(() => {
-            setHasTimerElapsed(true);
-            setIsRatingModalVisible(true);
-        }, 6000);
-
-        return () => clearTimeout(timer);
     }, [dreamIdParam, localId, remoteDreamId]);
+
+    useEffect(() => {
+        let isCancelled = false;
+
+        const loadVideo = async () => {
+            setVideoError(null);
+            setResolvedVideoUrl(null);
+
+            if (videoUrlParam) {
+                setResolvedVideoUrl(videoUrlParam);
+                setIsVideoLoading(false);
+                return;
+            }
+
+            if (!dreamId) {
+                setVideoError('꿈 정보를 찾지 못했어요.');
+                setIsVideoLoading(false);
+                return;
+            }
+
+            setIsVideoLoading(true);
+
+            try {
+                const videoRes = await dreamApi.generateVideo(dreamId);
+                const responseDreamId = getParamNumber(
+                    videoRes?.dreamId ?? videoRes?.id ?? videoRes?.dream_id,
+                );
+                const isMismatchedVideo =
+                    responseDreamId !== undefined && responseDreamId !== dreamId;
+
+                if (isMismatchedVideo) {
+                    console.warn('꿈 영상 응답의 dreamId가 현재 꿈과 달라서 무시합니다.', {
+                        expectedDreamId: dreamId,
+                        responseDreamId,
+                    });
+                    throw new Error('다른 꿈의 영상 응답을 받았습니다.');
+                }
+
+                const nextVideoUrl = videoRes?.mediaUrl ?? videoRes?.videoUrl;
+
+                if (!nextVideoUrl) {
+                    throw new Error('영상 URL이 없습니다.');
+                }
+
+                if (!isCancelled) {
+                    setResolvedVideoUrl(nextVideoUrl);
+                }
+            } catch (error) {
+                console.error('꿈 영상 불러오기 실패:', error);
+                if (!isCancelled) {
+                    setVideoError('꿈 영상을 불러오지 못했어요.');
+                }
+            } finally {
+                if (!isCancelled) {
+                    setIsVideoLoading(false);
+                }
+            }
+        };
+
+        loadVideo();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [dreamId, videoUrlParam, videoReloadKey]);
+
+    const showRatingModal = () => {
+        setHasTimerElapsed(true);
+        setIsRatingModalVisible(true);
+    };
 
     const navigateToHome = () => {
         setIsRatingModalVisible(false);
@@ -135,28 +216,69 @@ export default function RecordStep4Screen() {
     return (
         <>
             <Stack.Screen options={{ headerShown: false }} />
-            <SafeAreaView style={styles.container}>
+            <View style={styles.container}>
                 <View style={styles.centerContent}>
                     <View style={styles.videoWrapper}>
-                        {videoUrlParam ? (
+                        {resolvedVideoUrl ? (
                             <Video
-                                source={{ uri: videoUrlParam }}
+                                source={{ uri: resolvedVideoUrl as string }}
                                 style={styles.video}
                                 resizeMode={ResizeMode.COVER}
                                 shouldPlay
-                                isLooping
                                 rate={0.5}
                                 shouldCorrectPitch
+                                onPlaybackStatusUpdate={(status) => {
+                                    if (
+                                        status.isLoaded &&
+                                        status.didJustFinish &&
+                                        !hasTimerElapsed
+                                    ) {
+                                        showRatingModal();
+                                    }
+                                }}
                             />
+                        ) : videoError ? (
+                            <View style={styles.videoStateCard}>
+                                <Text style={styles.videoStateTitle}>{videoError}</Text>
+                                <Text style={styles.videoStateMessage}>
+                                    잠시 후 다시 시도해주세요.
+                                </Text>
+                                <Pressable
+                                    style={styles.retryButton}
+                                    onPress={() => {
+                                        setVideoError(null);
+                                        setResolvedVideoUrl(null);
+                                        setVideoReloadKey((key) => key + 1);
+                                    }}
+                                >
+                                    <Text style={styles.retryButtonText}>다시 시도</Text>
+                                </Pressable>
+                                <View style={styles.errorActions}>
+                                    <Pressable
+                                        style={styles.errorSecondaryButton}
+                                        onPress={() => router.back()}
+                                    >
+                                        <Text style={styles.errorSecondaryButtonText}>뒤로가기</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={styles.errorSecondaryButton}
+                                        onPress={() => router.replace('/(tabs)')}
+                                    >
+                                        <Text style={styles.errorSecondaryButtonText}>홈으로</Text>
+                                    </Pressable>
+                                </View>
+                            </View>
                         ) : (
-                            <>
+                            <EmptyStateCard
+                                title={isVideoLoading ? '꿈 영상을 불러오는 중...' : '꿈 영상을 준비하는 중...'}
+                                style={styles.loadingCard}
+                            >
                                 <Image
                                     source={require('../../assets/images/icons/making_image.png')}
                                     style={styles.mockImage}
                                     resizeMode="contain"
                                 />
-                                <Text style={styles.loadingText}>꿈 영상을 만드는 중...</Text>
-                            </>
+                            </EmptyStateCard>
                         )}
                     </View>
                 </View>
@@ -251,35 +373,28 @@ export default function RecordStep4Screen() {
 
                 {hasTimerElapsed && !isRatingModalVisible ? (
                     <>
-                        <View style={[styles.headerOverlay, { top: insets.top + 8 }]}>
-                            <View />
-                            <Pressable onPress={handleSave}>
-                                <Text style={styles.saveText}>저장하기</Text>
-                            </Pressable>
-                        </View>
+                        <RecordHeader
+                            showBack={false}
+                            rightText="저장하기"
+                            onRightPress={handleSave}
+                            variant="overlay"
+                        />
 
-                        <View style={[styles.buttonContainer, { paddingBottom: BOTTOM_INSET }]}>
-                            <Pressable
-                                onPress={navigateToHome}
-                                style={styles.nextButton}
-                            >
-                                <Text style={styles.nextButtonText}>다음</Text>
-                            </Pressable>
-                        </View>
+                        <FixedBottomButton
+                            label="다음"
+                            onPress={navigateToHome}
+                            overlay
+                        />
                     </>
                 ) : null}
 
-                <AppModal
+                <SaveConfirmModal
                     visible={isSaveModalVisible}
-                    title="영상을 저장하시겠습니까?"
-                    message="현재 꿈 영상을 갤러리에 저장할 수 있습니다."
-                    buttons={[
-                        { text: '닫기', style: 'cancel', onPress: () => setIsSaveModalVisible(false) },
-                        { text: '영상 저장', onPress: handleSaveVideo },
-                    ]}
+                    kind="video"
+                    onSave={handleSaveVideo}
                     onClose={() => setIsSaveModalVisible(false)}
                 />
-            </SafeAreaView>
+            </View>
         </>
     );
 }
@@ -298,9 +413,6 @@ const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: '#000000',
         overflow: 'hidden',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 24,
     },
     video: {
         width: '100%',
@@ -310,50 +422,67 @@ const styles = StyleSheet.create({
         width: 220,
         height: 220,
     },
-    loadingText: {
-        fontSize: 14,
-        color: '#FFFFFF',
-        textAlign: 'center',
-        marginTop: 20,
+    loadingCard: {
+        maxWidth: 320,
+        backgroundColor: 'rgba(255, 255, 255, 0.96)',
     },
-    headerOverlay: {
-        position: 'absolute',
-        left: 16,
-        right: 16,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    videoStateCard: {
+        width: '100%',
+        maxWidth: 320,
+        minHeight: 120,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: 'rgba(255, 255, 255, 0.96)',
         alignItems: 'center',
-        zIndex: 10,
-        elevation: 10,
+        justifyContent: 'center',
+        padding: 16,
     },
-    saveText: {
-        fontSize: 18,
+    videoStateTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: colors.text,
+        textAlign: 'center',
+    },
+    videoStateMessage: {
+        marginTop: 6,
+        fontSize: 13,
+        color: colors.inactive,
+        lineHeight: 18,
+        textAlign: 'center',
+    },
+    retryButton: {
+        height: 40,
+        marginTop: 18,
+        borderRadius: 8,
+        backgroundColor: colors.buttonColor,
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+    },
+    retryButtonText: {
+        fontSize: 14,
         fontWeight: '700',
         color: '#FFFFFF',
-        letterSpacing: -0.36,
     },
-    buttonContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
-        zIndex: 10,
-        elevation: 10,
+    errorActions: {
+        flexDirection: 'column',
+        gap: 10,
+        marginTop: 10,
+        width: '100%',
     },
-    nextButton: {
-        height: FIXED_BUTTON_HEIGHT,
-        backgroundColor: colors.buttonColor,
-        borderRadius: 12,
+    errorSecondaryButton: {
+        height: 40,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: colors.border,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    nextButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '700',
+    errorSecondaryButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.text,
     },
     ratingOverlay: {
         flex: 1,

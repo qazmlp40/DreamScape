@@ -1,4 +1,6 @@
-import AppModal from "@/components/app/AppModal";
+import FixedBottomButton from "@/components/app/FixedBottomButton";
+import RecordHeader from "@/components/app/RecordHeader";
+import SaveConfirmModal from "@/components/app/SaveConfirmModal";
 import PigIcon from "@/assets/images/icons/dream_symbol/pig.svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -6,19 +8,16 @@ import * as MediaLibrary from "expo-media-library";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Image,
-  Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import { API_BASE_URL, DEV_MOCK_DREAMS } from "../../constants/api";
 import { useAppDialog } from "../../contexts/AppDialogContext";
-import { useDreamRecord } from "../../contexts/DreamRecordContext";
+import { type DreamRecord, useDreamRecord } from "../../contexts/DreamRecordContext";
 import { dreamApi, getMockDreamById } from "../../services/dreamApi";
 
 const colors = {
@@ -32,9 +31,130 @@ const colors = {
 
 const FIXED_BUTTON_HEIGHT = 56;
 
+type RemoteDreamRecord = {
+  dreamId?: number;
+  date?: string;
+  title?: string;
+  mood?: string;
+  dreamText?: string;
+  summary?: string;
+  interpretation?: string;
+  videoUrl?: string;
+};
+
+type DreamResultViewModel = {
+  remoteId?: string;
+  localId?: string;
+  dreamId?: number;
+  date?: string;
+  selectedDate?: string;
+  title: string;
+  summary: string;
+  interpretation: string;
+  videoUrl?: string;
+};
+
+const getParamValue = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return typeof value === "string" && value.trim() ? value : undefined;
+};
+
+const getParamNumber = (value: unknown) => {
+  const rawValue = getParamValue(value);
+  if (!rawValue) {
+    return undefined;
+  }
+
+  const numberValue = Number(rawValue);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+};
+
+const firstText = (...values: (string | null | undefined)[]) => {
+  return values.find((value) => value?.trim())?.trim();
+};
+
+const buildDreamResultViewModel = ({
+  params,
+  localRecord,
+  currentRecord,
+  remoteRecord,
+}: {
+  params: ReturnType<typeof useLocalSearchParams>;
+  localRecord?: DreamRecord;
+  currentRecord: {
+    title: string;
+    mood: string | null;
+    dreamText: string;
+    analysis: DreamRecord["analysis"] | null;
+    videoUrl: string | null;
+  };
+  remoteRecord: RemoteDreamRecord | null;
+}): DreamResultViewModel => {
+  const remoteId = getParamValue(params.id) ?? getParamValue(params.dreamId);
+  const localId = localRecord?.localId ?? getParamValue(params.localId);
+  const canUseCurrentRecord = !remoteId && !localRecord;
+  const dreamId =
+    remoteRecord?.dreamId ??
+    localRecord?.dreamId ??
+    getParamNumber(params.dreamId) ??
+    getParamNumber(params.id);
+  const date =
+    remoteRecord?.date ??
+    localRecord?.date ??
+    getParamValue(params.date) ??
+    getParamValue(params.selectedDate);
+  const selectedDate = getParamValue(params.selectedDate);
+
+  const title =
+    firstText(
+      remoteRecord?.title,
+      localRecord?.title,
+      canUseCurrentRecord ? currentRecord.title : undefined,
+    ) ??
+    "";
+  const summary =
+    firstText(
+      remoteRecord?.summary,
+      localRecord?.analysis?.summary,
+      canUseCurrentRecord ? currentRecord.analysis?.summary : undefined,
+      remoteRecord?.dreamText,
+      localRecord?.dreamText,
+      canUseCurrentRecord ? currentRecord.dreamText : undefined,
+    ) ?? "";
+  const interpretation =
+    firstText(
+      remoteRecord?.interpretation,
+      localRecord?.analysis?.interpretation,
+      canUseCurrentRecord ? currentRecord.analysis?.interpretation : undefined,
+    ) ?? "";
+  const videoUrl =
+    firstText(
+      remoteRecord?.videoUrl,
+      localRecord?.videoUrl,
+      canUseCurrentRecord ? currentRecord.videoUrl : undefined,
+    ) ??
+    undefined;
+
+  return {
+    remoteId,
+    localId,
+    dreamId,
+    date,
+    selectedDate,
+    title,
+    summary,
+    interpretation,
+    videoUrl,
+  };
+};
+
 export default function RecordStep5Screen() {
   const {
     currentRecord,
+    savedRecords,
     getRecordByLocalId,
     getRecordByDate,
     updateRecordByLocalId,
@@ -43,36 +163,35 @@ export default function RecordStep5Screen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { showDialog } = useAppDialog();
-  const insets = useSafeAreaInsets();
-  const BOTTOM_INSET = insets.bottom || 20;
   const [isSaved, setIsSaved] = useState(false);
   const viewRef = useRef(null);
-  const [remoteRecord, setRemoteRecord] = useState<{
-    title?: string;
-    mood?: string;
-    summary?: string;
-    interpretation?: string;
-    videoUrl?: string;
-  } | null>(null);
+  const [remoteRecord, setRemoteRecord] = useState<RemoteDreamRecord | null>(
+    null,
+  );
+  const fetchDreamId = getParamValue(params.id) ?? getParamValue(params.dreamId);
+  const fetchDreamIdNumber = getParamNumber(fetchDreamId);
 
   useEffect(() => {
     const fetchDream = async () => {
-      if (!params.id) {
+      if (!fetchDreamId) {
         setRemoteRecord(null);
         return;
       }
 
       if (DEV_MOCK_DREAMS) {
-        const mockDream = getMockDreamById(Number(params.id));
+        const mockDreamId = getParamNumber(fetchDreamId);
+        const mockDream = mockDreamId ? getMockDreamById(mockDreamId) : null;
         setRemoteRecord(
           mockDream
             ? {
-                title: mockDream.title,
-                mood: mockDream.mood,
-                summary: mockDream.aiSummary ?? mockDream.rawText,
-                interpretation: mockDream.aiInterpretation,
-                videoUrl: mockDream.mediaUrl ?? undefined,
-              }
+              title: mockDream.title,
+              mood: mockDream.mood,
+              summary: mockDream.aiSummary ?? mockDream.rawText,
+              interpretation: mockDream.aiInterpretation,
+              videoUrl: mockDream.mediaUrl ?? undefined,
+              dreamId: mockDream.dreamId,
+              date: mockDream.createdAt.slice(0, 10),
+            }
             : null,
         );
         return;
@@ -84,17 +203,41 @@ export default function RecordStep5Screen() {
           return;
         }
 
-        const res = await axios.get(`${API_BASE_URL}/api/dreams/${params.id}`);
+        const res = await axios.get(`${API_BASE_URL}/api/dreams/${fetchDreamId}`);
         const data = res.data || {};
+        const fetchedDreamId = Number(
+          data.dreamId ?? data.id ?? getParamNumber(fetchDreamId),
+        );
+        const expectedDreamId = getParamNumber(fetchDreamId);
+
+        if (
+          expectedDreamId !== undefined &&
+          Number.isFinite(fetchedDreamId) &&
+          fetchedDreamId !== expectedDreamId
+        ) {
+          console.warn("꿈 상세 응답의 dreamId가 요청한 dreamId와 달라서 무시합니다.", {
+            expectedDreamId,
+            fetchedDreamId,
+          });
+          setRemoteRecord(null);
+          return;
+        }
 
         setRemoteRecord({
+          dreamId: Number.isFinite(fetchedDreamId) ? fetchedDreamId : undefined,
+          date: data.date ?? data.dreamDate ?? data.createdAt?.slice?.(0, 10),
           title: data.title || data.dreamTitle,
           mood: data.mood || data.emotion,
+          dreamText: data.rawText ?? data.content,
           summary:
             data.aiSummary ?? data.summary ?? data.rawText ?? data.content,
           interpretation:
             data.aiInterpretation ?? data.interpretation ?? data.analysisText,
-          videoUrl: data.mediaUrl ?? data.videoUrl,
+          videoUrl:
+            data.mediaUrl ??
+            data.videoUrl ??
+            data.video?.mediaUrl ??
+            data.media?.mediaUrl,
         });
       } catch (error) {
         console.error("꿈 데이터 불러오기 실패:", error);
@@ -102,55 +245,67 @@ export default function RecordStep5Screen() {
     };
 
     fetchDream();
-  }, [params.id]);
+  }, [fetchDreamId]);
 
-  // params로 저장된 record 먼저 찾기
-  const record =
-    (params.localId ? getRecordByLocalId(String(params.localId)) : null) ??
-    (params.date ? getRecordByDate(String(params.date)) : null);
+  const localRecordByLocalId = getParamValue(params.localId)
+    ? getRecordByLocalId(String(getParamValue(params.localId)))
+    : undefined;
+  const localRecordByDreamId = fetchDreamIdNumber
+    ? savedRecords.find((record) => record.dreamId === fetchDreamIdNumber)
+    : undefined;
+  const localRecordByDate = !fetchDreamIdNumber && getParamValue(params.date)
+    ? getRecordByDate(String(getParamValue(params.date)))
+    : undefined;
+  const localRecord =
+    localRecordByLocalId ?? localRecordByDreamId ?? localRecordByDate;
 
-  // record를 먼저 쓰고, 없으면 currentRecord (DreamRecord 타입으로 좁히기)
-  const displayRecord:
-    | import("../../contexts/DreamRecordContext").DreamRecord
-    | null =
-    record ??
-    (currentRecord.mood
-      ? (currentRecord as unknown as import("../../contexts/DreamRecordContext").DreamRecord)
-      : null);
-
-  // 화면에 뿌리는 데이터도 displayRecord 기준으로 통일
-  const dreamTitle =
-    (remoteRecord?.title && remoteRecord.title.trim()) ||
-    (displayRecord?.title && displayRecord.title.trim()) ||
-    "";
-
-  const dreamSummary =
-    remoteRecord?.summary ??
-    displayRecord?.analysis?.summary ??
-    displayRecord?.dreamText ??
-    "";
-
-  const dreamInterpretation =
-    remoteRecord?.interpretation ??
-    displayRecord?.analysis?.interpretation ??
-    "";
-
-  const dreamVideoUrl =
-    remoteRecord?.videoUrl ?? displayRecord?.videoUrl ?? null;
-  const localDreamId = displayRecord?.dreamId;
+  const dreamResult = buildDreamResultViewModel({
+    params,
+    localRecord,
+    currentRecord,
+    remoteRecord,
+  });
 
   useEffect(() => {
     const run = async () => {
-      if (!localDreamId || !displayRecord?.localId || dreamVideoUrl) {
+      if (!dreamResult.dreamId || dreamResult.videoUrl) {
         return;
       }
 
       try {
-        const videoRes = await dreamApi.generateVideo(localDreamId);
-        updateRecordByLocalId(displayRecord.localId, {
-          dreamId: localDreamId,
-          videoUrl: videoRes.mediaUrl ?? undefined,
-        });
+        const videoRes = await dreamApi.generateVideo(dreamResult.dreamId);
+        const responseDreamId = getParamNumber(
+          videoRes.dreamId ?? videoRes.id ?? videoRes.dream_id,
+        );
+        const isMismatchedVideo =
+          responseDreamId !== undefined && responseDreamId !== dreamResult.dreamId;
+
+        if (isMismatchedVideo) {
+          console.warn("꿈 영상 응답의 dreamId가 현재 꿈과 달라서 무시합니다.", {
+            expectedDreamId: dreamResult.dreamId,
+            responseDreamId,
+          });
+          return;
+        }
+
+        const videoUrl = videoRes.mediaUrl ?? videoRes.videoUrl ?? undefined;
+
+        if (!videoUrl) {
+          return;
+        }
+
+        setRemoteRecord((prev) => ({
+          ...(prev ?? {}),
+          dreamId: dreamResult.dreamId,
+          videoUrl,
+        }));
+
+        if (dreamResult.localId) {
+          updateRecordByLocalId(dreamResult.localId, {
+            dreamId: dreamResult.dreamId,
+            videoUrl,
+          });
+        }
       } catch (error) {
         console.error("꿈 영상 생성 실패:", error);
       }
@@ -158,9 +313,9 @@ export default function RecordStep5Screen() {
 
     run();
   }, [
-    dreamVideoUrl,
-    displayRecord?.localId,
-    localDreamId,
+    dreamResult.dreamId,
+    dreamResult.localId,
+    dreamResult.videoUrl,
     updateRecordByLocalId,
   ]);
 
@@ -172,12 +327,14 @@ export default function RecordStep5Screen() {
     router.push({
       pathname: "/record/step4",
       params: {
-        ...(params.id ? { id: String(params.id) } : {}),
-        ...(params.date ? { date: String(params.date) } : {}),
-        ...(params.selectedDate ? { selectedDate: String(params.selectedDate) } : {}),
-        ...(displayRecord?.localId ? { localId: displayRecord.localId } : {}),
-        ...(localDreamId ? { dreamId: String(localDreamId) } : {}),
-        ...(dreamVideoUrl ? { videoUrl: dreamVideoUrl } : {}),
+        ...(dreamResult.remoteId ? { id: dreamResult.remoteId } : {}),
+        ...(dreamResult.date ? { date: dreamResult.date } : {}),
+        ...(dreamResult.selectedDate
+          ? { selectedDate: dreamResult.selectedDate }
+          : {}),
+        ...(dreamResult.localId ? { localId: dreamResult.localId } : {}),
+        ...(dreamResult.dreamId ? { dreamId: String(dreamResult.dreamId) } : {}),
+        ...(dreamResult.videoUrl ? { videoUrl: dreamResult.videoUrl } : {}),
       },
     } as any);
   };
@@ -214,14 +371,12 @@ export default function RecordStep5Screen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={styles.container} ref={viewRef} collapsable={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View />
-          <Pressable onPress={handleSave}>
-            <Text style={styles.saveText}>저장하기</Text>
-          </Pressable>
-        </View>
+      <SafeAreaView edges={[]} style={styles.container} ref={viewRef} collapsable={false}>
+        <RecordHeader
+          showBack={false}
+          rightText="저장하기"
+          onRightPress={handleSave}
+        />
 
         {/* Main Content */}
         <ScrollView
@@ -230,7 +385,7 @@ export default function RecordStep5Screen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Title */}
-          <Text style={styles.title}>{dreamTitle || "제목 없는 꿈"}</Text>
+          <Text style={styles.title}>{dreamResult.title || "제목 없는 꿈"}</Text>
 
           <View style={styles.videoSection}>
             <View style={styles.videoBox}>
@@ -240,32 +395,23 @@ export default function RecordStep5Screen() {
 
           <Text style={styles.sectionLabel}>꿈 요약</Text>
           <View style={styles.inputContainer}>
-            <Text style={styles.summaryText}>{dreamSummary}</Text>
+            <Text style={styles.summaryText}>{dreamResult.summary}</Text>
           </View>
 
           <Text style={styles.sectionLabel}>꿈 해몽</Text>
           <View style={styles.optionsWrapper}>
             <Text style={styles.interpretationText}>
-              {dreamInterpretation || "아직 해몽이 없습니다."}
+              {dreamResult.interpretation || "아직 해몽이 없습니다."}
             </Text>
           </View>
         </ScrollView>
 
-        {/* Next Button */}
-        <View style={[styles.buttonContainer, { paddingBottom: BOTTOM_INSET }]}>
-          <Pressable style={styles.nextButton} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>다음</Text>
-          </Pressable>
-        </View>
+        <FixedBottomButton label="다음" onPress={handleNext} />
 
-        <AppModal
+        <SaveConfirmModal
           visible={isSaved}
-          title="이미지를 저장하시겠습니까?"
-          message="현재 꿈 이미지를 갤러리에 저장할 수 있습니다."
-          buttons={[
-            { text: "닫기", style: "cancel", onPress: () => setIsSaved(false) },
-            { text: "이미지 저장", onPress: handleSaveImage },
-          ]}
+          kind="image"
+          onSave={handleSaveImage}
           onClose={() => setIsSaved(false)}
         />
       </SafeAreaView>
@@ -277,19 +423,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  saveText: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#282828",
-    letterSpacing: -0.36,
   },
   title: {
     fontSize: 22,
@@ -303,7 +436,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 8,
     paddingBottom: FIXED_BUTTON_HEIGHT + 40,
   },
   videoBox: {
@@ -350,27 +483,5 @@ const styles = StyleSheet.create({
   },
   videoSection: {
     marginBottom: 28,
-  },
-  buttonContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    backgroundColor: colors.background,
-    gap: 10,
-  },
-  nextButton: {
-    height: FIXED_BUTTON_HEIGHT,
-    backgroundColor: colors.buttonColor,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  nextButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
   },
 });

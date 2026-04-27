@@ -135,7 +135,7 @@ export default function TabsIndex() {
                 .reverse()
                 .map((dream) => (
                   <Link
-                    key={dream.localId}
+                    key={dream.id}
                     href={{
                       pathname: '/record/step5',
                       params: {

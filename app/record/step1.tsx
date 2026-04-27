@@ -1,6 +1,7 @@
+import FixedBottomButton from '@/components/app/FixedBottomButton';
+import RecordHeader from '@/components/app/RecordHeader';
 import { dreamApi } from '@/services/dreamApi';
 import { clamp } from '@/utils/responsive';
-import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -8,7 +9,6 @@ import {
     Image,
     ImageSourcePropType,
     Platform,
-    Pressable,
     Image as RNImage,
     ScrollView,
     StyleSheet,
@@ -30,10 +30,6 @@ const containerWidth = Math.min(412, screenWidth);
 
 // Responsive helpers
 const HORIZONTAL_PADDING = Math.min(20, Math.round(screenWidth * 0.05));
-
-// 디자인 상수
-const HEADER_BG_COLOR = '#FFFFFF';
-const HEADER_TEXT_COLOR = '#1F2937';
 
 const colors = {
     primary: '#5B76EE',
@@ -62,86 +58,6 @@ const FIXED_BUTTON_HEIGHT = 56;
 // TODO: Set API_BASE_URL in constants/api.ts to your backend IP:PORT (e.g., http://192.168.0.5:8080)
 const SERVER_URL = API_BASE_URL;
 
-// 커스텀 헤더 (흰색 + 마이크 음성인식) 
-const CustomRecordHeader = ({ title, onMicPress }: { title: string; onMicPress?: () => void }) => {
-    const router = useRouter();
-    const insets = useSafeAreaInsets();
-    const HEADER_CONTENT_HEIGHT = 56;
-
-    return (
-        <View
-            style={[
-                headerStyles.headerContainer,
-                {
-                    height: HEADER_CONTENT_HEIGHT + insets.top,
-                    paddingTop: insets.top,
-                    backgroundColor: HEADER_BG_COLOR,
-                    borderBottomWidth: 0,
-                }
-            ]}
-        >
-            {/* 뒤로가기 버튼 */}
-            <TouchableOpacity
-                onPress={() => router.back()}
-                style={headerStyles.headerLeft}
-                accessibilityRole="button"
-                accessibilityLabel="뒤로가기"
-            >
-                <Ionicons name="arrow-back" size={24} color={HEADER_TEXT_COLOR} />
-            </TouchableOpacity>
-
-            {/* 제목: 한 줄로 제한 (넘치면 ...으로) */}
-            <Text
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                style={[headerStyles.headerTitle, { color: '#282828', marginLeft: 4 }]}
-            >
-                {title}
-            </Text>
-
-            {/* 음성인식(마이크) 아이콘 */}
-            <TouchableOpacity
-                onPress={onMicPress}
-                style={headerStyles.headerRight}
-                accessibilityRole="button"
-                accessibilityLabel="음성으로 입력"
-            >
-                <Ionicons name="mic-outline" size={24} color={HEADER_TEXT_COLOR} />
-            </TouchableOpacity>
-        </View>
-    );
-};
-
-const headerStyles = StyleSheet.create({
-    headerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 8,
-    },
-    headerLeft: {
-        width: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        letterSpacing: -0.36,
-        textAlign: 'left',
-        color: '#282828',
-        flex: 1,
-        zIndex: 1,
-    },
-    headerRight: {
-        width: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2,
-    },
-});
-
 export default function RecordStep1Screen() {
     const [selectedMood, setSelectedMood] = useState<string | null>(null);
     const [dreamContent, setDreamContent] = useState('');
@@ -163,9 +79,7 @@ export default function RecordStep1Screen() {
     }, [params.voiceText]);
     
     // [step 1 - 꿈 기록 화면]
-    // 1) 사용자가 입력한 감정/꿈 내용을 로컬 record로 먼저 저장해 localId를 만든다
-    // 2) saveDream 호출로 백엔드에 꿈을 저장하고 dreamId를 받는다
-    // 3) 방금 만든 local record에 dreamId를 연결한 뒤 Step2로 이동한다
+    // 서버 dreamId를 플로우의 기준으로 삼고, 로컬 record는 즉시 화면 복구용 보조 캐시로만 사용한다.
     const submitDreamToServer = async (emotion: string, content: string, selectedDate?: string) => {
         setIsSubmitting(true);
         try {
@@ -223,22 +137,6 @@ export default function RecordStep1Screen() {
           setMood(selectedMood);
           setDreamText(trimmedContent);
           
-        // 1) 로컬 record를 먼저 saveRecord()로 저장하고 localId를 만든다
-          const localId = saveRecord({
-            selectedDate,
-            title: '',
-            mood: selectedMood,
-            dreamText: trimmedContent,
-            analysis: null,
-            videoUrl: null,
-          });
-
-        
-          if (!localId) {
-            showDialog({ title: '오류', message: '로컬 기록 저장에 실패했어요.' });
-            return;
-          }
-        
           // 백엔드 저장 후 dreamId 받기 (DreamEntity 생성)
           const res = await submitDreamToServer(selectedMood, trimmedContent, selectedDate);
         
@@ -249,11 +147,30 @@ export default function RecordStep1Screen() {
         
           const dreamId = res.dreamId;
 
-            // API 호출 (DreamAnalysisEntity 생성)
-            await dreamApi.summarizeDream(dreamId, trimmedContent);
+          // 로컬 record는 서버 플로우를 막지 않는 보조 캐시로 저장한다.
+          const localId = saveRecord({
+            selectedDate,
+            title: '',
+            mood: selectedMood,
+            dreamText: trimmedContent,
+            analysis: null,
+            videoUrl: null,
+            dreamId,
+          });
 
-            updateRecordByLocalId(localId, { dreamId });
-            router.replace(`/record/step2?dreamId=${dreamId}&localId=${localId}&dreamText=${encodeURIComponent(trimmedContent)}...`);
+            if (localId) {
+                updateRecordByLocalId(localId, { dreamId });
+            }
+
+            router.replace({
+                pathname: '/record/step2',
+                params: {
+                    dreamId: String(dreamId),
+                    dreamText: trimmedContent,
+                    ...(localId ? { localId } : {}),
+                    ...(selectedDate ? { selectedDate } : {}),
+                },
+            } as any);
     };
 
     const handleMicPress = async () => {
@@ -263,7 +180,7 @@ export default function RecordStep1Screen() {
     return (
         <View style={styles.container}>
             {/* 헤더 */}
-            <CustomRecordHeader title="꿈 기록" onMicPress={handleMicPress} />
+            <RecordHeader title="꿈 기록" onMicPress={handleMicPress} backIcon="arrow-back" />
 
             {/* 콘텐츠 */}
             <KeyboardAwareScrollView
@@ -350,19 +267,12 @@ export default function RecordStep1Screen() {
                 <View style={{ height: FIXED_BUTTON_HEIGHT + BOTTOM_INSET + 40 }} />
             </KeyboardAwareScrollView>
 
-            {/* 하단 버튼 */}
-            <View style={[styles.buttonContainer, { paddingBottom: BOTTOM_INSET }]}>
-                <Pressable
-                    onPress={handleNext}
-                    style={[
-                        styles.nextButton,
-                        { opacity: (selectedMood && dreamContent.trim() && !isSubmitting) ? 1 : 0.5 }
-                    ]}
-                    disabled={isSubmitting || !(selectedMood && dreamContent.trim())}
-                >
-                    <Text style={styles.nextButtonText}>완료</Text>
-                </Pressable>
-            </View>
+            <FixedBottomButton
+                label="완료"
+                onPress={handleNext}
+                disabled={isSubmitting || !(selectedMood && dreamContent.trim())}
+                showDivider
+            />
         </View>
     );
 }
@@ -520,28 +430,4 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
 
-    // 하단 버튼
-    buttonContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        backgroundColor: colors.background,
-        borderTopWidth: 1,
-        borderTopColor: colors.divider,
-    },
-    nextButton: {
-        height: FIXED_BUTTON_HEIGHT,
-        backgroundColor: colors.recordButtonColor,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    nextButtonText: {
-        color: colors.background,
-        fontSize: 16,
-        fontWeight: '700',
-    },
 });

@@ -3,6 +3,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     Dimensions,
     Image,
     Platform,
@@ -318,6 +319,8 @@ export default function CalendarScreen() {
   const router = useRouter();
   const { showDialog } = useAppDialog();
   const [dreams, setDreams] = useState<CalendarDream[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(
     INITIAL_SELECTED_DATE,
   );
@@ -325,8 +328,12 @@ export default function CalendarScreen() {
   const selectedDreams = dreams.filter((dream) => dream.date === selectedDate);
   const selectedDream = selectedDreams[selectedDreams.length - 1];
   const hasDreamRecord = selectedDreams.length > 0;
+  const isEmpty = !isLoading && !isError && !hasDreamRecord;
 
   const loadDreams = useCallback(async () => {
+    setIsLoading(true);
+    setIsError(false);
+
     try {
       const response = await dreamApi.getDreams();
       const nextDreams = Array.isArray(response)
@@ -336,7 +343,9 @@ export default function CalendarScreen() {
       setDreams(nextDreams as CalendarDream[]);
     } catch (error) {
       console.error("캘린더 꿈 목록 조회 실패:", error);
-      setDreams([]);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -543,8 +552,24 @@ export default function CalendarScreen() {
             <Text style={styles.dateText}>{formatSelectedDate()}</Text>
           </View>
 
-          {/* 조건부 렌더링: 기록 있음 vs 없음 */}
-          {hasDreamRecord ? (
+          {isLoading ? (
+            <View style={styles.emptyBox}>
+              <ActivityIndicator size="small" color={colors.recordButtonColor} />
+              <Text style={styles.emptyText}>꿈 기록을 불러오는 중이에요</Text>
+            </View>
+          ) : isError ? (
+            <View style={styles.emptyBox}>
+              <NoteIcon />
+              <Text style={styles.emptyText}>꿈 기록을 불러오지 못했어요</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                activeOpacity={0.8}
+                onPress={loadDreams}
+              >
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </TouchableOpacity>
+            </View>
+          ) : hasDreamRecord ? (
             // 기록이 있을 때
             <>
               <View style={styles.interpretationSection}>
@@ -586,7 +611,7 @@ export default function CalendarScreen() {
                   ))}
               </View>
             </>
-          ) : (
+          ) : isEmpty ? (
             // 기록이 없을 때
             <>
               <View style={styles.emptyBox}>
@@ -596,10 +621,10 @@ export default function CalendarScreen() {
                 </Text>
               </View>
             </>
-          )}
+          ) : null}
         </ScrollView>
       </SafeAreaView>
-      {!hasDreamRecord && (
+      {isEmpty && (
         <View style={styles.fixedButtonContainer}>
           <TouchableOpacity
             style={styles.recordBtn}
@@ -939,14 +964,31 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    width: scale(169),
-    height: scale(16),
+    maxWidth: scale(240),
     marginTop: scale(16),
     fontSize: scale(14),
     fontWeight: "500",
     color: "#919191",
     fontFamily: "Roboto",
     textAlign: "center",
+  },
+
+  retryButton: {
+    height: scale(40),
+    minWidth: scale(112),
+    marginTop: scale(18),
+    paddingHorizontal: scale(18),
+    borderRadius: scale(8),
+    backgroundColor: colors.recordButtonColor,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: scale(14),
+    fontWeight: "700",
+    fontFamily: "Roboto",
   },
 
   // 꿈 기록하기 버튼

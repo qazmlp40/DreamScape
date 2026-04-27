@@ -1,3 +1,6 @@
+import EmptyStateCard from '@/components/app/EmptyStateCard';
+import FixedBottomButton from '@/components/app/FixedBottomButton';
+import RecordHeader from '@/components/app/RecordHeader';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -8,9 +11,7 @@ import {
     Keyboard,
     Platform,
     StyleSheet,
-    Text,
     TextInput,
-    TouchableOpacity,
     TouchableWithoutFeedback,
     View
 } from 'react-native';
@@ -41,10 +42,6 @@ const colors = {
     placeholder: '#9CA3AF',
 };
 
-// 디자인 상수
-const HEADER_BG_COLOR = '#FFFFFF';
-const HEADER_TEXT_COLOR = '#1F2937';
-
 // 🔥 레이아웃 상수
 const HEADER_CONTENT_HEIGHT = 56;
 const HEADER_HEIGHT = HEADER_CONTENT_HEIGHT; // 상단 여백 + 헤더
@@ -62,86 +59,6 @@ const moodIcons: { [key: string]: any } = {
     '6': scared_icon,
     '7': ambiguous_icon,
 };
-
-/**
- * 커스텀 헤더 (흰색 + 마이크 음성인식)
- */
-const CustomRecordHeader = ({ title, onMicPress, onBackPress }: { title: string; onMicPress?: () => void; onBackPress?: () => void }) => {
-    const insets = useSafeAreaInsets();
-
-    return (
-        <View
-            style={[
-                headerStyles.headerContainer,
-                {
-                    height: HEADER_CONTENT_HEIGHT + insets.top,
-                    paddingTop: insets.top,
-                    backgroundColor: HEADER_BG_COLOR,
-                    borderBottomWidth: 0,
-                }
-            ]}
-        >
-            {/* 뒤로가기 버튼 */}
-            <TouchableOpacity
-                onPress={onBackPress}
-                style={headerStyles.headerLeft}
-                accessibilityRole="button"
-                accessibilityLabel="뒤로가기"
-            >
-                <Ionicons name="chevron-back" size={24} color={HEADER_TEXT_COLOR} />
-            </TouchableOpacity>
-
-            {/* 제목: 한 줄로 제한 (넘치면 ...으로) */}
-            <Text
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                style={[headerStyles.headerTitle, { color: '#282828', marginLeft: 4 }]}
-            >
-                {title}
-            </Text>
-
-            {/* 음성인식(마이크) 아이콘 */}
-            <TouchableOpacity
-                onPress={onMicPress}
-                style={headerStyles.headerRight}
-                accessibilityRole="button"
-                accessibilityLabel="음성으로 입력"
-            >
-                <Ionicons name="mic-outline" size={24} color={HEADER_TEXT_COLOR} />
-            </TouchableOpacity>
-        </View>
-    );
-};
-
-const headerStyles = StyleSheet.create({
-    headerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 8,
-    },
-    headerLeft: {
-        width: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2,
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        letterSpacing: -0.36,
-        textAlign: 'left',
-        color: '#282828',
-        flex: 1,
-        zIndex: 1,
-    },
-    headerRight: {
-        width: 44,
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2,
-    },
-});
 
 export default function DreamEditScreen() {
     const { showDialog } = useAppDialog();
@@ -416,7 +333,7 @@ export default function DreamEditScreen() {
                 <Stack.Screen options={{ headerShown: false }} />
                 
                 {/* 헤더 */}
-                <CustomRecordHeader 
+                <RecordHeader 
                     title="꿈 수정하기" 
                     onMicPress={handleMicPress} 
                     onBackPress={handleBack}
@@ -437,7 +354,9 @@ export default function DreamEditScreen() {
                             resizeMode="contain"
                         />
                     ) : (
-                        <View style={styles.imagePlaceholder} />
+                        <EmptyStateCard style={styles.imagePlaceholder}>
+                            <Ionicons name="image-outline" size={36} color={colors.placeholder} />
+                        </EmptyStateCard>
                     )}
                 </Animated.View>
                 
@@ -467,22 +386,17 @@ export default function DreamEditScreen() {
                     />
                 </Animated.View>
                 
-                {/* 🔥 완료 버튼 - 하단 24px 고정 */}
-                <View style={[styles.buttonContainer, { bottom: BOTTOM_PADDING + insets.bottom }]}>
-                    <TouchableOpacity 
-                        style={[
-                            styles.completeBtn,
-                            (!dreamText.trim() || !isModified) && styles.completeBtnDisabled
-                        ]}
-                        onPress={handleComplete}
-                        activeOpacity={0.8}
-                        disabled={!dreamText.trim() || !isModified}
-                    >
-                        <Text style={styles.completeBtnText}>
-                            {isModified ? '수정 완료' : '완료'}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <FixedBottomButton
+                    label={isModified ? '수정 완료' : '완료'}
+                    onPress={handleComplete}
+                    disabled={!dreamText.trim() || !isModified}
+                    bottomOffset={BOTTOM_PADDING}
+                    buttonHeight={BUTTON_HEIGHT}
+                    buttonRadius={8}
+                    horizontalPadding={scale(16)}
+                    disabledColor="#D9D9D9"
+                    fontSize={18}
+                />
             </View>
         </TouchableWithoutFeedback>
     );
@@ -516,7 +430,6 @@ const styles = StyleSheet.create({
     imagePlaceholder: {
         width: scale(200),
         height: scale(200),
-        backgroundColor: '#F5F5F5',
         borderRadius: scale(16),
     },
     
@@ -558,52 +471,5 @@ const styles = StyleSheet.create({
         fontSize: scale(15),
         color: colors.text,
         lineHeight: scale(24),
-    },
-    
-    // 🔥 버튼 컨테이너 - 하단 24px 고정
-    buttonContainer: {
-        position: 'absolute',
-        left: scale(16),
-        right: scale(16),
-        bottom: BOTTOM_PADDING, // iOS Safe Area는 인라인 스타일로 추가
-    },
-    
-    // 🔥 완료 버튼
-    completeBtn: {
-        width: '100%',
-        height: 60,
-        backgroundColor: colors.primary,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#BB7CFF',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 6,
-            },
-            android: {
-                elevation: 8,
-            },
-        }),
-    },
-    
-    completeBtnDisabled: {
-        backgroundColor: '#D9D9D9',
-        ...Platform.select({
-            ios: {
-                shadowOpacity: 0,
-            },
-            android: {
-                elevation: 0,
-            },
-        }),
-    },
-    
-    completeBtnText: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#FFFFFF',
     },
 });

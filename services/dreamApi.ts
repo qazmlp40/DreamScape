@@ -168,6 +168,7 @@ export const dreamApi = {
     if (DEV_MOCK_DREAMS) {
       const existing = getMockDream(dreamId);
       const mockResponse = {
+        dreamId,
         mediaUrl: null,
         message: 'mock video generation complete',
       };

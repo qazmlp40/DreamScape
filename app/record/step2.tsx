@@ -27,6 +27,24 @@ const colors = {
 
 const MIN_LOADING_DURATION_MS = 5000;
 
+const getParamValue = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+
+  return typeof value === "string" && value.trim() ? value : undefined;
+};
+
+const getParamNumber = (value: unknown) => {
+  const rawValue = getParamValue(value);
+  if (!rawValue) {
+    return undefined;
+  }
+
+  const numberValue = Number(rawValue);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+};
+
 export default function RecordStep2Screen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -47,10 +65,7 @@ export default function RecordStep2Screen() {
     updateRecordByLocalId,
   } = useDreamRecord();
 
-  const dreamTextParam =
-    typeof params.dreamText === "string"
-      ? decodeURIComponent(params.dreamText)
-      : "";
+  const dreamTextParam = getParamValue(params.dreamText) ?? "";
 
   const finalDreamText = contextDreamText || dreamTextParam || "";
 
@@ -98,63 +113,61 @@ export default function RecordStep2Screen() {
 
     const run = async () => {
       const startedAt = Date.now();
-      const dreamIdParam = params.dreamId;
-      const dreamId =
-        typeof dreamIdParam === "string" ? Number(dreamIdParam) : NaN;
-      const localIdParam = params.localId;
-      const localId = typeof localIdParam === "string" ? localIdParam : "";
+      const dreamId = getParamNumber(params.dreamId);
+      const localId = getParamValue(params.localId);
 
       console.log("[Step2] API_BASE_URL:", API_BASE_URL);
-      console.log("[Step2] dreamIdParam:", dreamIdParam, "->", dreamId);
+      console.log("[Step2] dreamId:", dreamId);
       console.log("[Step2] finalDreamText:", finalDreamText);
 
-      // dreamId가 없어도 그냥 진행 (기본값 사용)
-      const finalDreamId = dreamId || 1; // 기본값으로 1 사용
-
       try {
-        const [summarizeResult, interpretResult] = await Promise.allSettled([
-          dreamApi.summarizeDream(finalDreamId, finalDreamText),
-          dreamApi.interpretDream(finalDreamId),
-        ]);
-
         let summary = finalDreamText ?? "";
         let interpretation = "";
         let tags: string[] = [];
 
-        if (summarizeResult.status === "fulfilled") {
-          const summarizeRes = summarizeResult.value;
-          console.log("[Step2] dreamApi.summarizeDream 응답:", summarizeRes);
+        if (dreamId) {
+          const [summarizeResult, interpretResult] = await Promise.allSettled([
+            dreamApi.summarizeDream(dreamId, finalDreamText),
+            dreamApi.interpretDream(dreamId),
+          ]);
 
-          summary =
-            summarizeRes.aiSummary ??
-            summarizeRes.summary ??
-            finalDreamText ??
-            "";
+          if (summarizeResult.status === "fulfilled") {
+            const summarizeRes = summarizeResult.value;
+            console.log("[Step2] dreamApi.summarizeDream 응답:", summarizeRes);
+
+            summary =
+              summarizeRes.aiSummary ??
+              summarizeRes.summary ??
+              finalDreamText ??
+              "";
+          } else {
+            console.log(
+              "summarize failed:",
+              summarizeResult.reason?.response?.status,
+              summarizeResult.reason?.response?.data,
+            );
+            summary = finalDreamText || "꿈 내용";
+          }
+
+          if (interpretResult.status === "fulfilled") {
+            const interpretRes = interpretResult.value;
+            console.log("[Step2] dreamApi.interpretDream 응답:", interpretRes);
+
+            interpretation = interpretRes.aiInterpretation ?? "";
+            tags = interpretRes.tags ?? [];
+          } else {
+            console.log(
+              "interpret failed:",
+              interpretResult.reason?.response?.status,
+              interpretResult.reason?.response?.data,
+            );
+            interpretation = "꿈 해석을 준비 중입니다.";
+            tags = [];
+          }
         } else {
-          console.log(
-            "summarize failed:",
-            summarizeResult.reason?.response?.status,
-            summarizeResult.reason?.response?.data,
-          );
-          // 실패해도 기본값 사용
+          console.warn("[Step2] dreamId가 없어 서버 분석을 건너뜁니다.");
           summary = finalDreamText || "꿈 내용";
-        }
-
-        if (interpretResult.status === "fulfilled") {
-          const interpretRes = interpretResult.value;
-          console.log("[Step2] dreamApi.interpretDream 응답:", interpretRes);
-
-          interpretation = interpretRes.aiInterpretation ?? "";
-          tags = interpretRes.tags ?? [];
-        } else {
-          console.log(
-            "interpret failed:",
-            interpretResult.reason?.response?.status,
-            interpretResult.reason?.response?.data,
-          );
-          // 실패해도 기본값 사용
           interpretation = "꿈 해석을 준비 중입니다.";
-          tags = [];
         }
 
         setAnalysis({
@@ -165,7 +178,7 @@ export default function RecordStep2Screen() {
 
         if (localId) {
           updateRecordByLocalId(localId, {
-            dreamId: finalDreamId,
+            ...(dreamId ? { dreamId } : {}),
             analysis: {
               summary,
               interpretation,
@@ -174,10 +187,10 @@ export default function RecordStep2Screen() {
           });
           console.log("[Step2] local record에 dreamId/analysis 연결 완료:", {
             localId,
-            dreamId: finalDreamId,
+            dreamId,
           });
         } else {
-          console.warn("[Step2] localId가 없어서 record 연결 불가");
+          console.log("[Step2] localId 없이 서버 dreamId 기준으로 계속 진행합니다.");
         }
       } catch (error) {
         console.error("[Step2] API 호출 중 예상치 못한 에러:", error);
@@ -258,13 +271,16 @@ export default function RecordStep2Screen() {
           ]),
         );
 
-        const selectedDate = params.selectedDate as string | undefined;
+        const selectedDate = getParamValue(params.selectedDate);
 
-        router.replace(
-          `/record/step3?dreamId=${finalDreamId}&localId=${localId}${
-            selectedDate ? `&selectedDate=${selectedDate}` : ""
-          }` as any,
-        );
+        router.replace({
+          pathname: "/record/step3",
+          params: {
+            ...(dreamId ? { dreamId: String(dreamId) } : {}),
+            ...(localId ? { localId } : {}),
+            ...(selectedDate ? { selectedDate } : {}),
+          },
+        } as any);
       }
     };
 
