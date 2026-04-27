@@ -84,4 +84,16 @@ public class UserController {
         String email = authentication.getName();
         return ResponseEntity.ok(userService.logout(email));
     }
+
+    @RestController
+    public class OAuthSuccessController {
+
+        @GetMapping("/login/success")
+        public Map<String, String> loginSuccess(@RequestParam String token) {
+            return Map.of(
+                    "message", "구글 로그인 성공",
+                    "accessToken", token
+            );
+        }
+    }
 }

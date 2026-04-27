@@ -2,29 +2,19 @@ package signup.dreamscape.Security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
 @Component
 public class JwtProvider {
 
-    @Value("${jwt.secret}")
-    private String secret;
-
-    private Key key;
+    private final String SECRET = "";
+    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
     private final long accessTokenValidTime = 1000 * 60 * 60; // 1시간
     private final long refreshTokenValidTime = 1000 * 60 * 60 * 24 * 7; // 7일
-
-    @PostConstruct
-    public void init() {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    }
 
     // ✅ Access Token
     public String createAccessToken(Long userId, String email) {

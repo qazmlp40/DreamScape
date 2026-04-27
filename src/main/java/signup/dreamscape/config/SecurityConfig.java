@@ -10,12 +10,16 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import signup.dreamscape.Security.JwtAuthenticationFilter;
 import signup.dreamscape.Security.JwtProvider;
+import signup.dreamscape.Security.OAuth2SuccessHandler;
+import signup.dreamscape.Service.CustomOAuth2UserService;
 
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtProvider jwtProvider;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
@@ -33,8 +37,9 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
 
+                // ✅ OAuth2 로그인 때문에 완전 stateless 쓰면 안 됨
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
 
                 .authorizeHttpRequests(auth -> auth
@@ -45,12 +50,19 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/t_user/signup",
                                 "/t_user/login",
-                                "/t_user/delete/all",
-                                "/t_user/**",
-                                "/api/media/**",
-                                "/t_user/refresh"
+                                "/t_user/refresh",
+                                "/oauth2/**",
+                                "/login/**",
+                                "/error"
                         ).permitAll()
                         .anyRequest().authenticated()
+                )
+
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2SuccessHandler)
                 )
 
                 .addFilterBefore(jwtAuthenticationFilter(),
