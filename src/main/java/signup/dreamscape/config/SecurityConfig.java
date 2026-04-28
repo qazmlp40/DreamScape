@@ -1,14 +1,30 @@
 package signup.dreamscape.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import signup.dreamscape.Security.JwtAuthenticationFilter;
+import signup.dreamscape.Security.JwtProvider;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import signup.dreamscape.Security.OAuth2SuccessHandler; // 로컬에서 추가
+import signup.dreamscape.Service.CustomOAuth2UserService; // 로컬에서 추가
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtProvider jwtProvider;
+    private final CustomOAuth2UserService customOAuth2UserService; // 로컬에서 추가
+    private final OAuth2SuccessHandler oAuth2SuccessHandler; // 로컬에서 추가
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtProvider);
+    }
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -19,6 +35,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())   // csrf 비활성화
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -29,16 +50,22 @@ public class SecurityConfig {
                                 "/t_user/login",
                                 "/t_user/delete/all",
                                 "/t_user/**",
-                                // 인증없이 허용 (로컬에서 임시 추가)
-                                "/api/**",
-                                "api/media/**"
+                                "/api/media/**",
+                                "/t_user/refresh"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-               // .formLogin(Customizer.withDefaults())  // formLogin 기본 활성화 제거 안하려면 주석 처리
-               // .httpBasic(Customizer.withDefaults()) // 필요하면 httpBasic도 추가
 
-        ;
+                // oauth2Login 연결 (로컬에서 추가)
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2SuccessHandler)
+                )
+
+                .addFilterBefore(jwtAuthenticationFilter(),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

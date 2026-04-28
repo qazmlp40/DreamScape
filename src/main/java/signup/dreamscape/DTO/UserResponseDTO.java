@@ -22,5 +22,6 @@ public class UserResponseDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String accessToken;   // JWT 토큰 필드 추가
+    private String refreshToken;// 토큰 필드 추가
 
 }
