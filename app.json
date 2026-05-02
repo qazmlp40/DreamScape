@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "dream-app-new",
-    "slug": "dream-app-new",
+    "name": "DreamScape",
+    "slug": "DreamScape",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "dreamappnew",
+    "scheme": "dreamscape",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.dreamappnew"
+      "bundleIdentifier": "com.anonymous.dreamscape"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +18,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "package": "com.anonymous.dreamappnew"
+      "package": "com.anonymous.dreamscape"
     },
     "web": {
       "output": "static",
