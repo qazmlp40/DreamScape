@@ -340,6 +340,7 @@ export default function CalendarScreen() {
         ? response.map(normalizeDream).filter(Boolean)
         : [];
 
+      console.log('[Calendar] 서버 mood 원본값:', Array.isArray(response) ? response.map((d: any) => d?.mood ?? d?.emotion) : []);
       setDreams(nextDreams as CalendarDream[]);
     } catch (error) {
       console.error("캘린더 꿈 목록 조회 실패:", error);

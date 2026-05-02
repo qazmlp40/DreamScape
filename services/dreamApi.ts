@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DEV_MOCK_DREAMS } from '@/constants/api';
-import { api } from './api';
+import { DEV_MOCK_DREAMS } from "@/constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "./api";
 
 type MockDreamRecord = {
   dreamId: number;
@@ -17,6 +17,7 @@ type MockDreamRecord = {
 
 let mockDreamIdSeq = 1;
 const mockDreamStore = new Map<number, MockDreamRecord>();
+const videoGeneratingSet = new Set<number>(); // 진행 중인 영상 생성 dreamId 추적
 
 const getMockDream = (dreamId: number) => mockDreamStore.get(dreamId);
 
@@ -26,30 +27,29 @@ export const getMockDreamById = (dreamId: number) => {
 
 const buildMockSummary = (dreamText: string) => {
   const trimmed = dreamText.trim();
-  if (!trimmed) return '기록된 꿈이 아직 없습니다.';
+  if (!trimmed) return "기록된 꿈이 아직 없습니다.";
   return trimmed.length > 60 ? `${trimmed.slice(0, 60)}...` : trimmed;
 };
 
 const buildMockInterpretation = (mood: string) => {
-  const moodLabel = mood || '알 수 없음';
+  const moodLabel = mood || "알 수 없음";
   return `${moodLabel} 감정이 중심이 된 꿈으로 보여요. 지금은 서버 없이 로컬 mock으로 해석 결과를 보여주고 있습니다.`;
 };
 
 export const dreamApi = {
   // ✅ 꿈 생성
-  saveDream: async (data: { 
+  saveDream: async (data: {
     date: string;
     title: string;
     dreamText: string;
     mood: string;
-    summary?: string; 
+    summary?: string;
     interpretation?: string;
-  }): Promise<{ dreamId: number }> => { 
-
-    const userId = await AsyncStorage.getItem('userId'); 
+  }): Promise<{ dreamId: number }> => {
+    const userId = await AsyncStorage.getItem("userId");
 
     if (!userId) {
-      throw new Error('userId가 없습니다. 다시 로그인하세요.');
+      throw new Error("userId가 없습니다. 다시 로그인하세요.");
     }
 
     if (DEV_MOCK_DREAMS) {
@@ -66,8 +66,8 @@ export const dreamApi = {
       return { dreamId };
     }
 
-    const response = await api.post(`/api/dreams/${userId}`, { 
-      title: data.title, 
+    const response = await api.post(`/api/dreams/${userId}`, {
+      title: data.title,
       rawText: data.dreamText,
       mood: data.mood,
     });
@@ -76,25 +76,31 @@ export const dreamApi = {
 
   // ✅ 사용자 꿈 목록 조회
   getDreams: async () => {
-    const userId = await AsyncStorage.getItem('userId'); 
-  
+    const userId = await AsyncStorage.getItem("userId");
+
     if (!userId) {
-      throw new Error('userId가 없습니다. 다시 로그인하세요.');
+      throw new Error("userId가 없습니다. 다시 로그인하세요.");
     }
 
     if (DEV_MOCK_DREAMS) {
-      return Array.from(mockDreamStore.values()).filter((dream) => dream.userId === userId);
+      return Array.from(mockDreamStore.values()).filter(
+        (dream) => dream.userId === userId,
+      );
     }
-  
-    const response = await api.get(`/api/dreams/user/${userId}`); 
-  
+
+    const response = await api.get(`/api/dreams/user/${userId}`);
+
     return response.data;
   },
- 
+
   // ✅ 날짜별 꿈 조회
   getDreamByDate: async (date: string) => {
     if (DEV_MOCK_DREAMS) {
-      return Array.from(mockDreamStore.values()).find((dream) => dream.createdAt.slice(0, 10) === date) ?? null;
+      return (
+        Array.from(mockDreamStore.values()).find(
+          (dream) => dream.createdAt.slice(0, 10) === date,
+        ) ?? null
+      );
     }
     const response = await api.get(`/api/dreams/${date}`);
     return response.data;
@@ -113,8 +119,8 @@ export const dreamApi = {
   interpretDream: async (dreamId: number) => {
     if (DEV_MOCK_DREAMS) {
       const existing = getMockDream(dreamId);
-      const aiInterpretation = buildMockInterpretation(existing?.mood ?? '');
-      const tags = existing?.mood ? [existing.mood, 'mock'] : ['mock'];
+      const aiInterpretation = buildMockInterpretation(existing?.mood ?? "");
+      const tags = existing?.mood ? [existing.mood, "mock"] : ["mock"];
 
       if (existing) {
         mockDreamStore.set(dreamId, { ...existing, aiInterpretation, tags });
@@ -124,20 +130,21 @@ export const dreamApi = {
       return mockResponse;
     }
 
-    const response = await api.get(
-      `/api/analysis/interpret/${dreamId}`
-    );
+    const response = await api.get(`/api/analysis/interpret/${dreamId}`);
     return response.data;
   },
 
   // ✅ 꿈 수정
-  updateDream: async (dreamId: number, data: { 
-    title?: string;
-    dreamText?: string;
-    mood?: string;
-    interpretation?: string; 
-    summary?: string;
-  }) => {
+  updateDream: async (
+    dreamId: number,
+    data: {
+      title?: string;
+      dreamText?: string;
+      mood?: string;
+      interpretation?: string;
+      summary?: string;
+    },
+  ) => {
     if (DEV_MOCK_DREAMS) {
       const existing = getMockDream(dreamId);
       if (!existing) return null;
@@ -159,7 +166,7 @@ export const dreamApi = {
       interpretation: data.interpretation,
       summary: data.summary,
     };
-    const response = await api.put(`/api/dreams/${dreamId}`, payload); 
+    const response = await api.put(`/api/dreams/${dreamId}`, payload);
     return response.data;
   },
 
@@ -170,7 +177,7 @@ export const dreamApi = {
       const mockResponse = {
         dreamId,
         mediaUrl: null,
-        message: 'mock video generation complete',
+        message: "mock video generation complete",
       };
 
       if (existing) {
@@ -182,10 +189,19 @@ export const dreamApi = {
       return mockResponse;
     }
 
-    const response = await api.post(`/api/media/generate/video`, null, {
-      params: { dreamId }, // @RequestParam 대응
-    });
-    return response.data; // MediaResponseDTO
+    if (videoGeneratingSet.has(dreamId)) {
+      throw new Error(`dreamId ${dreamId} 영상 생성이 이미 진행 중입니다.`);
+    }
+
+    videoGeneratingSet.add(dreamId);
+    try {
+      const response = await api.post(`/api/media/generate/video`, null, {
+        params: { dreamId },
+      });
+      return response.data;
+    } finally {
+      videoGeneratingSet.delete(dreamId);
+    }
   },
 
   // ✅ 꿈 요약
@@ -205,8 +221,8 @@ export const dreamApi = {
       const mockResponse = { dreamId, aiSummary, summary: aiSummary };
       return mockResponse;
     }
-  
-    const response = await api.post('/api/analysis/summarize', {
+
+    const response = await api.post("/api/analysis/summarize", {
       dreamId,
       dreamText,
     });

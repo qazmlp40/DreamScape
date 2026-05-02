@@ -1,23 +1,21 @@
+import PigIcon from "@/assets/images/icons/dream_symbol/pig.svg";
 import FixedBottomButton from "@/components/app/FixedBottomButton";
 import RecordHeader from "@/components/app/RecordHeader";
 import SaveConfirmModal from "@/components/app/SaveConfirmModal";
-import PigIcon from "@/assets/images/icons/dream_symbol/pig.svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as MediaLibrary from "expo-media-library";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import { API_BASE_URL, DEV_MOCK_DREAMS } from "../../constants/api";
 import { useAppDialog } from "../../contexts/AppDialogContext";
-import { type DreamRecord, useDreamRecord } from "../../contexts/DreamRecordContext";
+import {
+  type DreamRecord,
+  useDreamRecord,
+} from "../../contexts/DreamRecordContext";
 import { dreamApi, getMockDreamById } from "../../services/dreamApi";
 
 const colors = {
@@ -113,8 +111,7 @@ const buildDreamResultViewModel = ({
       remoteRecord?.title,
       localRecord?.title,
       canUseCurrentRecord ? currentRecord.title : undefined,
-    ) ??
-    "";
+    ) ?? "";
   const summary =
     firstText(
       remoteRecord?.summary,
@@ -135,8 +132,7 @@ const buildDreamResultViewModel = ({
       remoteRecord?.videoUrl,
       localRecord?.videoUrl,
       canUseCurrentRecord ? currentRecord.videoUrl : undefined,
-    ) ??
-    undefined;
+    ) ?? undefined;
 
   return {
     remoteId,
@@ -168,7 +164,8 @@ export default function RecordStep5Screen() {
   const [remoteRecord, setRemoteRecord] = useState<RemoteDreamRecord | null>(
     null,
   );
-  const fetchDreamId = getParamValue(params.id) ?? getParamValue(params.dreamId);
+  const fetchDreamId =
+    getParamValue(params.id) ?? getParamValue(params.dreamId);
   const fetchDreamIdNumber = getParamNumber(fetchDreamId);
 
   useEffect(() => {
@@ -184,14 +181,14 @@ export default function RecordStep5Screen() {
         setRemoteRecord(
           mockDream
             ? {
-              title: mockDream.title,
-              mood: mockDream.mood,
-              summary: mockDream.aiSummary ?? mockDream.rawText,
-              interpretation: mockDream.aiInterpretation,
-              videoUrl: mockDream.mediaUrl ?? undefined,
-              dreamId: mockDream.dreamId,
-              date: mockDream.createdAt.slice(0, 10),
-            }
+                title: mockDream.title,
+                mood: mockDream.mood,
+                summary: mockDream.aiSummary ?? mockDream.rawText,
+                interpretation: mockDream.aiInterpretation,
+                videoUrl: mockDream.mediaUrl ?? undefined,
+                dreamId: mockDream.dreamId,
+                date: mockDream.createdAt.slice(0, 10),
+              }
             : null,
         );
         return;
@@ -203,7 +200,9 @@ export default function RecordStep5Screen() {
           return;
         }
 
-        const res = await axios.get(`${API_BASE_URL}/api/dreams/${fetchDreamId}`);
+        const res = await axios.get(
+          `${API_BASE_URL}/api/dreams/${fetchDreamId}`,
+        );
         const data = res.data || {};
         const fetchedDreamId = Number(
           data.dreamId ?? data.id ?? getParamNumber(fetchDreamId),
@@ -215,10 +214,13 @@ export default function RecordStep5Screen() {
           Number.isFinite(fetchedDreamId) &&
           fetchedDreamId !== expectedDreamId
         ) {
-          console.warn("꿈 상세 응답의 dreamId가 요청한 dreamId와 달라서 무시합니다.", {
-            expectedDreamId,
-            fetchedDreamId,
-          });
+          console.warn(
+            "꿈 상세 응답의 dreamId가 요청한 dreamId와 달라서 무시합니다.",
+            {
+              expectedDreamId,
+              fetchedDreamId,
+            },
+          );
           setRemoteRecord(null);
           return;
         }
@@ -253,9 +255,10 @@ export default function RecordStep5Screen() {
   const localRecordByDreamId = fetchDreamIdNumber
     ? savedRecords.find((record) => record.dreamId === fetchDreamIdNumber)
     : undefined;
-  const localRecordByDate = !fetchDreamIdNumber && getParamValue(params.date)
-    ? getRecordByDate(String(getParamValue(params.date)))
-    : undefined;
+  const localRecordByDate =
+    !fetchDreamIdNumber && getParamValue(params.date)
+      ? getRecordByDate(String(getParamValue(params.date)))
+      : undefined;
   const localRecord =
     localRecordByLocalId ?? localRecordByDreamId ?? localRecordByDate;
 
@@ -268,6 +271,8 @@ export default function RecordStep5Screen() {
 
   useEffect(() => {
     const run = async () => {
+      const mode = getParamValue(params.mode);
+      if (mode === 'review') return; // review 모드에서는 영상 재생성 안 함
       if (!dreamResult.dreamId || dreamResult.videoUrl) {
         return;
       }
@@ -278,13 +283,17 @@ export default function RecordStep5Screen() {
           videoRes.dreamId ?? videoRes.id ?? videoRes.dream_id,
         );
         const isMismatchedVideo =
-          responseDreamId !== undefined && responseDreamId !== dreamResult.dreamId;
+          responseDreamId !== undefined &&
+          responseDreamId !== dreamResult.dreamId;
 
         if (isMismatchedVideo) {
-          console.warn("꿈 영상 응답의 dreamId가 현재 꿈과 달라서 무시합니다.", {
-            expectedDreamId: dreamResult.dreamId,
-            responseDreamId,
-          });
+          console.warn(
+            "꿈 영상 응답의 dreamId가 현재 꿈과 달라서 무시합니다.",
+            {
+              expectedDreamId: dreamResult.dreamId,
+              responseDreamId,
+            },
+          );
           return;
         }
 
@@ -333,7 +342,9 @@ export default function RecordStep5Screen() {
           ? { selectedDate: dreamResult.selectedDate }
           : {}),
         ...(dreamResult.localId ? { localId: dreamResult.localId } : {}),
-        ...(dreamResult.dreamId ? { dreamId: String(dreamResult.dreamId) } : {}),
+        ...(dreamResult.dreamId
+          ? { dreamId: String(dreamResult.dreamId) }
+          : {}),
         ...(dreamResult.videoUrl ? { videoUrl: dreamResult.videoUrl } : {}),
       },
     } as any);
@@ -385,7 +396,9 @@ export default function RecordStep5Screen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Title */}
-          <Text style={styles.title}>{dreamResult.title || "제목 없는 꿈"}</Text>
+          <Text style={styles.title}>
+            {dreamResult.title || "제목 없는 꿈"}
+          </Text>
 
           <View style={styles.videoSection}>
             <View style={styles.videoBox}>

@@ -1,4 +1,3 @@
-import EmptyStateCard from '@/components/app/EmptyStateCard';
 import FixedBottomButton from '@/components/app/FixedBottomButton';
 import RecordHeader from '@/components/app/RecordHeader';
 import SaveConfirmModal from '@/components/app/SaveConfirmModal';
@@ -8,7 +7,6 @@ import { ResizeMode, Video } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Image,
     Modal,
     Pressable,
     StyleSheet,
@@ -223,7 +221,7 @@ export default function RecordStep4Screen() {
                             <Video
                                 source={{ uri: resolvedVideoUrl as string }}
                                 style={styles.video}
-                                resizeMode={ResizeMode.COVER}
+                                resizeMode={ResizeMode.CONTAIN}
                                 shouldPlay
                                 rate={0.5}
                                 shouldCorrectPitch
@@ -269,16 +267,10 @@ export default function RecordStep4Screen() {
                                 </View>
                             </View>
                         ) : (
-                            <EmptyStateCard
-                                title={isVideoLoading ? '꿈 영상을 불러오는 중...' : '꿈 영상을 준비하는 중...'}
-                                style={styles.loadingCard}
-                            >
-                                <Image
-                                    source={require('../../assets/images/icons/making_image.png')}
-                                    style={styles.mockImage}
-                                    resizeMode="contain"
-                                />
-                            </EmptyStateCard>
+                            <View style={styles.loadingCard}>
+                                <Text style={styles.loadingTitle}>꿈 영상을 불러오는 중이에요</Text>
+                                <Text style={styles.loadingText}>영상을 생성하고 있어요. 잠시만 기다려주세요</Text>
+                            </View>
                         )}
                     </View>
                 </View>
@@ -407,24 +399,40 @@ const styles = StyleSheet.create({
     centerContent: {
         flex: 1,
         backgroundColor: '#000000',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     videoWrapper: {
         width: '100%',
         height: '100%',
         backgroundColor: '#000000',
         overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     video: {
         width: '100%',
         height: '100%',
     },
-    mockImage: {
-        width: 220,
-        height: 220,
-    },
     loadingCard: {
-        maxWidth: 320,
-        backgroundColor: 'rgba(255, 255, 255, 0.96)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+    },
+    loadingTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        letterSpacing: -0.4,
+        textAlign: 'center',
+    },
+    loadingText: {
+        fontSize: 15,
+        lineHeight: 22,
+        fontWeight: '500',
+        color: 'rgba(255,255,255,0.6)',
+        marginTop: 10,
+        textAlign: 'center',
     },
     videoStateCard: {
         width: '100%',
