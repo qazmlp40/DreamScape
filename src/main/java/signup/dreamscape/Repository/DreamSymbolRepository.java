@@ -16,4 +16,9 @@ public interface DreamSymbolRepository extends JpaRepository<DreamSymbolEntity, 
     // 키워드에 해당하는 meaning 가져오는 메서드
     // 반환은 엔티티 전체가 됨
     List<DreamSymbolEntity> findByKeywordIn(List<String> keyword);
+
+    // 형태소가 situation 컬럼에 포함된 행 검색
+    @Query("select s from DreamSymbolEntity s where s.keyword = :keyword and s.situation like %:morepheme%")
+    List<DreamSymbolEntity> findByKeywordAndSituation(String keyword, String morepheme);
+
 }
