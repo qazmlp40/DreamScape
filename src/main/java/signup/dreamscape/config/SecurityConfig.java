@@ -1,14 +1,30 @@
 package signup.dreamscape.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import signup.dreamscape.Security.JwtAuthenticationFilter;
+import signup.dreamscape.Security.JwtProvider;
+import signup.dreamscape.Security.OAuth2SuccessHandler;
+import signup.dreamscape.Service.CustomOAuth2UserService;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtProvider jwtProvider;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtProvider);
+    }
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -17,8 +33,15 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
-                .csrf(csrf -> csrf.disable())   // csrf 비활성화
+                .csrf(csrf -> csrf.disable())
+
+                // ✅ OAuth2 로그인 때문에 완전 stateless 쓰면 안 됨
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                )
+
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -27,16 +50,23 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/t_user/signup",
                                 "/t_user/login",
-                                "/t_user/delete/all",
-                                "/t_user/**",
-                                "api/media/++"
+                                "/t_user/refresh",
+                                "/oauth2/**",
+                                "/login/**",
+                                "/error"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-               // .formLogin(Customizer.withDefaults())  // formLogin 기본 활성화 제거 안하려면 주석 처리
-               // .httpBasic(Customizer.withDefaults()) // 필요하면 httpBasic도 추가
 
-        ;
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2SuccessHandler)
+                )
+
+                .addFilterBefore(jwtAuthenticationFilter(),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
