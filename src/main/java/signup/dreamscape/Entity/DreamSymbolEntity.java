@@ -22,4 +22,11 @@ public class DreamSymbolEntity {
     private String meaning;
     // 상징의 기본 의미
 
+    @Column(columnDefinition = "TEXT")
+    private String situation;
+    // 형태소 키워드 ex) "꼬리, 잡다"
+
+    @Column(columnDefinition = "TEXT")
+    private String meaningContext;
+    // 상황별 상세 해석
 }
