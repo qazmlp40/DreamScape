@@ -785,19 +785,26 @@ const Chart = () => {
       }
   
       const userId = Number(userIdStr);
+
+      // 토큰 붙임
+      const token = await AsyncStorage.getItem("accessToken");
+      console.log("[Chart] accessToken:", token ? "있음" : "없음");
+
   
       const rangeType = isWeekly ? "WEEKLY" : "MONTHLY";
+      const chartUrl = `${API_BASE_URL}/api/chart/dream-chart?userId=${userId}&rangeType=${rangeType}&baseDate=${selectedBaseDate}`;
   
       const res = await fetch(
-        `${API_BASE_URL}/api/chart/dream-chart?userId=${userId}&rangeType=${rangeType}&baseDate=${selectedBaseDate}`,
+        chartUrl,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }
       );
-  
+
       const data: DreamChartResponse = await res.json();
 
       console.log("[Chart] response data:", data);
@@ -1143,7 +1150,7 @@ const Chart = () => {
           }
           items={topKeywords}
         />
-      </View>
+      </View> 
 
       <View
         style={[

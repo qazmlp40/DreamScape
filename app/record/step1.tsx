@@ -84,6 +84,8 @@ export default function RecordStep1Screen() {
         setIsSubmitting(true);
         try {
           const date = selectedDate ?? new Date().toISOString().slice(0, 10);
+          console.log('[Step1] submitDreamToServer selectedDate:', selectedDate);
+          console.log('[Step1] submitDreamToServer final date:', date);
       
           const saved = await dreamApi.saveDream({
             date,
@@ -91,6 +93,7 @@ export default function RecordStep1Screen() {
             dreamText: content,
             mood: convertMoodToKorean(emotion),
           });
+          console.log('[Step1] saveDream response:', saved);
       
           const dreamId = saved.dreamId;
 
@@ -133,6 +136,8 @@ export default function RecordStep1Screen() {
         
           const selectedDate = params.selectedDate as string | undefined;
           const trimmedContent = dreamContent.trim();
+          console.log('[Step1] route params:', params);
+          console.log('[Step1] handleNext selectedDate:', selectedDate);
         
           setMood(selectedMood);
           setDreamText(trimmedContent);

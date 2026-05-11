@@ -1,4 +1,4 @@
-import PigIcon from "@/assets/images/icons/dream_symbol/pig.svg";
+import FriendIcon from "@/assets/images/icons/dream_symbol/friend.svg";
 import FixedBottomButton from "@/components/app/FixedBottomButton";
 import RecordHeader from "@/components/app/RecordHeader";
 import SaveConfirmModal from "@/components/app/SaveConfirmModal";
@@ -227,14 +227,22 @@ export default function RecordStep5Screen() {
 
         setRemoteRecord({
           dreamId: Number.isFinite(fetchedDreamId) ? fetchedDreamId : undefined,
-          date: data.date ?? data.dreamDate ?? data.createdAt?.slice?.(0, 10),
+          date:
+            data.date ??
+            data.dreamDate ??
+            data.createdAt?.slice?.(0, 10),
           title: data.title || data.dreamTitle,
           mood: data.mood || data.emotion,
           dreamText: data.rawText ?? data.content,
           summary:
-            data.aiSummary ?? data.summary ?? data.rawText ?? data.content,
+            data.aiSummary ??
+            data.summary ??
+            data.rawText ??
+            data.content,
           interpretation:
-            data.aiInterpretation ?? data.interpretation ?? data.analysisText,
+            data.aiInterpretation ??
+            data.interpretation ??
+            data.analysisText,
           videoUrl:
             data.mediaUrl ??
             data.videoUrl ??
@@ -397,12 +405,12 @@ export default function RecordStep5Screen() {
         >
           {/* Title */}
           <Text style={styles.title}>
-            {dreamResult.title || "제목 없는 꿈"}
+            {dreamResult.title || "제목없는 꿈"} 
           </Text>
 
           <View style={styles.videoSection}>
             <View style={styles.videoBox}>
-              <PigIcon width={120} height={120} />
+              <FriendIcon width={120} height={120} />
             </View>
           </View>
 

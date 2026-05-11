@@ -66,11 +66,32 @@ export const dreamApi = {
       return { dreamId };
     }
 
+    console.log("[DreamApi] saveDream request date:", data.date);
+    console.log("[DreamApi] saveDream request payload:", {
+      title: data.title,
+      rawText: data.dreamText,
+      mood: data.mood,
+      date: data.date,
+    });
+
     const response = await api.post(`/api/dreams/${userId}`, {
       title: data.title,
       rawText: data.dreamText,
       mood: data.mood,
+      /*
+      date: data.date, // 캘린더에서 선택한 꿈 날짜
+      date : data.date, // 캘
+      */
+      date: data.date, // 캘린더에서 선택한 꿈 날짜
     });
+
+    console.log("[DreamApi] saveDream raw response:", response.data);
+    console.log("[DreamApi] saveDream response date:", {
+      date: response.data?.date,
+      dreamDate: response.data?.dreamDate,
+      createdAt: response.data?.createdAt,
+    });
+
     return response.data;
   },
 
