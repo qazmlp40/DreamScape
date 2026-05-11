@@ -1,4 +1,5 @@
-import { API_BASE_URL, DEV_MOCK_AUTH } from '@/constants/api';
+import { API_BASE_URL, APP_SCHEME, DEV_MOCK_AUTH } from '@/constants/api';
+import { tokenStorage } from '@/utils/tokenStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
@@ -99,7 +100,7 @@ const Login: React.FC = () => {
   const isDisabled = userID.trim() === '' || userPW.trim() === '';
 
   const redirectUri = makeRedirectUri({
-    scheme: 'dreamappnew',
+    scheme: APP_SCHEME,
     path: 'oauth',
   });
 
@@ -108,7 +109,7 @@ const Login: React.FC = () => {
     userId?: string | number,
     refreshToken?: string,
   ) => {
-    await AsyncStorage.setItem('accessToken', accessToken);
+    await tokenStorage.setToken(accessToken);
 
     if (refreshToken) {
       await AsyncStorage.setItem('refreshToken', refreshToken);

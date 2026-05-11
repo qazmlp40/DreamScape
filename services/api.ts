@@ -1,6 +1,8 @@
 import { API_BASE_URL } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { router } from 'expo-router';
+import { tokenStorage } from '../utils/tokenStorage';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,16 +14,9 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('accessToken');
-    console.log('API 요청 URL:', config.url);
-    console.log('API 요청 토큰:', token ? token.substring(0, 20) + '...' : '없음');
-    console.log('REQ', config.method, config.url, config.headers?.Authorization);
-    
+    const token = await tokenStorage.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('Authorization 헤더 설정 완료');
-    } else {
-      console.warn('⚠️ 토큰이 없습니다!');
     }
     return config;
   },
@@ -30,8 +25,12 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    console.error('API Error:', error.response?.data || error.message);
+  async (error) => {
+    if (error.response?.status === 401) {
+      await tokenStorage.deleteToken();
+      await AsyncStorage.removeItem('userId');
+      router.replace('/(auth)/login');
+    }
     return Promise.reject(error);
   }
 );

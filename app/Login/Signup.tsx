@@ -11,7 +11,6 @@
  */
 import { API_BASE_URL, DEV_MOCK_AUTH } from "@/constants/api";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -188,7 +187,6 @@ const CompleteBtn: React.FC<CompleteBtnProps> = ({
   📌 Signup 페이지 본체
 ------------------------------------------ */
 const Signup: React.FC = () => {
-  const navigation = useNavigation();
   const { s } = useScale();
   const { showDialog } = useAppDialog();
   const {
@@ -210,7 +208,6 @@ const Signup: React.FC = () => {
   const [termChecked, setTermChecked] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const params = useLocalSearchParams();
 
   useEffect(() => {
     if (acceptedTerms === "1") {
@@ -274,7 +271,6 @@ const Signup: React.FC = () => {
       };
 
       if (DEV_MOCK_AUTH) {
-        console.log("[Signup] DEV_MOCK_AUTH 회원가입 우회:", payload);
         showDialog({
           title: "회원가입 완료",
           message: "회원가입이 완료되었습니다.",
@@ -283,10 +279,6 @@ const Signup: React.FC = () => {
         return;
       }
 
-      console.log("[Signup] 요청 URL:", `${API_BASE_URL}/t_user/signup`);
-      console.log("[Signup] 요청 payload:", payload);
-
-      // 10초 타임아웃 설정
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -302,16 +294,10 @@ const Signup: React.FC = () => {
       const text = await res.text();
       let data: { message?: string } = {};
 
-      console.log("[Signup] 응답 status:", res.status);
-      console.log("[Signup] 응답 text:", text);
-
       try {
         data = JSON.parse(text);
       } catch {
-        // JSON 아닐 수도 있으니 무시
       }
-
-      console.log("[Signup] 파싱된 응답:", data);
 
       const responseMessage = data?.message?.trim() || text?.trim();
 
@@ -333,12 +319,10 @@ const Signup: React.FC = () => {
       } else {
         setGlobalErr(`서버 연결 실패: ${API_BASE_URL}`);
       }
-      console.error("Signup error:", e);
     } finally {
-      // 에러 발생 시에도 상태 초기화
       setIsSubmitting(false);
     }
-  }, [PW, checkPW, username, ID, email, isDisabled, isSubmitting, navigation]);
+  }, [PW, checkPW, username, ID, email, isDisabled, isSubmitting, showDialog]);
 
   return (
     <>

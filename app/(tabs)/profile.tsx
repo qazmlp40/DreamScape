@@ -1,5 +1,6 @@
 // Profile.tsx (아이콘 + 버튼 + useScale 완전 통합 버전)
 
+import { tokenStorage } from '@/utils/tokenStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React from 'react';
@@ -174,7 +175,7 @@ const Profile = () => {
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('accessToken');
+      await tokenStorage.deleteToken();
       await AsyncStorage.removeItem('userId');
       router.replace('/(auth)/login');
     } catch (error) {
@@ -186,7 +187,7 @@ const Profile = () => {
   const handleWithdraw = async () => {
     try {
       const userId = await AsyncStorage.getItem('userId');
-      const accessToken = await AsyncStorage.getItem('accessToken');
+      const accessToken = await tokenStorage.getToken();
   
       if (!userId || !accessToken) {
         showDialog({
@@ -212,7 +213,8 @@ const Profile = () => {
         return;
       }
   
-      await AsyncStorage.multiRemove(['accessToken', 'userId']);
+      await tokenStorage.deleteToken();
+      await AsyncStorage.removeItem('userId');
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('회원탈퇴 처리 중 오류:', error);

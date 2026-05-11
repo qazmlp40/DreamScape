@@ -14,8 +14,6 @@ import UserTrue from '@/assets/images/icons/footer/user_true.svg';
 import HomeDisabled from '@/assets/images/icons/footer/home_disabled.svg';
 import HomeTrue from '@/assets/images/icons/footer/home_true.svg';
 
-const tapIcon = require('../../assets/images/tap_icon.png');
-
 const colors = {
   primary: '#BB7CFF', // 메인 색상
   inactive: '#D6D6D6', // 비활성 아이콘 색상
@@ -23,9 +21,6 @@ const colors = {
 };
 
 export default function TabLayout() {
-  console.log("✅ metro.config.js loaded");
-
-
   return (
     <Tabs
       screenOptions={{
@@ -99,5 +94,4 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
 

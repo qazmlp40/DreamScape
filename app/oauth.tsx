@@ -10,11 +10,14 @@ export default function OAuthScreen() {
   useEffect(() => {
     const saveLogin = async () => {
       if (error) {
-        router.replace('/Login/Login');
+        router.replace('/(auth)/login');
         return;
       }
 
-      if (!accessToken || !userId) return;
+      if (!accessToken || !userId) {
+        router.replace('/(auth)/login');
+        return;
+      }
 
       // 토큰 저장 (로그인 유지)
       await AsyncStorage.setItem('accessToken', String(accessToken));
