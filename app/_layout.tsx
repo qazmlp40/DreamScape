@@ -1,20 +1,25 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AppDialogProvider } from '../contexts/AppDialogContext';
 import { DreamRecordProvider } from '../contexts/DreamRecordContext';
+import { initKakao } from '../utils/kakaoInit';
+import { tokenStorage } from '../utils/tokenStorage';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: '(auth)',
 };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    initKakao();
+  }, []);
 
   return (
     <DreamRecordProvider>
@@ -32,13 +37,25 @@ function AuthenticatedStack() {
   const router = useRouter();
   const segments = useSegments();
   const [isReady, setIsReady] = useState(false);
+  const [token, setToken] = useState<string | null | undefined>(undefined);
+  const hasHandledInitialRoute = useRef(false);
+
+  useEffect(() => {
+    const checkToken = async () => {
+      const t = await tokenStorage.getToken();
+      setToken(t);
+    };
+    checkToken();
+
+    const interval = setInterval(checkToken, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
     const guardRoute = async () => {
-      const token = await AsyncStorage.getItem('accessToken');
-
+      if (token === undefined) return;
       if (!mounted) return;
 
       const rootSegment = segments[0];
@@ -46,14 +63,20 @@ function AuthenticatedStack() {
 
       setIsReady(true);
 
+      if (!hasHandledInitialRoute.current) {
+        hasHandledInitialRoute.current = true;
+
+        if (!isAuthRoute) {
+          router.replace('/(auth)/login');
+          return;
+        }
+      }
+
       if (!token && !isAuthRoute) {
         router.replace('/(auth)/login');
         return;
       }
 
-      if (token && rootSegment === '(auth)') {
-        router.replace('/(tabs)');
-      }
     };
 
     guardRoute();
@@ -61,7 +84,7 @@ function AuthenticatedStack() {
     return () => {
       mounted = false;
     };
-  }, [router, segments]);
+  }, [router, segments, token]);
 
   if (!isReady) {
     return null;

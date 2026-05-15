@@ -17,7 +17,7 @@ type MockDreamRecord = {
 
 let mockDreamIdSeq = 1;
 const mockDreamStore = new Map<number, MockDreamRecord>();
-const videoGeneratingSet = new Set<number>(); // 진행 중인 영상 생성 dreamId 추적
+const videoGeneratingPromises = new Map<number, Promise<any>>();
 
 const getMockDream = (dreamId: number) => mockDreamStore.get(dreamId);
 
@@ -210,18 +210,24 @@ export const dreamApi = {
       return mockResponse;
     }
 
-    if (videoGeneratingSet.has(dreamId)) {
-      throw new Error(`dreamId ${dreamId} 영상 생성이 이미 진행 중입니다.`);
+    const pendingVideo = videoGeneratingPromises.get(dreamId);
+    if (pendingVideo) {
+      return pendingVideo;
     }
 
-    videoGeneratingSet.add(dreamId);
-    try {
+    const request = (async () => {
       const response = await api.post(`/api/media/generate/video`, null, {
         params: { dreamId },
       });
       return response.data;
+    })();
+
+    videoGeneratingPromises.set(dreamId, request);
+
+    try {
+      return await request;
     } finally {
-      videoGeneratingSet.delete(dreamId);
+      videoGeneratingPromises.delete(dreamId);
     }
   },
 

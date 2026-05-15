@@ -86,10 +86,13 @@ export default function TabsIndex() {
 
   const loadDreams = useCallback(async () => {
     try {
+      console.log('[Home] 꿈 목록 조회 시작');
       const response = await dreamApi.getDreams();
+      console.log('[Home] 서버 응답:', response);
       const nextDreams = Array.isArray(response)
         ? response.map(normalizeDream).filter(Boolean)
         : [];
+      console.log('[Home] 정규화된 꿈 목록:', nextDreams);
 
       setDreams(nextDreams as HomeDream[]);
     } catch (error) {
@@ -143,6 +146,10 @@ export default function TabsIndex() {
                         ...(dream.dreamId ? { id: String(dream.dreamId) } : {}),
                         ...(dream.dreamId ? { dreamId: String(dream.dreamId) } : {}),
                         date: dream.date,
+                        title: dream.title,
+                        dreamText: dream.dreamText,
+                        summary: dream.summary,
+                        interpretation: dream.interpretation,
                       },
                     }}
                     asChild

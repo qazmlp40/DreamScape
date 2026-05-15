@@ -10,7 +10,16 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. 카카오톡 공유 설정
+
+   - [카카오 개발자 콘솔](https://developers.kakao.com/console/app)에서 앱을 생성하고 네이티브 앱 키를 발급받으세요
+   - `.env` 파일을 생성하고 카카오 앱 키를 설정하세요:
+     ```
+     EXPO_PUBLIC_KAKAO_APP_KEY=your_kakao_native_app_key_here
+     ```
+   - `app.json`의 `android.intentFilters`에서 `{YOUR_KAKAO_APP_KEY}`를 실제 앱 키로 변경하세요
+
+3. Start the app
 
    ```bash
    npx expo start

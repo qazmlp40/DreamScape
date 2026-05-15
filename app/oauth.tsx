@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { tokenStorage } from '../utils/tokenStorage';
 
 export default function OAuthScreen() {
   // 데이터 꺼내기
@@ -20,7 +21,7 @@ export default function OAuthScreen() {
       }
 
       // 토큰 저장 (로그인 유지)
-      await AsyncStorage.setItem('accessToken', String(accessToken));
+      await tokenStorage.setToken(String(accessToken));
       await AsyncStorage.setItem('userId', String(userId));
 
       if (refreshToken) {

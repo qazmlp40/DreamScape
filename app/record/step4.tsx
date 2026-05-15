@@ -364,7 +364,7 @@ export default function RecordStep4Screen() {
                 </Modal>
 
                 {hasTimerElapsed && !isRatingModalVisible ? (
-                    <>
+                    <View style={styles.overlayControls}>
                         <RecordHeader
                             showBack={false}
                             rightText="저장하기"
@@ -377,7 +377,7 @@ export default function RecordStep4Screen() {
                             onPress={navigateToHome}
                             overlay
                         />
-                    </>
+                    </View>
                 ) : null}
 
                 <SaveConfirmModal
@@ -596,5 +596,13 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: '#FFFFFF',
+    },
+    overlayControls: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        pointerEvents: 'box-none',
     },
 });

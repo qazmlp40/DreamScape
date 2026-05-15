@@ -1,16 +1,19 @@
 import FriendIcon from "@/assets/images/icons/dream_symbol/friend.svg";
-import FixedBottomButton from "@/components/app/FixedBottomButton";
 import RecordHeader from "@/components/app/RecordHeader";
 import SaveConfirmModal from "@/components/app/SaveConfirmModal";
+import { KakaoShareIcon } from "@/components/ui/KakaoShareIcon";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { shareFeedTemplate } from "@react-native-kakao/share";
 import axios from "axios";
+import Constants from "expo-constants";
 import * as MediaLibrary from "expo-media-library";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import { API_BASE_URL, DEV_MOCK_DREAMS } from "../../constants/api";
+import { KAKAO_APP_KEY } from "../../constants/kakao";
 import { useAppDialog } from "../../contexts/AppDialogContext";
 import {
   type DreamRecord,
@@ -28,6 +31,24 @@ const colors = {
 };
 
 const FIXED_BUTTON_HEIGHT = 56;
+const KAKAO_FALLBACK_URL = "https://developers.kakao.com";
+const KAKAO_THUMBNAIL_URL = "https://picsum.photos/400/300";
+const isExpoGo = Constants.appOwnership === "expo";
+
+const buildAbsoluteUrl = (url?: string) => {
+  if (!url?.trim()) {
+    return undefined;
+  }
+
+  const trimmedUrl = url.trim();
+  if (/^https?:\/\//i.test(trimmedUrl)) {
+    return trimmedUrl;
+  }
+
+  const baseUrl = API_BASE_URL.replace(/\/$/, "");
+  const path = trimmedUrl.startsWith("/") ? trimmedUrl : `/${trimmedUrl}`;
+  return `${baseUrl}${path}`;
+};
 
 type RemoteDreamRecord = {
   dreamId?: number;
@@ -74,6 +95,17 @@ const firstText = (...values: (string | null | undefined)[]) => {
   return values.find((value) => value?.trim())?.trim();
 };
 
+const getNestedText = (source: any, paths: string[]) => {
+  for (const path of paths) {
+    const value = path.split(".").reduce((acc, key) => acc?.[key], source);
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+};
+
 const buildDreamResultViewModel = ({
   params,
   localRecord,
@@ -110,27 +142,32 @@ const buildDreamResultViewModel = ({
     firstText(
       remoteRecord?.title,
       localRecord?.title,
+      getParamValue(params.title),
       canUseCurrentRecord ? currentRecord.title : undefined,
     ) ?? "";
   const summary =
     firstText(
       remoteRecord?.summary,
       localRecord?.analysis?.summary,
+      getParamValue(params.summary),
       canUseCurrentRecord ? currentRecord.analysis?.summary : undefined,
       remoteRecord?.dreamText,
       localRecord?.dreamText,
+      getParamValue(params.dreamText),
       canUseCurrentRecord ? currentRecord.dreamText : undefined,
     ) ?? "";
   const interpretation =
     firstText(
       remoteRecord?.interpretation,
       localRecord?.analysis?.interpretation,
+      getParamValue(params.interpretation),
       canUseCurrentRecord ? currentRecord.analysis?.interpretation : undefined,
     ) ?? "";
   const videoUrl =
     firstText(
       remoteRecord?.videoUrl,
       localRecord?.videoUrl,
+      getParamValue(params.videoUrl),
       canUseCurrentRecord ? currentRecord.videoUrl : undefined,
     ) ?? undefined;
 
@@ -233,21 +270,44 @@ export default function RecordStep5Screen() {
             data.createdAt?.slice?.(0, 10),
           title: data.title || data.dreamTitle,
           mood: data.mood || data.emotion,
-          dreamText: data.rawText ?? data.content,
+          dreamText:
+            getNestedText(data, ["rawText", "content", "dreamText", "text"]) ??
+            undefined,
           summary:
-            data.aiSummary ??
-            data.summary ??
-            data.rawText ??
-            data.content,
+            getNestedText(data, [
+              "aiSummary",
+              "summary",
+              "analysis.aiSummary",
+              "analysis.summary",
+              "dreamAnalysis.aiSummary",
+              "dreamAnalysis.summary",
+              "result.aiSummary",
+              "result.summary",
+              "rawText",
+              "content",
+            ]) ?? undefined,
           interpretation:
-            data.aiInterpretation ??
-            data.interpretation ??
-            data.analysisText,
+            getNestedText(data, [
+              "aiInterpretation",
+              "interpretation",
+              "analysisText",
+              "analysis.aiInterpretation",
+              "analysis.interpretation",
+              "analysis.analysisText",
+              "dreamAnalysis.aiInterpretation",
+              "dreamAnalysis.interpretation",
+              "result.aiInterpretation",
+              "result.interpretation",
+            ]) ?? undefined,
           videoUrl:
-            data.mediaUrl ??
-            data.videoUrl ??
-            data.video?.mediaUrl ??
-            data.media?.mediaUrl,
+            getNestedText(data, [
+              "mediaUrl",
+              "videoUrl",
+              "video.mediaUrl",
+              "video.videoUrl",
+              "media.mediaUrl",
+              "media.videoUrl",
+            ]) ?? undefined,
         });
       } catch (error) {
         console.error("꿈 데이터 불러오기 실패:", error);
@@ -335,6 +395,70 @@ export default function RecordStep5Screen() {
     dreamResult.videoUrl,
     updateRecordByLocalId,
   ]);
+
+  const handleShareKakao = async () => {
+    if (!KAKAO_APP_KEY) {
+      Alert.alert("오류", "카카오 앱 키가 설정되지 않았습니다.");
+      return;
+    }
+
+    const videoShareUrl = buildAbsoluteUrl(dreamResult.videoUrl);
+    const shareUrl = videoShareUrl ?? KAKAO_FALLBACK_URL;
+    const shareTitle = dreamResult.title || "제목없는 꿈";
+    const shareDescription =
+      dreamResult.summary ||
+      dreamResult.interpretation ||
+      "DreamScape에서 기록한 꿈이에요.";
+
+    const shareWithSystemSheet = async () => {
+      await Share.share({
+        title: shareTitle,
+        message: `${shareTitle}\n\n${shareDescription}\n\n${shareUrl}`,
+        url: shareUrl,
+      });
+    };
+
+    if (isExpoGo) {
+      await shareWithSystemSheet();
+      return;
+    }
+
+    try {
+      await shareFeedTemplate({
+        template: {
+          content: {
+            title: shareTitle,
+            description: shareDescription,
+            imageUrl: KAKAO_THUMBNAIL_URL,
+            link: {
+              mobileWebUrl: shareUrl,
+              webUrl: shareUrl,
+            },
+          },
+          buttons: [
+            {
+              title: videoShareUrl ? "영상 보기" : "자세히 보기",
+              link: {
+                mobileWebUrl: shareUrl,
+                webUrl: shareUrl,
+              },
+            },
+          ],
+        },
+        useWebBrowserIfKakaoTalkNotAvailable: true,
+      });
+    } catch (error) {
+      console.error("카카오톡 공유 실패:", error);
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (message.includes("doesn't seem to be linked")) {
+        await shareWithSystemSheet();
+        return;
+      }
+
+      Alert.alert("오류", "카카오톡 공유에 실패했습니다.");
+    }
+  };
 
   const handleSave = () => {
     setIsSaved(true);
@@ -427,7 +551,23 @@ export default function RecordStep5Screen() {
           </View>
         </ScrollView>
 
-        <FixedBottomButton label="다음" onPress={handleNext} />
+        <View style={styles.bottomContainer}>
+          <TouchableOpacity
+            style={styles.shareButton}
+            onPress={handleShareKakao}
+            activeOpacity={0.8}
+          >
+            <KakaoShareIcon width={24} height={24} />
+            <Text style={styles.shareButtonText}>공유하기</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={handleNext}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.nextButtonText}>다음</Text>
+          </TouchableOpacity>
+        </View>
 
         <SaveConfirmModal
           visible={isSaved}
@@ -458,7 +598,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: FIXED_BUTTON_HEIGHT + 40,
+    paddingBottom: FIXED_BUTTON_HEIGHT + 100,
   },
   videoBox: {
     width: "100%",
@@ -504,5 +644,39 @@ const styles = StyleSheet.create({
   },
   videoSection: {
     marginBottom: 28,
+  },
+  bottomContainer: {
+    position: "absolute",
+    bottom: 20,
+    left: 16,
+    right: 16,
+    gap: 16,
+  },
+  shareButton: {
+    backgroundColor: "#FEE500",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  shareButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#3C1E1E",
+  },
+  nextButton: {
+    backgroundColor: colors.buttonColor,
+    borderRadius: 12,
+    padding: 16,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nextButtonText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

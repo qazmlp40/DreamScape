@@ -176,7 +176,7 @@ const Profile = () => {
   const handleLogout = async () => {
     try {
       await tokenStorage.deleteToken();
-      await AsyncStorage.removeItem('userId');
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userId', 'email']);
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('로그아웃 처리 오류:', error);
@@ -214,7 +214,7 @@ const Profile = () => {
       }
   
       await tokenStorage.deleteToken();
-      await AsyncStorage.removeItem('userId');
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userId', 'email']);
       router.replace('/(auth)/login');
     } catch (error) {
       console.error('회원탈퇴 처리 중 오류:', error);

@@ -43,12 +43,12 @@ export default function FixedBottomButton({
   return (
     <View
       style={[
-        styles.container,
+        includeSafeArea ? styles.container : styles.relativeContainer,
         {
           bottom: bottomOffset,
           paddingBottom: safeBottom,
           paddingHorizontal: horizontalPadding,
-          backgroundColor: overlay ? 'rgba(0, 0, 0, 0.2)' : '#FFFFFF',
+          backgroundColor: overlay ? 'rgba(0, 0, 0, 0.2)' : 'transparent',
           borderTopWidth: showDivider ? 1 : 0,
         },
         style,
@@ -83,6 +83,11 @@ const styles = StyleSheet.create({
     gap: 10,
     zIndex: 10,
     elevation: 10,
+  },
+  relativeContainer: {
+    paddingTop: 0,
+    borderTopColor: '#F0F0F0',
+    gap: 10,
   },
   button: {
     width: '100%',
