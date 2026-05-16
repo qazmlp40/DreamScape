@@ -10,7 +10,7 @@ import java.util.Date;
 @Component
 public class JwtProvider {
 
-    private final String SECRET = "";
+    private final String SECRET = "my-super-secret-key-my-super-secret-key";
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
     private final long accessTokenValidTime = 1000 * 60 * 60; // 1시간

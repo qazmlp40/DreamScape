@@ -53,7 +53,8 @@ public class SecurityConfig {
                                 "/t_user/refresh",
                                 "/oauth2/**",
                                 "/login/**",
-                                "/error"
+                                "/error",
+                                "/analysis/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

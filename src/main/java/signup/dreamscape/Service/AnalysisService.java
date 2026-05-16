@@ -168,8 +168,11 @@ public class AnalysisService {
 
             // 9. DB 저장
             DreamAnalysisEntity analysisEntity = new DreamAnalysisEntity();
+
             analysisEntity.setTextSummary(interpretation);
-            analysisEntity.setMood(mood);
+            analysisEntity.setInterpretation(interpretation);
+            // analysisEntity.setTextSummary(interpretation); 수정
+=            analysisEntity.setMood(mood);
             analysisEntity.setDream(dream);
             dreamAnalysisRepository.save(analysisEntity);
 

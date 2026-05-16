@@ -7,7 +7,7 @@ import signup.dreamscape.DTO.DreamResponseDTO;
 import signup.dreamscape.Service.AnalysisService;
 
 @RestController
-@RequestMapping("/api/analysis")
+@RequestMapping("/analysis")
 @RequiredArgsConstructor
 public class AnalysisController {
 
@@ -15,7 +15,7 @@ public class AnalysisController {
 
 
     // 꿈 요약
-    @PostMapping("/summarize")  // ← @PostMapping으로 변경!
+    @PostMapping("/summary")  // ← @PostMapping으로 변경!
     public DreamResponseDTO analysis(@RequestBody String dreamText) {
 
         return analysisService.summarizeText(dreamText);
