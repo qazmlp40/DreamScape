@@ -28,6 +28,4 @@ public class DreamSymbolEntity {
     private String meaningContext;
     // 상황별 상세 해석
 
-    @Column(columnDefinition = "TEXT")
-    private String meaningContext;
 }

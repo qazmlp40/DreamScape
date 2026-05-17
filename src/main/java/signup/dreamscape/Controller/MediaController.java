@@ -13,7 +13,8 @@ public class MediaController {
     private final MediaService mediaService;
 
     @PostMapping("/generate/vedio")
-    public MediaResponseDTO generateVideo(@RequestParam Long dreamId) { //DTO가 아닌 Param 방식 사용
+    public MediaResponseDTO generateVideo(@RequestParam Long dreamId) throws Exception { //DTO가 아닌 Param 방식 사용
         return mediaService.generateVideo(dreamId);
     }
+
 }

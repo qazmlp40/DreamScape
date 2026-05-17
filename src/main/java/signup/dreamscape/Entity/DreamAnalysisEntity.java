@@ -22,5 +22,6 @@ public class DreamAnalysisEntity {
     @Column(columnDefinition = "TEXT")
     private String interpretation;
 
+    private String TextSummary;
     private String mood;
 }

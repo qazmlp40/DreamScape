@@ -82,10 +82,14 @@ public class AnalysisService {
 
 
     // 꿈 요약
-    public DreamResponseDTO summarizeText(String text){
+    public DreamResponseDTO summarizeText(Long dreamId, String text){
         if (text == null || text.trim().isEmpty()) {
             throw new IllegalArgumentException("꿈 텍스트는 비어있을 수 없습니다");
         }
+        // dreamId null 체크 (로컬에서 추가)
+        if (dreamId == null) {
+            throw new IllegalArgumentException("dreamId는 필수입니다");
+            }
 
         try {
             JSONArray messages = makeSummaryMessages(text);
@@ -93,12 +97,18 @@ public class AnalysisService {
             Request request = makeRequest(requestBody);
             String summaryText = callOpenAIAPI(request);
 
-            DreamEntity dreamEntity = new DreamEntity();
+            // 드림아이디로 기존에 저장되었던 꿈 조회
+            DreamEntity dreamEntity = dreamRepository.findById(dreamId).orElseThrow(()
+                    -> new IllegalArgumentException("존재하지 않는 꿈입니다. id=" + dreamId));
             dreamEntity.setRawText(text);
+
+            // 기존 꿈이랑 같은 행에 저장
             dreamEntity.setAiSummary(summaryText);
 
+            // 디비에 저장
             DreamEntity savedDream = dreamRepository.save(dreamEntity);
 
+            // 저장된 엔티티 정보 디티오로 옮기기(프엔에 보내주는 값)
             DreamResponseDTO responseDTO = new DreamResponseDTO();
             responseDTO.setAiSummary(savedDream.getAiSummary());
             responseDTO.setDreamId(savedDream.getDreamId());
@@ -172,7 +182,7 @@ public class AnalysisService {
             analysisEntity.setTextSummary(interpretation);
             analysisEntity.setInterpretation(interpretation);
             // analysisEntity.setTextSummary(interpretation); 수정
-=            analysisEntity.setMood(mood);
+            analysisEntity.setMood(mood);
             analysisEntity.setDream(dream);
             dreamAnalysisRepository.save(analysisEntity);
 
@@ -238,7 +248,7 @@ public class AnalysisService {
     }
 
     // OpenAI API 요청 바디 생성
-    private JSONObject makeRequestBody(JSONArray messages) {
+    public JSONObject makeRequestBody(JSONArray messages) {
         JSONObject body = new JSONObject();
         body.put("model", model);
         body.put("temperature", temperature);
@@ -258,7 +268,7 @@ public class AnalysisService {
     }
 
     // OpenAI API에 보낼 HTTP 요청 객체 생성
-    private Request makeRequest(JSONObject requestBody) {
+    public Request makeRequest(JSONObject requestBody) {
         return new Request.Builder()
                 .url(apiUrl)
                 .addHeader("Authorization", "Bearer " + apiKey)
@@ -269,9 +279,10 @@ public class AnalysisService {
     }
 
     // OpenAI API 호출 및 응답 처리
-    private String callOpenAIAPI(Request request) throws Exception {
+    public String callOpenAIAPI(Request request) throws Exception {
         try (Response response = http.newCall(request).execute()) {
             if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "";
                 log.error("OpenAI API 오류 [{}]", response.code());
                 throw new RuntimeException("OpenAI API 오류: " + response.code());
             }

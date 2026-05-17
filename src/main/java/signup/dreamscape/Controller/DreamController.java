@@ -62,12 +62,6 @@ public class DreamController {
         return ResponseEntity.noContent().build();
     }
 
-    // (테스트용) dreamId로 더미 비디오 생성
-    @PostMapping("/media-test/{dreamId}")
-    public ResponseEntity<MediaResponseDTO> generateVideoFromDreamController(
-            @PathVariable Long dreamId
-    ) {
-        MediaResponseDTO response = mediaService.generateVideo(dreamId);
-        return ResponseEntity.ok(response);
-    }
+
 }
+
