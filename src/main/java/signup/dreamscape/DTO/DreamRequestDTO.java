@@ -28,4 +28,16 @@ public class DreamRequestDTO {
     private String mood;
 
     private LocalDate date; // 로컬에서 추가 (26.05.09)
+
+    private String aiSummary; // 로컬에서 추가 (26.05.17)
+
+    private String aiInterpretation; // 로컬에서 추가 (26.05.17)
+
+    private String summary; // 로컬에서 추가 (26.05.17)
+
+    private String interpretation; // 로컬에서 추가 (26.05.17)
+
+    private String mediaUrl; // 로컬에서 추가 (26.05.17)
+
+    private String videoUrl; // 로컬에서 추가 (26.05.17)
 }

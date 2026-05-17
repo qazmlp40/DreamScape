@@ -41,4 +41,10 @@ public class DreamEntity {
 
     @Column(name = "dream_date") // 로컬에서 추가 (26.05.09)
     private LocalDate date; // 사용자가 선택한 꿈 날짜
+
+    @Column
+    private String aiInterpretation; // 로컬에서 추가 (26.05.17)
+
+    @Column
+    private String mediaUrl; // 로컬에서 추가 (26.05.17)
 }

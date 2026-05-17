@@ -60,10 +60,44 @@ public class DreamService {
         DreamEntity entity = dreamRepository.findById(dreamId)
                 .orElseThrow(() -> new IllegalArgumentException("Dream not found: " + dreamId));
 
-        entity.setTitle(dto.getTitle());
-        entity.setRawText(dto.getRawText());
+        // 수정 전
+//        entity.setTitle(dto.getTitle());
+//        entity.setRawText(dto.getRawText());
+//        entity.setUpdatedAt(LocalDateTime.now());
+//        // aiSummary는 dto에 없으니 기존 값 유지
+
+        // 수정 후 - 로컬에서 수정 (26.05.17)
+        // DreamService.updateDream()에 저장 로직 추가
+        if (dto.getTitle() != null) {
+            entity.setTitle(dto.getTitle());
+        }
+
+        if (dto.getRawText() != null) {
+            entity.setRawText(dto.getRawText());
+        }
+
+        if (dto.getMood() != null) {
+            entity.setMood(dto.getMood());
+        }
+
+        String summary = dto.getAiSummary() != null ? dto.getAiSummary() : dto.getSummary();
+        if (summary != null) {
+            entity.setAiSummary(summary);
+        }
+
+        String interpretation = dto.getAiInterpretation() != null
+                ? dto.getAiInterpretation()
+                : dto.getInterpretation(); // 여기 에러뜸
+        if (interpretation != null) {
+            entity.setAiInterpretation(interpretation);
+        }
+
+        String mediaUrl = dto.getMediaUrl() != null ? dto.getMediaUrl() : dto.getVideoUrl();
+        if (mediaUrl != null) {
+            entity.setMediaUrl(mediaUrl);
+        }
+
         entity.setUpdatedAt(LocalDateTime.now());
-        // aiSummary는 dto에 없으니 기존 값 유지
 
         DreamEntity saved = dreamRepository.save(entity);
         return toResponse(saved);
@@ -86,11 +120,11 @@ public class DreamService {
                 .date(e.getDate()) // 로컬에서 추가 (26.05.09)
                 .createdAt(e.getCreatedAt())
                 .recordedAt(e.getCreatedAt())
-                .aiInterpretation(null)
+                .aiInterpretation(e.getAiInterpretation()) // 로컬에서 수정 (26.05.17) - null 대신 실제 값 내려주기
                 .mood(e.getMood())
                 .tag(null)
-                .originalMediaUrl(null)
-                .editedMediaUrl(null)
+                .originalMediaUrl(e.getMediaUrl()) // 로컬에서 수정 (26.05.17)
+                .editedMediaUrl(e.getMediaUrl()) // 로컬에서 수정 (26.05.17)
                 .build();
     }
 }
