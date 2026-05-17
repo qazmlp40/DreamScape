@@ -164,9 +164,9 @@ export default function TabsIndex() {
                         </Text>
                       </View>
                       <Text style={styles.dreamSummary} numberOfLines={2}>
-                        {dream.interpretation ||
+                        {dream.dreamText ||
                           dream.summary ||
-                          dream.dreamText ||
+                          dream.interpretation ||
                           '아직 해몽이 없습니다.'}
                       </Text>
                     </Pressable>

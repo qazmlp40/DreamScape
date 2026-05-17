@@ -78,10 +78,6 @@ export const dreamApi = {
       title: data.title,
       rawText: data.dreamText,
       mood: data.mood,
-      /*
-      date: data.date, // 캘린더에서 선택한 꿈 날짜
-      date : data.date, // 캘
-      */
       date: data.date, // 캘린더에서 선택한 꿈 날짜
     });
 
@@ -164,6 +160,8 @@ export const dreamApi = {
       mood?: string;
       interpretation?: string;
       summary?: string;
+      videoUrl?: string;
+      mediaUrl?: string;
     },
   ) => {
     if (DEV_MOCK_DREAMS) {
@@ -184,10 +182,19 @@ export const dreamApi = {
       title: data.title,
       rawText: data.dreamText,
       mood: data.mood,
-      interpretation: data.interpretation,
       summary: data.summary,
+      interpretation: data.interpretation,
+      aiSummary: data.summary,
+      aiInterpretation: data.interpretation,
+      videoUrl: data.videoUrl,
+      mediaUrl: data.mediaUrl ?? data.videoUrl,
     };
+    console.log("[DreamApi] updateDream request:", {
+      dreamId,
+      payload,
+    });
     const response = await api.put(`/api/dreams/${dreamId}`, payload);
+    console.log("[DreamApi] updateDream response:", response.data);
     return response.data;
   },
 

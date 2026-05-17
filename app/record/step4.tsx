@@ -1,8 +1,9 @@
 import FixedBottomButton from '@/components/app/FixedBottomButton';
 import RecordHeader from '@/components/app/RecordHeader';
 import SaveConfirmModal from '@/components/app/SaveConfirmModal';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppDialog } from '@/contexts/AppDialogContext';
 import { dreamApi } from '@/services/dreamApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ResizeMode, Video } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -14,7 +15,6 @@ import {
     TextInput,
     View
 } from 'react-native';
-import { useAppDialog } from '@/contexts/AppDialogContext';
 
 const colors = {
     text: '#1F2937',
@@ -68,6 +68,9 @@ export default function RecordStep4Screen() {
     const selectedDate = getParamValue(params.selectedDate) ?? null;
     const dateParam = getParamValue(params.date) ?? null;
     const videoUrlParam = getParamValue(params.videoUrl) ?? null;
+    const mode = getParamValue(params.mode); // review mode
+    const isReviewMode = mode === "review";
+
 
     useEffect(() => {
         setHasTimerElapsed(false);
@@ -82,12 +85,27 @@ export default function RecordStep4Screen() {
         const loadVideo = async () => {
             setVideoError(null);
             setResolvedVideoUrl(null);
+            console.log("[Step4] loadVideo start:", {
+                dreamId,
+                videoUrlParam,
+                mode,
+                isReviewMode,
+            });
 
             if (videoUrlParam) {
+                console.log("[Step4] videoUrlParam으로 기존 영상 재생:", videoUrlParam);
                 setResolvedVideoUrl(videoUrlParam);
                 setIsVideoLoading(false);
                 return;
             }
+
+            // 리뷰 모드일 땐 영상 재생성 안되게 함
+            if (isReviewMode) {
+                console.log("[Step4] review mode + videoUrl 없음: 영상 재생성 중단");
+                setVideoError('저장된 영상이 없습니다.');
+                setIsVideoLoading(false);
+                return;
+              }              
 
             if (!dreamId) {
                 setVideoError('꿈 정보를 찾지 못했어요.');
@@ -98,7 +116,9 @@ export default function RecordStep4Screen() {
             setIsVideoLoading(true);
 
             try {
+                console.log("[Step4] generateVideo 요청:", { dreamId });
                 const videoRes = await dreamApi.generateVideo(dreamId);
+                console.log("[Step4] generateVideo 응답:", videoRes);
                 const responseDreamId = getParamNumber(
                     videoRes?.dreamId ?? videoRes?.id ?? videoRes?.dream_id,
                 );
@@ -139,7 +159,7 @@ export default function RecordStep4Screen() {
         return () => {
             isCancelled = true;
         };
-    }, [dreamId, videoUrlParam, videoReloadKey]);
+    }, [dreamId, videoUrlParam, videoReloadKey, isReviewMode]);
 
     const showRatingModal = () => {
         setHasTimerElapsed(true);

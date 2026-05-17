@@ -4,7 +4,6 @@ import SaveConfirmModal from "@/components/app/SaveConfirmModal";
 import { KakaoShareIcon } from "@/components/ui/KakaoShareIcon";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { shareFeedTemplate } from "@react-native-kakao/share";
-import axios from "axios";
 import Constants from "expo-constants";
 import * as MediaLibrary from "expo-media-library";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -191,6 +190,7 @@ export default function RecordStep5Screen() {
     getRecordByLocalId,
     getRecordByDate,
     updateRecordByLocalId,
+    updateRecordByDreamId,
   } = useDreamRecord();
 
   const router = useRouter();
@@ -201,10 +201,13 @@ export default function RecordStep5Screen() {
   const [remoteRecord, setRemoteRecord] = useState<RemoteDreamRecord | null>(
     null,
   );
+  const analysisBackfillRef = useRef<Set<number>>(new Set());
+  const videoBackfillRef = useRef<Set<number>>(new Set());
   const fetchDreamId =
     getParamValue(params.id) ?? getParamValue(params.dreamId);
   const fetchDreamIdNumber = getParamNumber(fetchDreamId);
 
+  // 기존 꿈 상세 조회
   useEffect(() => {
     const fetchDream = async () => {
       if (!fetchDreamId) {
@@ -237,10 +240,13 @@ export default function RecordStep5Screen() {
           return;
         }
 
-        const res = await axios.get(
-          `${API_BASE_URL}/api/dreams/${fetchDreamId}`,
-        );
-        const data = res.data || {};
+        // 직접 axios를 호출하지 않고 dreamApi.getDreamById() 사용
+        const data = await dreamApi.getDreamById(Number(fetchDreamId));
+
+        console.log("[Step5] dream detail raw response:", {
+          fetchDreamId,
+          data,
+        });
         const fetchedDreamId = Number(
           data.dreamId ?? data.id ?? getParamNumber(fetchDreamId),
         );
@@ -283,8 +289,6 @@ export default function RecordStep5Screen() {
               "dreamAnalysis.summary",
               "result.aiSummary",
               "result.summary",
-              "rawText",
-              "content",
             ]) ?? undefined,
           interpretation:
             getNestedText(data, [
@@ -303,6 +307,8 @@ export default function RecordStep5Screen() {
             getNestedText(data, [
               "mediaUrl",
               "videoUrl",
+              "originalMediaUrl",
+              "editedMediaUrl",
               "video.mediaUrl",
               "video.videoUrl",
               "media.mediaUrl",
@@ -337,16 +343,169 @@ export default function RecordStep5Screen() {
     remoteRecord,
   });
 
+  // 요약/ 해몽 누락 시 재생성 및 저장
   useEffect(() => {
     const run = async () => {
-      const mode = getParamValue(params.mode);
-      if (mode === 'review') return; // review 모드에서는 영상 재생성 안 함
-      if (!dreamResult.dreamId || dreamResult.videoUrl) {
+      const dreamId = dreamResult.dreamId;
+
+      if (!dreamId) {
         return;
       }
 
+      // 누락 여부 판단
+      if (dreamResult.remoteId && remoteRecord === null) {
+        return;
+      }
+
+      const hasGeneratedSummary = Boolean(
+        firstText(
+          remoteRecord?.summary,
+          localRecord?.analysis?.summary,
+          !dreamResult.remoteId ? currentRecord.analysis?.summary : undefined,
+        ),
+      );
+      const hasInterpretation = Boolean(
+        firstText(
+          remoteRecord?.interpretation,
+          localRecord?.analysis?.interpretation,
+          !dreamResult.remoteId
+            ? currentRecord.analysis?.interpretation
+            : undefined,
+        ),
+      );
+
+      if (
+        (hasGeneratedSummary && hasInterpretation) ||
+        analysisBackfillRef.current.has(dreamId)
+      ) {
+        return;
+      }
+
+      analysisBackfillRef.current.add(dreamId);
+
       try {
+        const dreamText =
+          remoteRecord?.dreamText ??
+          localRecord?.dreamText ??
+          getParamValue(params.dreamText) ??
+          currentRecord.dreamText;
+
+        // 요약/ 해몽 재생성 요청
+        const [summarizeResult, interpretResult] = await Promise.allSettled([
+          hasGeneratedSummary || !dreamText
+            ? Promise.resolve(null)
+            : dreamApi.summarizeDream(dreamId, dreamText),
+          hasInterpretation
+            ? Promise.resolve(null)
+            : dreamApi.interpretDream(dreamId),
+        ]);
+        const summarizeRes =
+          summarizeResult.status === "fulfilled" ? summarizeResult.value : null;
+        const interpretRes =
+          interpretResult.status === "fulfilled" ? interpretResult.value : null;
+        const summary =
+          summarizeRes?.aiSummary ?? summarizeRes?.summary ?? undefined;
+        const interpretation =
+          interpretRes?.aiInterpretation ??
+          interpretRes?.interpretation ??
+          interpretRes?.analysisText ??
+          undefined;
+        const tags = interpretRes?.tags ?? localRecord?.analysis?.tags ?? [];
+
+        if (!summary && !interpretation) {
+          return;
+        }
+
+        // 요약, 해몽 서버 저장
+        try {
+          await dreamApi.updateDream(dreamId, {
+            ...(summary ? { summary } : {}),
+            ...(interpretation ? { interpretation } : {}),
+          });
+        } catch (error) {
+          console.error("[Step5] generated analysis save failed:", error);
+        }
+
+        setRemoteRecord((prev) => ({
+          ...(prev ?? {}),
+          dreamId,
+          ...(summary ? { summary } : {}),
+          ...(interpretation ? { interpretation } : {}),
+        }));
+
+        const nextAnalysis = {
+          summary:
+            summary ??
+            localRecord?.analysis?.summary ??
+            currentRecord.analysis?.summary ??
+            dreamText ??
+            "",
+          interpretation:
+            interpretation ??
+            localRecord?.analysis?.interpretation ??
+            currentRecord.analysis?.interpretation ??
+            "",
+          tags,
+        };
+
+        if (dreamResult.localId) {
+          updateRecordByLocalId(dreamResult.localId, {
+            dreamId,
+            analysis: nextAnalysis,
+          });
+        } else {
+          updateRecordByDreamId(dreamId, { analysis: nextAnalysis });
+        }
+      } catch (error) {
+        console.error("[Step5] generated analysis backfill failed:", error);
+      }
+    };
+
+    run();
+  }, [
+    currentRecord.analysis,
+    currentRecord.dreamText,
+    dreamResult.dreamId,
+    dreamResult.localId,
+    dreamResult.remoteId,
+    localRecord,
+    params.dreamText,
+    remoteRecord,
+    updateRecordByDreamId,
+    updateRecordByLocalId,
+  ]);
+
+
+  // 영상 url 누락 시 생성 및 저장
+  useEffect(() => {
+    const run = async () => {
+      const mode = getParamValue(params.mode);
+      console.log("[Step5] video effect state:", {
+        mode,
+        dreamId: dreamResult.dreamId,
+        hasVideoUrl: Boolean(dreamResult.videoUrl),
+        videoUrl: dreamResult.videoUrl,
+      });
+      if (
+        !dreamResult.dreamId ||
+        dreamResult.videoUrl ||
+        videoBackfillRef.current.has(dreamResult.dreamId)
+      ) {
+        return;
+      }
+
+      if (dreamResult.remoteId && remoteRecord === null) {
+        return;
+      }
+
+      videoBackfillRef.current.add(dreamResult.dreamId);
+
+      try {
+        console.log("[Step5] generateVideo 요청:", {
+          dreamId: dreamResult.dreamId,
+        });
         const videoRes = await dreamApi.generateVideo(dreamResult.dreamId);
+        console.log("[Step5] generateVideo 응답:", videoRes);
         const responseDreamId = getParamNumber(
           videoRes.dreamId ?? videoRes.id ?? videoRes.dream_id,
         );
@@ -364,11 +523,27 @@ export default function RecordStep5Screen() {
           );
           return;
         }
-
+        // url 추출
         const videoUrl = videoRes.mediaUrl ?? videoRes.videoUrl ?? undefined;
 
         if (!videoUrl) {
+          console.warn("[Step5] generateVideo 응답에 videoUrl/mediaUrl 없음:", videoRes);
           return;
+        }
+
+        // 영상 생성 후 url 서버 저장
+        try {
+          console.log("[Step5] videoUrl 저장 요청:", {
+            dreamId: dreamResult.dreamId,
+            videoUrl,
+          });
+          const updateRes = await dreamApi.updateDream(dreamResult.dreamId, {
+            videoUrl,
+            mediaUrl: videoUrl,
+          });
+          console.log("[Step5] videoUrl 서버 저장 완료:", updateRes);
+        } catch (error) {
+          console.error("[Step5] videoUrl 서버 저장 실패:", error);
         }
 
         setRemoteRecord((prev) => ({
@@ -382,6 +557,8 @@ export default function RecordStep5Screen() {
             dreamId: dreamResult.dreamId,
             videoUrl,
           });
+        } else {
+          updateRecordByDreamId(dreamResult.dreamId, { videoUrl });
         }
       } catch (error) {
         console.error("꿈 영상 생성 실패:", error);
@@ -392,7 +569,11 @@ export default function RecordStep5Screen() {
   }, [
     dreamResult.dreamId,
     dreamResult.localId,
+    dreamResult.remoteId,
     dreamResult.videoUrl,
+    params.mode,
+    remoteRecord,
+    updateRecordByDreamId,
     updateRecordByLocalId,
   ]);
 
@@ -464,10 +645,14 @@ export default function RecordStep5Screen() {
     setIsSaved(true);
   };
 
+  // step5에서 step4로 review mode로 넘기기 (영상 재생성 방지)
   const handleNext = () => {
+    const mode = getParamValue(params.mode);
+
     router.push({
       pathname: "/record/step4",
       params: {
+        ...(mode ? { mode } : {}),
         ...(dreamResult.remoteId ? { id: dreamResult.remoteId } : {}),
         ...(dreamResult.date ? { date: dreamResult.date } : {}),
         ...(dreamResult.selectedDate

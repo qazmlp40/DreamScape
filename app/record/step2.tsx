@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "@/constants/api";
-import { MaterialIcons } from "@expo/vector-icons";
 import { dreamApi } from "@/services/dreamApi";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import {
@@ -175,6 +175,33 @@ export default function RecordStep2Screen() {
           interpretation,
           tags,
         });
+        console.log("[Step2] analysis resolved before updateDream:", {
+          dreamId,
+          finalDreamTextLength: finalDreamText.length,
+          summary,
+          interpretation,
+          tags,
+        });
+
+        // updateDream - 꿈 요약/ 해몽 서버 저장
+        if (dreamId) {
+          try {
+            console.log("[Step2] updateDream 저장 요청:", {
+              dreamId,
+              dreamTextLength: finalDreamText.length,
+              summary,
+              interpretation,
+            });
+            const updateRes = await dreamApi.updateDream(dreamId, {
+              dreamText: finalDreamText,
+              summary,
+              interpretation,
+            });
+            console.log("[Step2] summary/interpretation 서버 저장 완료:", updateRes);
+          } catch (error) {
+            console.error("[Step2] summary/interpretation 서버 저장 실패:", error);
+          }
+        }        
 
         if (localId) {
           updateRecordByLocalId(localId, {

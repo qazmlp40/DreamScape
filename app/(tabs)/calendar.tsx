@@ -603,9 +603,9 @@ export default function CalendarScreen() {
                         </Text>
                       </View>
                       <Text style={styles.interpretationText} numberOfLines={2}>
-                        {dream.interpretation ||
+                        {dream.dreamText ||
                           dream.summary ||
-                          dream.dreamText ||
+                          dream.interpretation ||
                           "아직 해몽이 없습니다."}
                       </Text>
                     </TouchableOpacity>

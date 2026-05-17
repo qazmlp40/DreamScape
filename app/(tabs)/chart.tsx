@@ -1,4 +1,5 @@
-import { API_BASE_URL } from "@/constants/api";
+import { api } from "@/services/api";
+import { dreamApi } from "@/services/dreamApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -15,7 +16,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Path, Svg } from "react-native-svg";
-import { useDreamRecord } from "../../contexts/DreamRecordContext";
 
 /* ----------------------- Types ----------------------- */
 type EmotionKey =
@@ -41,6 +41,41 @@ interface DreamChartResponse {
   moodDistribution: Record<string, number>;
   topKeywords: DreamKeywordItem[];
 }
+
+// 차트용 꿈 타입
+type ChartDream = {
+  id: string;
+  dreamId?: number;
+  date: string;
+};
+
+// 날짜 추출/ 정규화 함수
+const extractDreamDate = (dream: any) => {
+  const rawDate =
+    dream?.date ??
+    dream?.dreamDate ??
+    dream?.createdAt ??
+    dream?.updatedAt ??
+    "";
+
+  return typeof rawDate === "string" ? rawDate.slice(0, 10) : "";
+};
+
+const normalizeChartDream = (dream: any): ChartDream | null => {
+  const dreamId = Number(
+    dream?.dreamId ?? dream?.id ?? dream?.dream_id ?? dream?.dreamID,
+  );
+  const date = extractDreamDate(dream);
+
+  if (!date) return null;
+
+  return {
+    id: String(dreamId || dream?.id || date),
+    dreamId: Number.isFinite(dreamId) ? dreamId : undefined,
+    date,
+  };
+};
+
 
 /* ----------------------- Mock Data ----------------------- */
 
@@ -594,7 +629,10 @@ const Chart = () => {
   const { s } = useScale();
   const ITEM_HEIGHT = 32;
 
-  const { savedRecords } = useDreamRecord();
+  // const { savedRecords } = useDreamRecord();
+  // 서버 꿈 목록 state
+  const [dreams, setDreams] = useState<ChartDream[]>([]);
+
 
   const [chartData, setChartData] = useState<Record<EmotionKey, number>>({
     happy: 0,
@@ -632,7 +670,7 @@ const Chart = () => {
   };
 
   const monthKeySet = new Set<string>();
-  savedRecords.forEach((r) => {
+  dreams.forEach((r) => {
     const d = safeDate(r.date);
     if (!d) return;
     monthKeySet.add(toMonthKey(d));
@@ -704,7 +742,7 @@ const Chart = () => {
   // ✅ 선택된 monthKey 기준으로 "데이터가 있는 주차"만 만들기
   const weekNoSet = new Set<number>();
 
-  savedRecords.forEach((record) => {
+  dreams.forEach((record) => {
     const d = safeDate(record.date);
     if (!d) return;
 
@@ -772,6 +810,33 @@ const Chart = () => {
     return `${yyyy}-${mm}-${dd}`;
   }, [isWeekly, monthKey, weekKey]);
 
+  console.log("[Chart] filter dreams:", dreams.map((d) => d.date));
+  console.log("[Chart] MONTH_KEYS:", MONTH_KEYS);
+  console.log("[Chart] WEEKS:", WEEKS);
+  console.log("[Chart] selectedBaseDate:", selectedBaseDate);
+
+// 서버에서 꿈 목록 불러오기 
+  const fetchDreamsForFilter = async () => {
+    try {
+      const response = await dreamApi.getDreams();
+
+      // 날짜 데이터로 정규화
+      const nextDreams = Array.isArray(response)
+        ? response.map(normalizeChartDream).filter(Boolean)
+        : [];
+  
+      setDreams(nextDreams as ChartDream[]);
+    } catch (error) {
+      console.error("[Chart] 꿈 목록 조회 실패:", error);
+      setDreams([]);
+    }
+  };
+  
+  useEffect(() => {
+    fetchDreamsForFilter();
+  }, []);
+  
+
   // API 호출 
   const fetchChartData = async () => {
     try {
@@ -785,27 +850,19 @@ const Chart = () => {
       }
   
       const userId = Number(userIdStr);
-
-      // 토큰 붙임
-      const token = await AsyncStorage.getItem("accessToken");
-      console.log("[Chart] accessToken:", token ? "있음" : "없음");
-
-  
+      
+      // 공통 api 인스턴스로 차트 데이터 조회
       const rangeType = isWeekly ? "WEEKLY" : "MONTHLY";
-      const chartUrl = `${API_BASE_URL}/api/chart/dream-chart?userId=${userId}&rangeType=${rangeType}&baseDate=${selectedBaseDate}`;
-  
-      const res = await fetch(
-        chartUrl,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        }
-      );
 
-      const data: DreamChartResponse = await res.json();
+      const res = await api.get<DreamChartResponse>("/api/chart/dream-chart", {
+        params: {
+          userId,
+          rangeType,
+          baseDate: selectedBaseDate,
+        },
+      });
+
+      const data = res.data;
 
       console.log("[Chart] response data:", data);
       console.log("[Chart] moodDistribution:", data?.moodDistribution);
@@ -851,7 +908,7 @@ const Chart = () => {
 
   useEffect(() => {
     fetchChartData();
-  }, [isWeekly, selectedMonthIndex, safeWeekIndex]);
+  }, [isWeekly, selectedMonthIndex, safeWeekIndex, selectedBaseDate]);
 
   // 해당 주차 기간 계산 (현재 주차 번호 사용)
   const weekNo = Number(weekKey.split("-")[2]);
