@@ -32,7 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AnalysisService {
 
-    @Value("${openai.api-key}")
+    @Value("${openai.api.key}")
     private String apiKey;
 
     @Value("${openai.api-url}")

@@ -26,6 +26,5 @@ public class DreamSymbolEntity {
 
     @Column(columnDefinition = "TEXT")
     private String meaningContext;
-    // 상황별 상세 해석
-
 }
+    // 상황별 상세 해석

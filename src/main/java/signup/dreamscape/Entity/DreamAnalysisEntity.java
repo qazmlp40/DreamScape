@@ -24,4 +24,7 @@ public class DreamAnalysisEntity {
 
     private String TextSummary;
     private String mood;
+
+    @Column(columnDefinition = "TEXT")
+    private String textSummary;
 }
