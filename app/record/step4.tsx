@@ -1,12 +1,14 @@
 import FixedBottomButton from '@/components/app/FixedBottomButton';
 import RecordHeader from '@/components/app/RecordHeader';
 import SaveConfirmModal from '@/components/app/SaveConfirmModal';
+import { getEmotionThemeMusicSource } from '@/constants/emotionThemeMusic';
 import { useAppDialog } from '@/contexts/AppDialogContext';
 import { dreamApi } from '@/services/dreamApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ResizeMode, Video } from 'expo-av';
+import { Ionicons } from '@expo/vector-icons';
+import { Audio, ResizeMode, Video } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Modal,
     Pressable,
@@ -57,7 +59,6 @@ export default function RecordStep4Screen() {
     const [feedbackReason, setFeedbackReason] = useState('');
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
     const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
-    const [isVideoLoading, setIsVideoLoading] = useState(false);
     const [videoError, setVideoError] = useState<string | null>(null);
     const [videoReloadKey, setVideoReloadKey] = useState(0);
 
@@ -67,9 +68,16 @@ export default function RecordStep4Screen() {
     const remoteDreamId = getParamValue(params.id) ?? null;
     const selectedDate = getParamValue(params.selectedDate) ?? null;
     const dateParam = getParamValue(params.date) ?? null;
+    const mood = getParamValue(params.mood) ?? null;
     const videoUrlParam = getParamValue(params.videoUrl) ?? null;
     const mode = getParamValue(params.mode); // review mode
     const isReviewMode = mode === "review";
+    const themeMusicRef = useRef<Audio.Sound | null>(null);
+
+    const navigateToHome = () => {
+        setIsRatingModalVisible(false);
+        router.replace('/(tabs)');
+    };
 
 
     useEffect(() => {
@@ -95,7 +103,6 @@ export default function RecordStep4Screen() {
             if (videoUrlParam) {
                 console.log("[Step4] videoUrlParam으로 기존 영상 재생:", videoUrlParam);
                 setResolvedVideoUrl(videoUrlParam);
-                setIsVideoLoading(false);
                 return;
             }
 
@@ -103,17 +110,13 @@ export default function RecordStep4Screen() {
             if (isReviewMode) {
                 console.log("[Step4] review mode + videoUrl 없음: 영상 재생성 중단");
                 setVideoError('저장된 영상이 없습니다.');
-                setIsVideoLoading(false);
-                return;
-              }              
-
-            if (!dreamId) {
-                setVideoError('꿈 정보를 찾지 못했어요.');
-                setIsVideoLoading(false);
                 return;
             }
 
-            setIsVideoLoading(true);
+            if (!dreamId) {
+                setVideoError('꿈 정보를 찾지 못했어요.');
+                return;
+            }
 
             try {
                 console.log("[Step4] generateVideo 요청:", { dreamId });
@@ -147,10 +150,6 @@ export default function RecordStep4Screen() {
                 if (!isCancelled) {
                     setVideoError('꿈 영상을 불러오지 못했어요.');
                 }
-            } finally {
-                if (!isCancelled) {
-                    setIsVideoLoading(false);
-                }
             }
         };
 
@@ -159,16 +158,68 @@ export default function RecordStep4Screen() {
         return () => {
             isCancelled = true;
         };
-    }, [dreamId, videoUrlParam, videoReloadKey, isReviewMode]);
+    }, [dreamId, videoUrlParam, videoReloadKey, isReviewMode, mode]);
+
+    useEffect(() => {
+        let isCancelled = false;
+
+        const stopThemeMusic = async () => {
+            const currentSound = themeMusicRef.current;
+            themeMusicRef.current = null;
+
+            if (currentSound) {
+                await currentSound.stopAsync().catch(() => undefined);
+                await currentSound.unloadAsync().catch(() => undefined);
+            }
+        };
+
+        const playThemeMusic = async () => {
+            await stopThemeMusic();
+
+            if (!resolvedVideoUrl) {
+                return;
+            }
+
+            const themeMusicSource = getEmotionThemeMusicSource(mood);
+            if (!themeMusicSource) {
+                return;
+            }
+
+            try {
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: false,
+                    playsInSilentModeIOS: true,
+                    shouldDuckAndroid: true,
+                });
+
+                const { sound } = await Audio.Sound.createAsync(themeMusicSource, {
+                    isLooping: true,
+                    shouldPlay: true,
+                    volume: 0.6,
+                });
+
+                if (isCancelled) {
+                    await sound.unloadAsync();
+                    return;
+                }
+
+                themeMusicRef.current = sound;
+            } catch (error) {
+                console.error('감정 테마 음악 재생 실패:', error);
+            }
+        };
+
+        playThemeMusic();
+
+        return () => {
+            isCancelled = true;
+            stopThemeMusic();
+        };
+    }, [mood, resolvedVideoUrl]);
 
     const showRatingModal = () => {
         setHasTimerElapsed(true);
         setIsRatingModalVisible(true);
-    };
-
-    const navigateToHome = () => {
-        setIsRatingModalVisible(false);
-        router.replace('/(tabs)');
     };
 
     const handleSave = () => {
@@ -249,8 +300,10 @@ export default function RecordStep4Screen() {
                                     if (
                                         status.isLoaded &&
                                         status.didJustFinish &&
+                                        !isReviewMode &&
                                         !hasTimerElapsed
                                     ) {
+                                        themeMusicRef.current?.stopAsync().catch(() => undefined);
                                         showRatingModal();
                                     }
                                 }}
@@ -294,6 +347,27 @@ export default function RecordStep4Screen() {
                         )}
                     </View>
                 </View>
+
+                {isReviewMode ? (
+                    <View style={styles.reviewControls} pointerEvents="box-none">
+                        <Pressable
+                            style={styles.reviewIconButton}
+                            onPress={() => router.back()}
+                            accessibilityRole="button"
+                            accessibilityLabel="이전 화면으로 이동"
+                        >
+                            <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
+                        </Pressable>
+                        <Pressable
+                            style={styles.reviewIconButton}
+                            onPress={navigateToHome}
+                            accessibilityRole="button"
+                            accessibilityLabel="홈으로 이동"
+                        >
+                            <Ionicons name="home-outline" size={24} color="#FFFFFF" />
+                        </Pressable>
+                    </View>
+                ) : null}
 
                 <Modal
                     visible={isRatingModalVisible}
@@ -624,5 +698,24 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         pointerEvents: 'box-none',
+    },
+    reviewControls: {
+        position: 'absolute',
+        top: 52,
+        left: 18,
+        right: 18,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    reviewIconButton: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.18)',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

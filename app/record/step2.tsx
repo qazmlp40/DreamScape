@@ -299,12 +299,14 @@ export default function RecordStep2Screen() {
         );
 
         const selectedDate = getParamValue(params.selectedDate);
+        const mood = getParamValue(params.mood);
 
         router.replace({
           pathname: "/record/step3",
           params: {
             ...(dreamId ? { dreamId: String(dreamId) } : {}),
             ...(localId ? { localId } : {}),
+            ...(mood ? { mood } : {}),
             ...(selectedDate ? { selectedDate } : {}),
           },
         } as any);
@@ -316,6 +318,7 @@ export default function RecordStep2Screen() {
     finalDreamText,
     params.dreamId,
     params.localId,
+    params.mood,
     params.selectedDate,
     router,
     setAnalysis,

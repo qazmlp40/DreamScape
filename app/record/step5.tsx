@@ -66,6 +66,7 @@ type DreamResultViewModel = {
   dreamId?: number;
   date?: string;
   selectedDate?: string;
+  mood?: string;
   title: string;
   summary: string;
   interpretation: string;
@@ -136,6 +137,13 @@ const buildDreamResultViewModel = ({
     getParamValue(params.date) ??
     getParamValue(params.selectedDate);
   const selectedDate = getParamValue(params.selectedDate);
+  const mood =
+    firstText(
+      remoteRecord?.mood,
+      localRecord?.mood,
+      getParamValue(params.mood),
+      canUseCurrentRecord ? currentRecord.mood : undefined,
+    ) ?? undefined;
 
   const title =
     firstText(
@@ -176,6 +184,7 @@ const buildDreamResultViewModel = ({
     dreamId,
     date,
     selectedDate,
+    mood,
     title,
     summary,
     interpretation,
@@ -659,6 +668,7 @@ export default function RecordStep5Screen() {
           ? { selectedDate: dreamResult.selectedDate }
           : {}),
         ...(dreamResult.localId ? { localId: dreamResult.localId } : {}),
+        ...(dreamResult.mood ? { mood: dreamResult.mood } : {}),
         ...(dreamResult.dreamId
           ? { dreamId: String(dreamResult.dreamId) }
           : {}),

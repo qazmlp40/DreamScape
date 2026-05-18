@@ -129,6 +129,7 @@ type CalendarDream = {
   dreamText: string;
   summary: string;
   interpretation: string;
+  videoUrl: string;
 };
 
 interface CustomDayProps {
@@ -239,6 +240,9 @@ const normalizeDream = (dream: any): CalendarDream | null => {
     ).trim(),
     interpretation: String(
       dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? "",
+    ).trim(),
+    videoUrl: String(
+      dream?.mediaUrl ?? dream?.videoUrl ?? dream?.originalMediaUrl ?? dream?.editedMediaUrl ?? "",
     ).trim(),
   };
 };
@@ -391,12 +395,18 @@ export default function CalendarScreen() {
     }
 
     router.push({
-      pathname: "/record/step5",
+      pathname: "/dream-view",
       params: {
         mode: "review",
         date: selectedDate,
         id: String(targetDream.dreamId),
         dreamId: String(targetDream.dreamId),
+        mood: targetDream.mood,
+        title: targetDream.title,
+        dreamText: targetDream.dreamText,
+        summary: targetDream.summary,
+        interpretation: targetDream.interpretation,
+        videoUrl: targetDream.videoUrl,
       },
     } as any);
   };

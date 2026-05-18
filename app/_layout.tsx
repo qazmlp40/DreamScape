@@ -102,6 +102,7 @@ function AuthenticatedStack() {
       <Stack.Screen name="setting" options={{ headerShown: false }} />
       <Stack.Screen name="inquiry" options={{ headerShown: false }} />
       <Stack.Screen name="dream-edit" options={{ headerShown: false }} />
+      <Stack.Screen name="dream-view" options={{ headerShown: false }} />
       <Stack.Screen name="oauth" options={{ headerShown: false }} />
       <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
     </Stack>

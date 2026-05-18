@@ -32,9 +32,11 @@ type HomeDream = {
   dreamId?: number;
   date: string;
   title: string;
+  mood: string;
   dreamText: string;
   summary: string;
   interpretation: string;
+  videoUrl: string;
 };
 
 const formatDateToString = (d: Date) => {
@@ -70,12 +72,16 @@ const normalizeDream = (dream: any): HomeDream | null => {
     dreamId: Number.isFinite(dreamId) ? dreamId : undefined,
     date,
     title: String(dream?.title ?? dream?.dreamTitle ?? '').trim(),
+    mood: String(dream?.mood ?? dream?.emotion ?? '').trim(),
     dreamText: String(dream?.rawText ?? dream?.content ?? '').trim(),
     summary: String(
       dream?.aiSummary ?? dream?.summary ?? dream?.rawText ?? dream?.content ?? '',
     ).trim(),
     interpretation: String(
       dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? '',
+    ).trim(),
+    videoUrl: String(
+      dream?.mediaUrl ?? dream?.videoUrl ?? dream?.originalMediaUrl ?? dream?.editedMediaUrl ?? '',
     ).trim(),
   };
 };
@@ -140,16 +146,18 @@ export default function TabsIndex() {
                   <Link
                     key={dream.id}
                     href={{
-                      pathname: '/record/step5',
+                      pathname: '/dream-view',
                       params: {
                         mode: 'review',
                         ...(dream.dreamId ? { id: String(dream.dreamId) } : {}),
                         ...(dream.dreamId ? { dreamId: String(dream.dreamId) } : {}),
                         date: dream.date,
+                        mood: dream.mood,
                         title: dream.title,
                         dreamText: dream.dreamText,
                         summary: dream.summary,
                         interpretation: dream.interpretation,
+                        videoUrl: dream.videoUrl,
                       },
                     }}
                     asChild

@@ -32,19 +32,21 @@ export default function RecordStep4Screen() {
     
     const dreamId = getParamValue(params.dreamId);
     const localId = getParamValue(params.localId);
+    const mood = getParamValue(params.mood);
     const selectedDate = getParamValue(params.selectedDate);
 
     // 캐릭터 박스 클릭 시 해몽 화면으로 이동
     const handleCharacterClick = () => {
         router.replace({
             pathname: '/record/step5',
-            params: {
-                mode: 'record',
+	            params: {
+	                mode: 'record',
                 ...(dreamId ? { id: dreamId, dreamId } : {}),
                 ...(localId ? { localId } : {}),
+                ...(mood ? { mood } : {}),
                 ...(selectedDate ? { selectedDate } : {}),
             },
-        } as any);
+	        } as any);
     };
 
     return (

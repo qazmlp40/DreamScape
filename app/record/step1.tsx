@@ -168,14 +168,15 @@ export default function RecordStep1Screen() {
             }
 
             router.replace({
-                pathname: '/record/step2',
-                params: {
+	                pathname: '/record/step2',
+	                params: {
                     dreamId: String(dreamId),
                     dreamText: trimmedContent,
+                    mood: selectedMood,
                     ...(localId ? { localId } : {}),
                     ...(selectedDate ? { selectedDate } : {}),
                 },
-            } as any);
+	            } as any);
     };
 
     const handleMicPress = async () => {
