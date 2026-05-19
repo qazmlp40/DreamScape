@@ -10,8 +10,8 @@ public class SwaggerConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("My API Docs")
+                        .title("DreamScape API Docs")
                         .version("1.0")
-                        .description("API description here"));
+                        .description("AI 기반 꿈 해몽 및 통계 서비스 'Dreamscape'의 API 문서입니다."));
     }
 }
