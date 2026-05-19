@@ -25,6 +25,7 @@ import signup.dreamscape.Repository.DreamSymbolRepository;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -67,7 +68,8 @@ public class AnalysisService {
 
     private static final String INTERPRET_SYSTEM_PROMPT =
             "너는 꿈 해석을 제공하는 시스템이야. " +
-                    "반드시 아래 JSON 형식으로만 응답해. 다른 텍스트는 절대 포함하지 마.\n" +
+                    "반드시 아래 JSON 형식으로만 응답해. " +
+                    "마크다운 코드 블록(```)을 사용하지 말고, 순수 JSON만 출력해.\n" +  // ← 추가
                     "{\n" +
                     "  \"interpretation\": \"꿈 해석 한 문장\",\n" +
                     "  \"mood\": \"긍정 또는 부정 또는 중립\"\n" +
@@ -161,6 +163,12 @@ public class AnalysisService {
             // 7. API 호출
             String rawResponse = callOpenAIAPI(request);
 
+            // 7.5. 마크다운 코드 블록 제거
+            rawResponse = rawResponse
+                    .replaceAll("```json\\s*", "")
+                    .replaceAll("```\\s*", "")
+                    .trim();
+
             // 8. JSON 파싱
             String interpretation;
             String mood;
@@ -189,7 +197,15 @@ public class AnalysisService {
             // 10. DTO 리턴
             DreamResponseDTO dreamResponse = new DreamResponseDTO();
             dreamResponse.setAiInterpretation(interpretation);
-            dreamResponse.setMood(mood); // 추가!
+            dreamResponse.setMood(mood); //
+
+            // 키워드 추출
+            List<String> keywords = symbols.stream()
+                    .map(DreamSymbolEntity::getKeyword)
+                    .distinct()
+                    .collect(Collectors.toList());
+            dreamResponse.setDetectedKeywords(keywords);
+
             return dreamResponse;
 
         } catch (Exception e) {
