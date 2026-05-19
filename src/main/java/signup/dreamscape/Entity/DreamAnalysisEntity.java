@@ -22,7 +22,7 @@ public class DreamAnalysisEntity {
     @Column(columnDefinition = "TEXT")
     private String interpretation;
 
-    private String TextSummary;
+    // private String TextSummary; -> 밑에 textSummary랑 중복이라서 제거
     private String mood;
 
     @Column(columnDefinition = "TEXT")
