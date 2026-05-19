@@ -6,24 +6,25 @@ import lombok.*;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor // 기본 생성자 자동 생성
-@AllArgsConstructor // 모든 필드 포함한 생성자 자동 생성
-@Builder // 빌더 패턴으로 객체 생성
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class DreamAnalysisEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long analysisId;   // PK, 해몽 고유 ID
+    private Long id;
 
-    @Column
-    private String textSummary;   // 꿈 요약, 이거 배열이나 리스트나 변수 3개로 바꿀 예정
-
-    @Column
-    private String mood;          // 감정 태그
-
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dreamId") // 외래키(FK)
+    @OneToOne
+    @JoinColumn(name = "dream_id")
     private DreamEntity dream;
+
+    @Column(columnDefinition = "TEXT")
+    private String interpretation;
+
+    private String TextSummary;
+    private String mood;
+
+    @Column(columnDefinition = "TEXT")
+    private String textSummary;
 }
-
-
-

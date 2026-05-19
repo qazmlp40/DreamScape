@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -31,6 +32,8 @@ public class DreamResponseDTO {
 
     @Schema(description = "대표 감정", example = "신남")
     private String mood; // 감정 또는 분위기
+
+    private List<String> detectedKeywords;
 
     @Schema(description = "사용자가 작성한 원문", example = "갑자기 등에서 날개가 돋아나더니...")
     private String rawText; // 원문(사용자가 작성한 텍스트)

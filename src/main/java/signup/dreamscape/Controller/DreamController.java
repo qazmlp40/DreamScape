@@ -83,12 +83,10 @@ public class DreamController {
     }
 
     // (테스트용) dreamId로 더미 비디오 생성
-    @Operation(summary = "(테스트용) 더미 비디오 생성", description = "꿈 ID를 기반으로 테스트용 미디어를 생성합니다.")
     @PostMapping("/media-test/{dreamId}")
     public ResponseEntity<MediaResponseDTO> generateVideoFromDreamController(
-            @Parameter(description = "비디오를 생성할 꿈 고유 ID")
-            @PathVariable Long dreamId) {
-
+            @PathVariable Long dreamId
+    ) {
         MediaResponseDTO response = mediaService.generateVideo(dreamId);
         return ResponseEntity.ok(response);
     }

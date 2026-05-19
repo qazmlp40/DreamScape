@@ -21,11 +21,11 @@ public class DreamEntity {
     @Column
     private String title; // 꿈 제목
 
-    @Column
-    private String rawText; // 사용자가 입력한 원본 꿈 내용
+    @Column(columnDefinition = "TEXT")
+    private String rawText;
 
-    @Column
-    private String aiSummary; // AI 요약 결과
+    @Column(columnDefinition = "TEXT")
+    private String aiSummary;
 
     @Column
     private LocalDateTime createdAt;
