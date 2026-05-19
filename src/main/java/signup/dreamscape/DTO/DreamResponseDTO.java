@@ -4,6 +4,7 @@ package signup.dreamscape.DTO;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -18,6 +19,7 @@ public class DreamResponseDTO {
     private String aiSummary; // AI 요약 결과
     private String aiInterpretation; // 꿈 해몽 결과
     private String mood; // 감정 또는 분위기
+    private List<String> detectedKeywords;
     private String rawText; // 원문(사용자가 작성한 텍스트)
     private LocalDateTime recordedAt; // 기록 시각
     private LocalDateTime createdAt; // 생성 시각
