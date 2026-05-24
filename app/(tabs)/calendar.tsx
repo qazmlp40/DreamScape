@@ -3,16 +3,16 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    Image,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 import Svg, { Path } from "react-native-svg";
@@ -185,11 +185,13 @@ const normalizeMood = (moodValue: unknown) => {
     case "4":
     case "신남":
     case "흥분":
+    case "excitement":
     case "excited":
       return "4";
     case "5":
     case "감동":
     case "touched":
+    case "impressed":
       return "5";
     case "6":
     case "공포":
@@ -241,9 +243,7 @@ const normalizeDream = (dream: any): CalendarDream | null => {
     interpretation: String(
       dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? "",
     ).trim(),
-    videoUrl: String(
-      dream?.mediaUrl ?? dream?.videoUrl ?? dream?.originalMediaUrl ?? dream?.editedMediaUrl ?? "",
-    ).trim(),
+    videoUrl: String(dream?.mediaUrl ?? dream?.videoUrl ?? "").trim(),
   };
 };
 

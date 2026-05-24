@@ -91,7 +91,7 @@ export default function RecordStep1Screen() {
             date,
             title: '',
             dreamText: content,
-            mood: convertMoodToKorean(emotion),
+            mood: convertMoodToServerMood(emotion),
           });
           console.log('[Step1] saveDream response:', saved);
       
@@ -106,25 +106,25 @@ export default function RecordStep1Screen() {
         }
       };
 
-      // 서버로 보낼 때는 한글로 변환
-      const convertMoodToKorean = (moodId: string) => {
+      // 서버로 보낼 때는 영어로 변환
+      const convertMoodToServerMood = (moodId: string) => {
         switch (moodId) {
           case "1":
-            return "행복";
+            return "happy";
           case "2":
-            return "슬픔";
+            return "sad";
           case "3":
-            return "분노";
+            return "anger";
           case "4":
-            return "신남";
+            return "excitement";
           case "5":
-            return "감동";
+            return "impressed";
           case "6":
-            return "공포";
+            return "scared";
           case "7":
-            return "미묘";
+            return "ambiguous";
           default:
-            return "미묘";
+            return "ambiguous";
         }
       };
 

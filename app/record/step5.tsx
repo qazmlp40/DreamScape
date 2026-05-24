@@ -316,8 +316,6 @@ export default function RecordStep5Screen() {
             getNestedText(data, [
               "mediaUrl",
               "videoUrl",
-              "originalMediaUrl",
-              "editedMediaUrl",
               "video.mediaUrl",
               "video.videoUrl",
               "media.mediaUrl",

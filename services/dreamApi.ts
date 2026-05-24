@@ -1,4 +1,5 @@
 import { DEV_MOCK_DREAMS } from "@/constants/api";
+import { tokenStorage } from "@/utils/tokenStorage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api } from "./api";
 
@@ -37,7 +38,7 @@ const buildMockInterpretation = (mood: string) => {
 };
 
 export const dreamApi = {
-  // ✅ 꿈 생성
+  // 꿈 생성
   saveDream: async (data: {
     date: string;
     title: string;
@@ -91,11 +92,12 @@ export const dreamApi = {
     return response.data;
   },
 
-  // ✅ 사용자 꿈 목록 조회
+  // 사용자 꿈 목록 조회
   getDreams: async () => {
+    const token = await tokenStorage.getToken(); // accessToken
     const userId = await AsyncStorage.getItem("userId");
 
-    if (!userId) {
+    if (!token || !userId) { // 토큰 없으면 꿈 목록 조회 못함
       throw new Error("userId가 없습니다. 다시 로그인하세요.");
     }
 
@@ -110,7 +112,7 @@ export const dreamApi = {
     return response.data;
   },
 
-  // ✅ 날짜별 꿈 조회
+  // 날짜별 꿈 조회
   getDreamByDate: async (date: string) => {
     if (DEV_MOCK_DREAMS) {
       return (
@@ -132,7 +134,7 @@ export const dreamApi = {
     return response.data;
   },
 
-  // ✅ 꿈 해몽 조회
+  // 꿈 해몽 조회
   interpretDream: async (dreamId: number) => {
     if (DEV_MOCK_DREAMS) {
       const existing = getMockDream(dreamId);
@@ -147,11 +149,13 @@ export const dreamApi = {
       return mockResponse;
     }
 
-    const response = await api.get(`/api/analysis/interpret/${dreamId}`);
+    console.log("[dreamApi] interpretDream request:", dreamId);
+    const response = await api.get(`/analysis/interpret/${dreamId}`);
+    console.log("[dreamApi] interpretDream response:", response.data);
     return response.data;
   },
 
-  // ✅ 꿈 수정
+  // 꿈 수정
   updateDream: async (
     dreamId: number,
     data: {
@@ -198,7 +202,7 @@ export const dreamApi = {
     return response.data;
   },
 
-  // ✅ AI 영상 생성
+  // AI 영상 생성
   generateVideo: async (dreamId: number) => {
     if (DEV_MOCK_DREAMS) {
       const existing = getMockDream(dreamId);
@@ -225,6 +229,7 @@ export const dreamApi = {
     const request = (async () => {
       const response = await api.post(`/api/media/generate/video`, null, {
         params: { dreamId },
+        timeout: 360000,
       });
       return response.data;
     })();
@@ -238,7 +243,7 @@ export const dreamApi = {
     }
   },
 
-  // ✅ 꿈 요약
+  // 꿈 요약
   summarizeDream: async (dreamId: number, dreamText: string) => {
     if (DEV_MOCK_DREAMS) {
       const existing = getMockDream(dreamId);
@@ -256,7 +261,7 @@ export const dreamApi = {
       return mockResponse;
     }
 
-    const response = await api.post("/api/analysis/summarize", {
+    const response = await api.post("/analysis/summarize", {
       dreamId,
       dreamText,
     });

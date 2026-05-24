@@ -116,10 +116,12 @@ export default function DreamEditScreen() {
                                 case '신남':
                                 case '흥분':
                                 case 'excited':
+                                case 'excitement':
                                     return '4';
                                 case '5':
                                 case '감동':
                                 case 'touched':
+                                case 'impressed':
                                     return '5';
                                 case '6':
                                 case '공포':

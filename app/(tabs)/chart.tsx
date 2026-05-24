@@ -320,21 +320,77 @@ interface KeywordCloudProps {
   items: DreamKeywordItem[];
 }
 
+const DEFAULT_DREAM_KEYWORDS = [
+  "늑대",
+  "토끼",
+  "여우",
+  "곰",
+  "고양이",
+  "호랑이",
+  "말",
+  "개",
+  "나비",
+  "용",
+  "뱀",
+];
+
+const WORD_CLOUD_SLOTS = [
+  { left: "5%", top: 10, width: "38%" },
+  { left: "42%", top: 0, width: "30%" },
+  { left: "68%", top: 28, width: "28%" },
+  { left: "22%", top: 42, width: "42%" },
+  { left: "56%", top: 68, width: "38%" },
+  { left: "4%", top: 82, width: "34%" },
+  { left: "34%", top: 98, width: "34%" },
+  { left: "70%", top: 112, width: "26%" },
+  { left: "14%", top: 132, width: "34%" },
+  { left: "49%", top: 146, width: "34%" },
+  { left: "28%", top: 166, width: "42%" },
+] as const;
+
 // 키워드 클라우드 컴포넌트 (백엔드 연동 버전)
 const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
   const { s } = useScale();
 
-  const sortedKeywords = [...items].sort((a, b) => b.count - a.count);
+  const keywordCountMap = new Map<string, number>();
+
+  DEFAULT_DREAM_KEYWORDS.forEach((keyword) => {
+    keywordCountMap.set(keyword, 0);
+  });
+
+  items.forEach((item) => {
+    keywordCountMap.set(item.keyword, item.count);
+  });
+
+  const sortedKeywords = Array.from(keywordCountMap.entries())
+    .map(([keyword, count]) => ({ keyword, count }))
+    .sort((a, b) => b.count - a.count || a.keyword.localeCompare(b.keyword));
   const maxFreq = Math.max(...sortedKeywords.map((item) => item.count), 1);
   const minFreq = Math.min(...sortedKeywords.map((item) => item.count), 1);
 
-  const getTagFontSize = (freq: number) => {
-    const ratio = (freq - minFreq) / (maxFreq - minFreq || 1);
-    return s(12 + ratio * 12);
+  const getRatio = (freq: number) => {
+    if (maxFreq === minFreq) return 0;
+    return (freq - minFreq) / (maxFreq - minFreq);
   };
 
-  const getTagOpacity = (freq: number) => {
-    const ratio = (freq - minFreq) / (maxFreq - minFreq || 1);
+  const getWordFontSize = (freq: number) => {
+    const ratio = getRatio(freq);
+    return s(17 + ratio * 31);
+  };
+
+  const getWordColor = (freq: number) => {
+    const ratio = getRatio(freq);
+
+    if (ratio > 0.8) return "#4E3BB6";
+    if (ratio > 0.6) return "#5F45D8";
+    if (ratio > 0.4) return "#7E63F0";
+    if (ratio > 0.2) return "#9C7CFF";
+    if (ratio > 0) return "#B99BFF";
+    return "#D6C8FF";
+  };
+
+  const getWordOpacity = (freq: number) => {
+    const ratio = getRatio(freq);
     return 0.6 + ratio * 0.4;
   };
 
@@ -349,30 +405,34 @@ const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
         {title}
       </Text>
 
-      <View style={keywordStyles.cloudContainer}>
-        {sortedKeywords.map((item, index) => (
-          <View
-            key={`${item.keyword}-${index}`}
-            style={[
-              keywordStyles.cloudTag,
-              {
-                opacity: getTagOpacity(item.count),
-              },
-            ]}
-          >
+      <View style={[keywordStyles.cloudContainer, { height: s(198), marginTop: s(20) }]}>
+        {sortedKeywords.map((item, index) => {
+          const slot = WORD_CLOUD_SLOTS[index % WORD_CLOUD_SLOTS.length];
+
+          return (
             <Text
+              key={`${item.keyword}-${index}`}
               style={[
-                keywordStyles.cloudTagText,
+                keywordStyles.cloudWord,
                 {
-                  fontSize: getTagFontSize(item.count),
+                  color: getWordColor(item.count),
+                  fontSize: getWordFontSize(item.count),
+                  left: slot.left,
+                  opacity: getWordOpacity(item.count),
+                  top: s(slot.top),
+                  width: slot.width,
+                  fontWeight:
+                    item.count === maxFreq && maxFreq > 0
+                      ? ("800" as const)
+                      : ("700" as const),
                 },
               ]}
               numberOfLines={1}
             >
               {item.keyword}
             </Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
@@ -650,11 +710,23 @@ const Chart = () => {
 
   // 백엔드 <-> 프론트 키 매핑
   const moodLabelToEmotionKey: Record<string, EmotionKey> = {
+    happy: "happy",
+    sad: "sad",
+    anger: "anger",
+    scared: "fear",
+    fear: "fear",
+    ambiguous: "mixed",
+    mixed: "mixed",
+    impressed: "touched",
+    touched: "touched",
+    excitement: "excited",
+    excited: "excited",
+  
     행복: "happy",
     슬픔: "sad",
     분노: "anger",
     공포: "fear",
-    미묘: "mixed",
+    혼란: "mixed",
     감동: "touched",
     신남: "excited",
   };
@@ -880,7 +952,7 @@ const Chart = () => {
       };
   
       Object.entries(moodDistribution).forEach(([label, count]) => {
-        const emotionKey = moodLabelToEmotionKey[label];
+        const emotionKey = moodLabelToEmotionKey[String(label.trim())];
         if (emotionKey) {
           nextEmotionData[emotionKey] = Number(count);
         }
@@ -1195,6 +1267,7 @@ const Chart = () => {
             height: s(8),
             backgroundColor: "#EEE",
             marginTop: s(32),
+            marginBottom: s(8),
           }}
         />
 
@@ -1202,8 +1275,8 @@ const Chart = () => {
         <DreamKeywordCloud
           title={
             isWeekly
-              ? "이번 주 가장 많이 나온 꿈 키워드 TOP3"
-              : "이번 달 가장 많이 나온 꿈 키워드 TOP3"
+              ? "이번 주 꿈 키워드"
+              : "이번 달 꿈 키워드"
           }
           items={topKeywords}
         />
@@ -1316,23 +1389,13 @@ const keywordStyles = StyleSheet.create({
     fontFamily: "Roboto",
   },
   cloudContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    alignItems: "flex-start",
+    position: "relative",
+    width: "100%",
   },
-  cloudTag: {
-    backgroundColor: "#F3E8FF",
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "#E9D5FF",
-  },
-  cloudTagText: {
-    fontWeight: "600",
-    color: "#BB7CFF",
+  cloudWord: {
     fontFamily: "Roboto",
+    position: "absolute",
+    textAlign: "center",
   },
 });
 

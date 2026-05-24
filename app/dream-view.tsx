@@ -172,8 +172,6 @@ export default function DreamViewScreen() {
             getNestedText(data, [
               "mediaUrl",
               "videoUrl",
-              "originalMediaUrl",
-              "editedMediaUrl",
               "video.mediaUrl",
               "video.videoUrl",
               "media.mediaUrl",

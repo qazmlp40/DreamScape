@@ -126,6 +126,9 @@ export default function RecordStep2Screen() {
         let tags: string[] = [];
 
         if (dreamId) {
+          console.log("[Step2] summarizeDream 호출 dreamId:", dreamId);
+          console.log("[Step2] interpretDream 호출 dreamId:", dreamId);
+          
           const [summarizeResult, interpretResult] = await Promise.allSettled([
             dreamApi.summarizeDream(dreamId, finalDreamText),
             dreamApi.interpretDream(dreamId),

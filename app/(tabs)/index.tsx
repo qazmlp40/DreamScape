@@ -80,9 +80,7 @@ const normalizeDream = (dream: any): HomeDream | null => {
     interpretation: String(
       dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? '',
     ).trim(),
-    videoUrl: String(
-      dream?.mediaUrl ?? dream?.videoUrl ?? dream?.originalMediaUrl ?? dream?.editedMediaUrl ?? '',
-    ).trim(),
+    videoUrl: String(dream?.mediaUrl ?? dream?.videoUrl ?? '').trim(),
   };
 };
 
