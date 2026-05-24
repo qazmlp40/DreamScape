@@ -20,7 +20,7 @@ public class MediaController {
     private final MediaService mediaService;
 
     @Operation(summary = "AI 비디오 생성", description = "꿈 내용을 바탕으로 시각화된 비디오를 생성합니다.")
-    @PostMapping("/generate/vedio")
+    @PostMapping("/generate/video")
     public MediaResponseDTO generateVideo(@RequestParam Long dreamId) throws Exception { //DTO가 아닌 Param 방식 사용
         return mediaService.generateVideo(dreamId);
     }

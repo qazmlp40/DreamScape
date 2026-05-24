@@ -40,9 +40,9 @@ public class DreamChartService {
         // 3) 감정 분포 데이터 조회 및 매핑
         Map<String, Long> moodDistribution = getMoodDistribution(request.getUserId(), startDate, endDate);
 
-        // 4) 키워드 Top 3 조회
+        // 4) 키워드 조회
         List<DreamKeywordResponseDTO> topKeywords = dreamSymbolMapRepository.findTopKeywords(
-                request.getUserId(), startDate, endDate, PageRequest.of(0, 3)
+                request.getUserId(), startDate, endDate, PageRequest.of(0, 15)
         );
 
         // 6) 응답 DTO 생성

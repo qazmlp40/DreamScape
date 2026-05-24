@@ -21,6 +21,8 @@ import signup.dreamscape.Entity.DreamSymbolEntity;
 import signup.dreamscape.Repository.DreamAnalysisRepository;
 import signup.dreamscape.Repository.DreamRepository;
 import signup.dreamscape.Repository.DreamSymbolRepository;
+import signup.dreamscape.Entity.DreamSymbolMapEntity;
+import signup.dreamscape.Repository.DreamSymbolMapRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,6 +57,7 @@ public class AnalysisService {
     private final DreamRepository dreamRepository;
     private final DreamSymbolRepository dreamSymbolRepository;
     private final DreamAnalysisRepository dreamAnalysisRepository;
+    private final DreamSymbolMapRepository dreamSymbolMapRepository;
 
     // Komoran 형태소 분석기 초기화
     private final Komoran komoran = new Komoran(DEFAULT_MODEL.FULL);
@@ -205,6 +208,17 @@ public class AnalysisService {
                     .distinct()
                     .collect(Collectors.toList());
             dreamResponse.setDetectedKeywords(keywords);
+
+            // 키워드를 꿈-상징 매핑 테이블에 저장
+            List<DreamSymbolMapEntity> symbolMaps = symbols.stream()
+                    .distinct()
+                    .map(symbol -> DreamSymbolMapEntity.builder()
+                            .dream(dream)
+                            .symbol(symbol)
+                            .build())
+                    .collect(Collectors.toList());
+
+            dreamSymbolMapRepository.saveAll(symbolMaps);
 
             return dreamResponse;
 

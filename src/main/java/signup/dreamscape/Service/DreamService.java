@@ -27,6 +27,7 @@ public class DreamService {
                         .userId(userId)
                         .title(dto.getTitle())
                         .rawText(dto.getRawText())
+                        .mood(dto.getMood())
                         .aiSummary(null)     // DreamRequestDTO에 없으므로 일단 null
                         .createdAt(now)
                         .updatedAt(now)
@@ -80,7 +81,7 @@ public class DreamService {
                 .createdAt(e.getCreatedAt())
                 .recordedAt(e.getCreatedAt()) // recordedAt을 createdAt으로 매핑(현 시점)
                 .aiInterpretation(null)
-                .mood(null)
+                .mood(e.getMood())
                 .tag(null)
                 .originalMediaUrl(null)
                 .editedMediaUrl(null)

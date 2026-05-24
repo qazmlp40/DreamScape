@@ -35,4 +35,7 @@ public class DreamEntity {
 
     @Column
     private Long userId; // 실제로는 user테이블과 일대다연결
+
+    @Column
+    private String mood;
 }
