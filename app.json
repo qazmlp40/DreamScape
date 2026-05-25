@@ -11,7 +11,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.dreamscape",
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["kakaokompassauth", "kakaolink"]
+        "LSApplicationQueriesSchemes": [
+          "kakaokompassauth",
+          "kakaolink",
+          "kakaotalk"
+        ],
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["kakaodc20c43cdf2f8ffdc24ad4c184a1b6cb"]
+          }
+        ]
       }
     },
     "android": {

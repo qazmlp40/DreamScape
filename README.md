@@ -17,7 +17,11 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
      ```
      EXPO_PUBLIC_KAKAO_APP_KEY=your_kakao_native_app_key_here
      ```
-   - `app.json`의 `android.intentFilters`에서 `{YOUR_KAKAO_APP_KEY}`를 실제 앱 키로 변경하세요
+   - `app.json`의 Android `intentFilters`와 iOS `CFBundleURLSchemes`에 `kakao{네이티브 앱 키}` 형식의 URL 스킴을 등록하세요
+   - 카카오 개발자 콘솔에서 Android 패키지명 `com.anonymous.dreamscape`, Android 키 해시, iOS 번들 ID `com.anonymous.dreamscape`를 등록하세요
+   - 공유 메시지에 웹 링크를 넣으려면 `.env`의 `EXPO_PUBLIC_KAKAO_SHARE_WEB_URL` 도메인을 카카오 개발자 콘솔 > 제품 링크 > 웹 도메인에 등록하세요
+   - 공유 이미지 URL은 외부 네트워크에서 접근 가능한 HTTPS 주소를 사용하세요
+   - Expo Go에서는 네이티브 카카오 공유 SDK가 동작하지 않으므로 development build 또는 실제 빌드에서 확인하세요
 
 3. Start the app
 

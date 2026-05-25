@@ -1,9 +1,10 @@
-import Pigicon from '@/assets/images/icons/dream_symbol/pig.svg';
 import NoteIcon from '@/assets/images/icons/note.svg';
+import DreamSymbolIcon from '@/components/app/DreamSymbolIcon';
 import { useFocusEffect } from '@react-navigation/native';
 import { Link, Stack } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   SafeAreaView,
@@ -14,6 +15,17 @@ import {
 } from 'react-native';
 
 import { dreamApi } from '../../services/dreamApi';
+import {
+  extractDreamDate,
+  extractDreamId,
+  extractDreamInterpretation,
+  extractDreamSummary,
+  extractDreamTags,
+  extractDreamText,
+  extractDreamTitle,
+  extractDreamVideoUrl,
+  getDreamListFromResponse,
+} from '../../utils/dreamNormalize';
 
 const colors = {
   text: '#1F2937',
@@ -37,6 +49,7 @@ type HomeDream = {
   summary: string;
   interpretation: string;
   videoUrl: string;
+  tags: string[];
 };
 
 const formatDateToString = (d: Date) => {
@@ -46,62 +59,56 @@ const formatDateToString = (d: Date) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-const extractDate = (dream: any) => {
-  const rawDate =
-    dream?.date ??
-    dream?.dreamDate ??
-    dream?.createdAt ??
-    dream?.updatedAt ??
-    '';
-
-  return typeof rawDate === 'string' ? rawDate.slice(0, 10) : '';
-};
-
 const normalizeDream = (dream: any): HomeDream | null => {
-  const dreamId = Number(
-    dream?.dreamId ?? dream?.id ?? dream?.dream_id ?? dream?.dreamID,
-  );
-  const date = extractDate(dream);
+  const dreamId = extractDreamId(dream);
+  const date = extractDreamDate(dream);
+  const dreamText = extractDreamText(dream);
+  const summary = extractDreamSummary(dream);
 
   if (!date) {
     return null;
   }
 
   return {
-    id: String(dreamId || dream?.id || `${date}-${Math.random()}`),
-    dreamId: Number.isFinite(dreamId) ? dreamId : undefined,
+    id: String(dreamId || `${date}-${Math.random()}`),
+    dreamId,
     date,
-    title: String(dream?.title ?? dream?.dreamTitle ?? '').trim(),
+    title: extractDreamTitle(dream),
     mood: String(dream?.mood ?? dream?.emotion ?? '').trim(),
-    dreamText: String(dream?.rawText ?? dream?.content ?? '').trim(),
-    summary: String(
-      dream?.aiSummary ?? dream?.summary ?? dream?.rawText ?? dream?.content ?? '',
-    ).trim(),
-    interpretation: String(
-      dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? '',
-    ).trim(),
-    videoUrl: String(dream?.mediaUrl ?? dream?.videoUrl ?? '').trim(),
+    dreamText,
+    summary: summary || dreamText,
+    interpretation: extractDreamInterpretation(dream),
+    videoUrl: extractDreamVideoUrl(dream),
+    tags: extractDreamTags(dream),
   };
 };
 
 export default function TabsIndex() {
   const [dreams, setDreams] = useState<HomeDream[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const todayString = formatDateToString(new Date());
 
   const loadDreams = useCallback(async () => {
+    setIsLoading(true);
+    setIsError(false);
+
     try {
       console.log('[Home] 꿈 목록 조회 시작');
       const response = await dreamApi.getDreams();
       console.log('[Home] 서버 응답:', response);
-      const nextDreams = Array.isArray(response)
-        ? response.map(normalizeDream).filter(Boolean)
-        : [];
+      const nextDreams = getDreamListFromResponse(response)
+        .map(normalizeDream)
+        .filter(Boolean);
       console.log('[Home] 정규화된 꿈 목록:', nextDreams);
 
       setDreams(nextDreams as HomeDream[]);
     } catch (error) {
       console.error('홈 꿈 목록 조회 실패:', error);
       setDreams([]);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -132,7 +139,24 @@ export default function TabsIndex() {
             ) : null}
           </View>
 
-          {hasTodayDream && todayRecord ? (
+          {isLoading ? (
+            <View style={styles.stateBox}>
+              <ActivityIndicator size="small" color={colors.recordButtonColor} />
+              <Text style={styles.stateText}>꿈 기록을 불러오는 중이에요</Text>
+            </View>
+          ) : isError ? (
+            <View style={styles.stateBox}>
+              <NoteIcon />
+              <Text style={styles.stateText}>꿈 기록을 불러오지 못했어요</Text>
+              <Pressable
+                style={styles.retryButton}
+                onPress={loadDreams}
+                accessibilityRole="button"
+              >
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          ) : hasTodayDream && todayRecord ? (
             <View style={styles.summarySection}>
               <View style={styles.countChip}>
                 <Text style={styles.countChipText}>오늘 기록 {todayRecords.length}개</Text>
@@ -156,6 +180,7 @@ export default function TabsIndex() {
                         summary: dream.summary,
                         interpretation: dream.interpretation,
                         videoUrl: dream.videoUrl,
+                        ...(dream.tags.length ? { tags: dream.tags.join(',') } : {}),
                       },
                     }}
                     asChild
@@ -163,7 +188,12 @@ export default function TabsIndex() {
                     <Pressable style={styles.dreamCard}>
                       <View style={styles.dreamCardHeader}>
                         <View style={styles.symbolBadge}>
-                          <Pigicon width={44} height={44} />
+                          <DreamSymbolIcon
+                            tags={dream.tags}
+                            text={`${dream.title} ${dream.summary} ${dream.interpretation} ${dream.dreamText}`}
+                            width={44}
+                            height={44}
+                          />
                         </View>
                         <Text style={styles.dreamTitle} numberOfLines={1}>
                           {dream.title?.trim() || '제목 없는 꿈'}
@@ -183,19 +213,19 @@ export default function TabsIndex() {
         </ScrollView>
       </SafeAreaView>
 
-      {hasTodayDream && todayRecord ? (
+      {!isLoading && !isError && hasTodayDream && todayRecord ? (
         <Link href="/record/step1" asChild>
           <Pressable style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>꿈 더 기록하기</Text>
           </Pressable>
         </Link>
-      ) : (
+      ) : !isLoading && !isError ? (
         <Link href="/record/step1" asChild>
           <Pressable style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>꿈 기록하기</Text>
           </Pressable>
         </Link>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -241,6 +271,34 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 380,
     gap: 12,
+  },
+  stateBox: {
+    width: '100%',
+    maxWidth: 320,
+    minHeight: 126,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  stateText: {
+    color: colors.inactive,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  retryButton: {
+    minWidth: 112,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: colors.recordButtonColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   countChip: {
     alignSelf: 'flex-start',

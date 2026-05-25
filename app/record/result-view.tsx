@@ -1,8 +1,9 @@
-import FriendIcon from "@/assets/images/icons/dream_symbol/friend.svg";
+import DreamSymbolIcon from "@/components/app/DreamSymbolIcon";
 import RecordHeader from "@/components/app/RecordHeader";
 import SaveConfirmModal from "@/components/app/SaveConfirmModal";
 import { KakaoShareIcon } from "@/components/ui/KakaoShareIcon";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { KakaoTemplateLink } from "@react-native-kakao/share";
 import { shareFeedTemplate } from "@react-native-kakao/share";
 import Constants from "expo-constants";
 import * as MediaLibrary from "expo-media-library";
@@ -11,14 +12,31 @@ import React, { useEffect, useRef, useState } from "react";
 import { Alert, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
-import { API_BASE_URL, DEV_MOCK_DREAMS } from "../../constants/api";
-import { KAKAO_APP_KEY } from "../../constants/kakao";
+import { API_BASE_URL, APP_SCHEME, DEV_MOCK_DREAMS } from "../../constants/api";
+import {
+  KAKAO_APP_KEY,
+  KAKAO_SHARE_IMAGE_URL,
+  KAKAO_SHARE_WEB_URL,
+} from "../../constants/kakao";
 import { useAppDialog } from "../../contexts/AppDialogContext";
 import {
   type DreamRecord,
   useDreamRecord,
 } from "../../contexts/DreamRecordContext";
 import { dreamApi, getMockDreamById } from "../../services/dreamApi";
+import {
+  extractDreamDate,
+  extractDreamId,
+  extractDreamInterpretation,
+  extractDreamSummary,
+  extractDreamTags,
+  extractDreamText,
+  extractDreamTitle,
+  extractDreamVideoUrl,
+  firstText,
+  getParamNumber,
+  getParamValue,
+} from "../../utils/dreamNormalize";
 
 const colors = {
   text: "#1F2937",
@@ -30,8 +48,6 @@ const colors = {
 };
 
 const FIXED_BUTTON_HEIGHT = 56;
-const KAKAO_FALLBACK_URL = "https://developers.kakao.com";
-const KAKAO_THUMBNAIL_URL = "https://picsum.photos/400/300";
 const isExpoGo = Constants.appOwnership === "expo";
 
 const buildAbsoluteUrl = (url?: string) => {
@@ -49,6 +65,38 @@ const buildAbsoluteUrl = (url?: string) => {
   return `${baseUrl}${path}`;
 };
 
+const isPublicHttpsUrl = (url?: string) => {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    if (parsedUrl.protocol !== "https:") {
+      return false;
+    }
+
+    return !(
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname.endsWith(".local") ||
+      hostname.startsWith("10.") ||
+      hostname.startsWith("192.168.") ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+};
+
+const buildAppShareUrl = (params: Record<string, string>) => {
+  const query = new URLSearchParams(params).toString();
+  return `${APP_SCHEME}://record/result-view${query ? `?${query}` : ""}`;
+};
+
 type RemoteDreamRecord = {
   dreamId?: number;
   date?: string;
@@ -58,6 +106,7 @@ type RemoteDreamRecord = {
   summary?: string;
   interpretation?: string;
   videoUrl?: string;
+  tags?: string[];
 };
 
 type DreamResultViewModel = {
@@ -68,42 +117,11 @@ type DreamResultViewModel = {
   selectedDate?: string;
   mood?: string;
   title: string;
+  dreamText: string;
   summary: string;
   interpretation: string;
   videoUrl?: string;
-};
-
-const getParamValue = (value: unknown) => {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-
-  return typeof value === "string" && value.trim() ? value : undefined;
-};
-
-const getParamNumber = (value: unknown) => {
-  const rawValue = getParamValue(value);
-  if (!rawValue) {
-    return undefined;
-  }
-
-  const numberValue = Number(rawValue);
-  return Number.isFinite(numberValue) ? numberValue : undefined;
-};
-
-const firstText = (...values: (string | null | undefined)[]) => {
-  return values.find((value) => value?.trim())?.trim();
-};
-
-const getNestedText = (source: any, paths: string[]) => {
-  for (const path of paths) {
-    const value = path.split(".").reduce((acc, key) => acc?.[key], source);
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return undefined;
+  tags: string[];
 };
 
 const buildDreamResultViewModel = ({
@@ -163,6 +181,13 @@ const buildDreamResultViewModel = ({
       getParamValue(params.dreamText),
       canUseCurrentRecord ? currentRecord.dreamText : undefined,
     ) ?? "";
+  const dreamText =
+    firstText(
+      remoteRecord?.dreamText,
+      localRecord?.dreamText,
+      getParamValue(params.dreamText),
+      canUseCurrentRecord ? currentRecord.dreamText : undefined,
+    ) ?? "";
   const interpretation =
     firstText(
       remoteRecord?.interpretation,
@@ -177,6 +202,15 @@ const buildDreamResultViewModel = ({
       getParamValue(params.videoUrl),
       canUseCurrentRecord ? currentRecord.videoUrl : undefined,
     ) ?? undefined;
+  const tags =
+    remoteRecord?.tags ??
+    localRecord?.analysis?.tags ??
+    getParamValue(params.tags)
+      ?.split(",")
+      .map((tag: string) => tag.trim())
+      .filter(Boolean) ??
+    (canUseCurrentRecord ? currentRecord.analysis?.tags : undefined) ??
+    [];
 
   return {
     remoteId,
@@ -186,13 +220,15 @@ const buildDreamResultViewModel = ({
     selectedDate,
     mood,
     title,
+    dreamText,
     summary,
     interpretation,
     videoUrl,
+    tags,
   };
 };
 
-export default function RecordStep5Screen() {
+export default function ResultViewScreen() {
   const {
     currentRecord,
     savedRecords,
@@ -235,6 +271,7 @@ export default function RecordStep5Screen() {
                 summary: mockDream.aiSummary ?? mockDream.rawText,
                 interpretation: mockDream.aiInterpretation,
                 videoUrl: mockDream.mediaUrl ?? undefined,
+                tags: mockDream.tags ?? [],
                 dreamId: mockDream.dreamId,
                 date: mockDream.createdAt.slice(0, 10),
               }
@@ -252,18 +289,16 @@ export default function RecordStep5Screen() {
         // 직접 axios를 호출하지 않고 dreamApi.getDreamById() 사용
         const data = await dreamApi.getDreamById(Number(fetchDreamId));
 
-        console.log("[Step5] dream detail raw response:", {
+        console.log("[ResultView] dream detail raw response:", {
           fetchDreamId,
           data,
         });
-        const fetchedDreamId = Number(
-          data.dreamId ?? data.id ?? getParamNumber(fetchDreamId),
-        );
+        const fetchedDreamId = extractDreamId(data) ?? getParamNumber(fetchDreamId);
         const expectedDreamId = getParamNumber(fetchDreamId);
 
         if (
           expectedDreamId !== undefined &&
-          Number.isFinite(fetchedDreamId) &&
+          fetchedDreamId !== undefined &&
           fetchedDreamId !== expectedDreamId
         ) {
           console.warn(
@@ -278,49 +313,15 @@ export default function RecordStep5Screen() {
         }
 
         setRemoteRecord({
-          dreamId: Number.isFinite(fetchedDreamId) ? fetchedDreamId : undefined,
-          date:
-            data.date ??
-            data.dreamDate ??
-            data.createdAt?.slice?.(0, 10),
-          title: data.title || data.dreamTitle,
+          dreamId: fetchedDreamId,
+          date: extractDreamDate(data),
+          title: extractDreamTitle(data),
           mood: data.mood || data.emotion,
-          dreamText:
-            getNestedText(data, ["rawText", "content", "dreamText", "text"]) ??
-            undefined,
-          summary:
-            getNestedText(data, [
-              "aiSummary",
-              "summary",
-              "analysis.aiSummary",
-              "analysis.summary",
-              "dreamAnalysis.aiSummary",
-              "dreamAnalysis.summary",
-              "result.aiSummary",
-              "result.summary",
-            ]) ?? undefined,
-          interpretation:
-            getNestedText(data, [
-              "aiInterpretation",
-              "interpretation",
-              "analysisText",
-              "analysis.aiInterpretation",
-              "analysis.interpretation",
-              "analysis.analysisText",
-              "dreamAnalysis.aiInterpretation",
-              "dreamAnalysis.interpretation",
-              "result.aiInterpretation",
-              "result.interpretation",
-            ]) ?? undefined,
-          videoUrl:
-            getNestedText(data, [
-              "mediaUrl",
-              "videoUrl",
-              "video.mediaUrl",
-              "video.videoUrl",
-              "media.mediaUrl",
-              "media.videoUrl",
-            ]) ?? undefined,
+          dreamText: extractDreamText(data),
+          summary: extractDreamSummary(data),
+          interpretation: extractDreamInterpretation(data),
+          videoUrl: extractDreamVideoUrl(data),
+          tags: extractDreamTags(data),
         });
       } catch (error) {
         console.error("꿈 데이터 불러오기 실패:", error);
@@ -417,20 +418,14 @@ export default function RecordStep5Screen() {
           interpretRes?.interpretation ??
           interpretRes?.analysisText ??
           undefined;
-        const tags = interpretRes?.tags ?? localRecord?.analysis?.tags ?? [];
+        const detectedTags =
+          interpretRes?.detectedKeywords ??
+          interpretRes?.tags ??
+          localRecord?.analysis?.tags ??
+          [];
 
         if (!summary && !interpretation) {
           return;
-        }
-
-        // 요약, 해몽 서버 저장
-        try {
-          await dreamApi.updateDream(dreamId, {
-            ...(summary ? { summary } : {}),
-            ...(interpretation ? { interpretation } : {}),
-          });
-        } catch (error) {
-          console.error("[Step5] generated analysis save failed:", error);
         }
 
         setRemoteRecord((prev) => ({
@@ -438,6 +433,7 @@ export default function RecordStep5Screen() {
           dreamId,
           ...(summary ? { summary } : {}),
           ...(interpretation ? { interpretation } : {}),
+          tags: detectedTags,
         }));
 
         const nextAnalysis = {
@@ -452,7 +448,7 @@ export default function RecordStep5Screen() {
             localRecord?.analysis?.interpretation ??
             currentRecord.analysis?.interpretation ??
             "",
-          tags,
+          tags: detectedTags,
         };
 
         if (dreamResult.localId) {
@@ -464,7 +460,7 @@ export default function RecordStep5Screen() {
           updateRecordByDreamId(dreamId, { analysis: nextAnalysis });
         }
       } catch (error) {
-        console.error("[Step5] generated analysis backfill failed:", error);
+        console.error("[ResultView] generated analysis backfill failed:", error);
       }
     };
 
@@ -487,7 +483,7 @@ export default function RecordStep5Screen() {
   useEffect(() => {
     const run = async () => {
       const mode = getParamValue(params.mode);
-      console.log("[Step5] video effect state:", {
+      console.log("[ResultView] video effect state:", {
         mode,
         dreamId: dreamResult.dreamId,
         hasVideoUrl: Boolean(dreamResult.videoUrl),
@@ -508,11 +504,11 @@ export default function RecordStep5Screen() {
       videoBackfillRef.current.add(dreamResult.dreamId);
 
       try {
-        console.log("[Step5] generateVideo 요청:", {
+        console.log("[ResultView] generateVideo 요청:", {
           dreamId: dreamResult.dreamId,
         });
         const videoRes = await dreamApi.generateVideo(dreamResult.dreamId);
-        console.log("[Step5] generateVideo 응답:", videoRes);
+        console.log("[ResultView] generateVideo 응답:", videoRes);
         const responseDreamId = getParamNumber(
           videoRes.dreamId ?? videoRes.id ?? videoRes.dream_id,
         );
@@ -534,23 +530,8 @@ export default function RecordStep5Screen() {
         const videoUrl = videoRes.mediaUrl ?? videoRes.videoUrl ?? undefined;
 
         if (!videoUrl) {
-          console.warn("[Step5] generateVideo 응답에 videoUrl/mediaUrl 없음:", videoRes);
+          console.warn("[ResultView] generateVideo 응답에 videoUrl/mediaUrl 없음:", videoRes);
           return;
-        }
-
-        // 영상 생성 후 url 서버 저장
-        try {
-          console.log("[Step5] videoUrl 저장 요청:", {
-            dreamId: dreamResult.dreamId,
-            videoUrl,
-          });
-          const updateRes = await dreamApi.updateDream(dreamResult.dreamId, {
-            videoUrl,
-            mediaUrl: videoUrl,
-          });
-          console.log("[Step5] videoUrl 서버 저장 완료:", updateRes);
-        } catch (error) {
-          console.error("[Step5] videoUrl 서버 저장 실패:", error);
         }
 
         setRemoteRecord((prev) => ({
@@ -591,18 +572,41 @@ export default function RecordStep5Screen() {
     }
 
     const videoShareUrl = buildAbsoluteUrl(dreamResult.videoUrl);
-    const shareUrl = videoShareUrl ?? KAKAO_FALLBACK_URL;
+    const publicVideoShareUrl = isPublicHttpsUrl(videoShareUrl)
+      ? videoShareUrl
+      : undefined;
+    const publicWebShareUrl = isPublicHttpsUrl(KAKAO_SHARE_WEB_URL)
+      ? KAKAO_SHARE_WEB_URL
+      : undefined;
+    const shareUrl = publicVideoShareUrl ?? publicWebShareUrl;
     const shareTitle = dreamResult.title || "제목없는 꿈";
     const shareDescription =
       dreamResult.summary ||
       dreamResult.interpretation ||
       "DreamScape에서 기록한 꿈이에요.";
+    const appShareParams = Object.fromEntries(
+      Object.entries({
+        route: "record/result-view",
+        id: dreamResult.remoteId ?? dreamResult.dreamId?.toString(),
+        dreamId: dreamResult.dreamId?.toString(),
+        localId: dreamResult.localId,
+        mode: "view",
+      }).filter(([, value]) => Boolean(value)),
+    ) as Record<string, string>;
+    const appShareUrl = buildAppShareUrl(appShareParams);
+    const kakaoLink: KakaoTemplateLink = {
+      androidExecutionParams: appShareParams,
+      iosExecutionParams: appShareParams,
+      ...(shareUrl ? { mobileWebUrl: shareUrl, webUrl: shareUrl } : {}),
+    };
 
     const shareWithSystemSheet = async () => {
       await Share.share({
         title: shareTitle,
-        message: `${shareTitle}\n\n${shareDescription}\n\n${shareUrl}`,
-        url: shareUrl,
+        message: `${shareTitle}\n\n${shareDescription}${
+          shareUrl ? `\n\n${shareUrl}` : ""
+        }`,
+        url: shareUrl ?? appShareUrl,
       });
     };
 
@@ -617,19 +621,13 @@ export default function RecordStep5Screen() {
           content: {
             title: shareTitle,
             description: shareDescription,
-            imageUrl: KAKAO_THUMBNAIL_URL,
-            link: {
-              mobileWebUrl: shareUrl,
-              webUrl: shareUrl,
-            },
+            imageUrl: KAKAO_SHARE_IMAGE_URL,
+            link: kakaoLink,
           },
           buttons: [
             {
-              title: videoShareUrl ? "영상 보기" : "자세히 보기",
-              link: {
-                mobileWebUrl: shareUrl,
-                webUrl: shareUrl,
-              },
+              title: publicVideoShareUrl ? "영상 보기" : "앱에서 보기",
+              link: kakaoLink,
             },
           ],
         },
@@ -637,14 +635,15 @@ export default function RecordStep5Screen() {
       });
     } catch (error) {
       console.error("카카오톡 공유 실패:", error);
-      const message = error instanceof Error ? error.message : String(error);
-
-      if (message.includes("doesn't seem to be linked")) {
+      try {
         await shareWithSystemSheet();
-        return;
+      } catch (fallbackError) {
+        console.error("시스템 공유 실패:", fallbackError);
+        Alert.alert(
+          "오류",
+          "공유에 실패했습니다. 카카오 개발자 콘솔의 네이티브 앱 키, 패키지명, 키 해시 설정을 확인해주세요.",
+        );
       }
-
-      Alert.alert("오류", "카카오톡 공유에 실패했습니다.");
     }
   };
 
@@ -652,12 +651,12 @@ export default function RecordStep5Screen() {
     setIsSaved(true);
   };
 
-  // step5에서 step4로 review mode로 넘기기 (영상 재생성 방지)
+  // result-view에서 video-view로 review mode를 넘겨 영상 재생성을 방지한다.
   const handleNext = () => {
     const mode = getParamValue(params.mode);
 
     router.push({
-      pathname: "/record/step4",
+      pathname: "/record/video-view",
       params: {
         ...(mode ? { mode } : {}),
         ...(dreamResult.remoteId ? { id: dreamResult.remoteId } : {}),
@@ -667,6 +666,13 @@ export default function RecordStep5Screen() {
           : {}),
         ...(dreamResult.localId ? { localId: dreamResult.localId } : {}),
         ...(dreamResult.mood ? { mood: dreamResult.mood } : {}),
+        title: dreamResult.title,
+        ...(dreamResult.summary ? { summary: dreamResult.summary } : {}),
+        ...(dreamResult.interpretation
+          ? { interpretation: dreamResult.interpretation }
+          : {}),
+        ...(dreamResult.dreamText ? { dreamText: dreamResult.dreamText } : {}),
+        ...(dreamResult.tags.length ? { tags: dreamResult.tags.join(",") } : {}),
         ...(dreamResult.dreamId
           ? { dreamId: String(dreamResult.dreamId) }
           : {}),
@@ -720,14 +726,20 @@ export default function RecordStep5Screen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Title */}
           <Text style={styles.title}>
-            {dreamResult.title || "제목없는 꿈"} 
+            {dreamResult.title || "제목없는 꿈"}
           </Text>
 
           <View style={styles.videoSection}>
-            <View style={styles.videoBox}>
-              <FriendIcon width={120} height={120} />
+            <View
+              style={styles.videoBox}
+            >
+              <DreamSymbolIcon
+                tags={dreamResult.tags}
+                text={`${dreamResult.title} ${dreamResult.summary} ${dreamResult.interpretation} ${dreamResult.dreamText}`}
+                width={132}
+                height={132}
+              />
             </View>
           </View>
 
@@ -796,10 +808,8 @@ const styles = StyleSheet.create({
   videoBox: {
     width: "100%",
     aspectRatio: 16 / 9,
-    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 28,
   },
   inputContainer: {
     backgroundColor: "#FFFFFF",

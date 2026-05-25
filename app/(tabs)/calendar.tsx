@@ -19,6 +19,16 @@ import Svg, { Path } from "react-native-svg";
 import { useAppDialog } from "../../contexts/AppDialogContext";
 import { dreamApi } from "../../services/dreamApi";
 import {
+  extractDreamDate,
+  extractDreamId,
+  extractDreamInterpretation,
+  extractDreamSummary,
+  extractDreamText,
+  extractDreamTitle,
+  extractDreamVideoUrl,
+  getDreamListFromResponse,
+} from "../../utils/dreamNormalize";
+import {
   ambiguous_icon,
   anger_icon,
   excitement_icon,
@@ -209,41 +219,26 @@ const normalizeMood = (moodValue: unknown) => {
   }
 };
 
-const extractDate = (dream: any) => {
-  const rawDate =
-    dream?.date ??
-    dream?.dreamDate ??
-    dream?.createdAt ??
-    dream?.updatedAt ??
-    "";
-
-  return typeof rawDate === "string" ? rawDate.slice(0, 10) : "";
-};
-
 const normalizeDream = (dream: any): CalendarDream | null => {
-  const dreamId = Number(
-    dream?.dreamId ?? dream?.id ?? dream?.dream_id ?? dream?.dreamID,
-  );
-  const date = extractDate(dream);
+  const dreamId = extractDreamId(dream);
+  const date = extractDreamDate(dream);
+  const dreamText = extractDreamText(dream);
+  const summary = extractDreamSummary(dream);
 
   if (!date) {
     return null;
   }
 
   return {
-    id: String(dreamId || dream?.id || `${date}-${Math.random()}`),
-    dreamId: Number.isFinite(dreamId) ? dreamId : undefined,
+    id: String(dreamId || `${date}-${Math.random()}`),
+    dreamId,
     date,
-    title: String(dream?.title ?? dream?.dreamTitle ?? "").trim(),
+    title: extractDreamTitle(dream),
     mood: normalizeMood(dream?.mood ?? dream?.emotion),
-    dreamText: String(dream?.rawText ?? dream?.content ?? "").trim(),
-    summary: String(
-      dream?.aiSummary ?? dream?.summary ?? dream?.rawText ?? dream?.content ?? "",
-    ).trim(),
-    interpretation: String(
-      dream?.aiInterpretation ?? dream?.interpretation ?? dream?.analysisText ?? "",
-    ).trim(),
-    videoUrl: String(dream?.mediaUrl ?? dream?.videoUrl ?? "").trim(),
+    dreamText,
+    summary: summary || dreamText,
+    interpretation: extractDreamInterpretation(dream),
+    videoUrl: extractDreamVideoUrl(dream),
   };
 };
 
@@ -340,11 +335,10 @@ export default function CalendarScreen() {
 
     try {
       const response = await dreamApi.getDreams();
-      const nextDreams = Array.isArray(response)
-        ? response.map(normalizeDream).filter(Boolean)
-        : [];
+      const dreamList = getDreamListFromResponse(response);
+      const nextDreams = dreamList.map(normalizeDream).filter(Boolean);
 
-      console.log('[Calendar] 서버 mood 원본값:', Array.isArray(response) ? response.map((d: any) => d?.mood ?? d?.emotion) : []);
+      console.log('[Calendar] 서버 mood 원본값:', dreamList.map((d: any) => d?.mood ?? d?.emotion));
       setDreams(nextDreams as CalendarDream[]);
     } catch (error) {
       console.error("캘린더 꿈 목록 조회 실패:", error);

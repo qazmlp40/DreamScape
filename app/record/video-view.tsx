@@ -4,11 +4,12 @@ import SaveConfirmModal from '@/components/app/SaveConfirmModal';
 import { getEmotionThemeMusicSource } from '@/constants/emotionThemeMusic';
 import { useAppDialog } from '@/contexts/AppDialogContext';
 import { dreamApi } from '@/services/dreamApi';
+import { buildAbsoluteApiUrl } from '@/utils/url';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio, ResizeMode, Video } from 'expo-av';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Modal,
     Pressable,
@@ -47,7 +48,7 @@ const getParamNumber = (value: unknown) => {
     return Number.isFinite(numberValue) ? numberValue : undefined;
 };
 
-export default function RecordStep4Screen() {
+export default function VideoViewScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const { showDialog } = useAppDialog();
@@ -61,6 +62,7 @@ export default function RecordStep4Screen() {
     const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
     const [videoError, setVideoError] = useState<string | null>(null);
     const [videoReloadKey, setVideoReloadKey] = useState(0);
+    const [showReplayButton, setShowReplayButton] = useState(false);
 
     const dreamIdParam = getParamValue(params.dreamId) ?? getParamValue(params.id);
     const dreamId = getParamNumber(dreamIdParam);
@@ -74,8 +76,19 @@ export default function RecordStep4Screen() {
     const isReviewMode = mode === "review";
     const themeMusicRef = useRef<Audio.Sound | null>(null);
 
+    const stopThemeMusic = useCallback(async () => {
+        const currentSound = themeMusicRef.current;
+        themeMusicRef.current = null;
+
+        if (currentSound) {
+            await currentSound.stopAsync().catch(() => undefined);
+            await currentSound.unloadAsync().catch(() => undefined);
+        }
+    }, []);
+
     const navigateToHome = () => {
         setIsRatingModalVisible(false);
+        stopThemeMusic();
         router.replace('/(tabs)');
     };
 
@@ -85,6 +98,7 @@ export default function RecordStep4Screen() {
         setIsRatingModalVisible(false);
         setSelectedRating(0);
         setFeedbackReason('');
+        setShowReplayButton(false);
     }, [dreamIdParam, localId, remoteDreamId]);
 
     useEffect(() => {
@@ -93,7 +107,7 @@ export default function RecordStep4Screen() {
         const loadVideo = async () => {
             setVideoError(null);
             setResolvedVideoUrl(null);
-            console.log("[Step4] loadVideo start:", {
+            console.log("[VideoView] loadVideo start:", {
                 dreamId,
                 videoUrlParam,
                 mode,
@@ -101,14 +115,14 @@ export default function RecordStep4Screen() {
             });
 
             if (videoUrlParam) {
-                console.log("[Step4] videoUrlParam으로 기존 영상 재생:", videoUrlParam);
-                setResolvedVideoUrl(videoUrlParam);
+                console.log("[VideoView] videoUrlParam으로 기존 영상 재생:", videoUrlParam);
+                setResolvedVideoUrl(buildAbsoluteApiUrl(videoUrlParam) ?? videoUrlParam);
                 return;
             }
 
             // 리뷰 모드일 땐 영상 재생성 안되게 함
             if (isReviewMode) {
-                console.log("[Step4] review mode + videoUrl 없음: 영상 재생성 중단");
+                console.log("[VideoView] review mode + videoUrl 없음: 영상 재생성 중단");
                 setVideoError('저장된 영상이 없습니다.');
                 return;
             }
@@ -119,9 +133,9 @@ export default function RecordStep4Screen() {
             }
 
             try {
-                console.log("[Step4] generateVideo 요청:", { dreamId });
+                console.log("[VideoView] generateVideo 요청:", { dreamId });
                 const videoRes = await dreamApi.generateVideo(dreamId);
-                console.log("[Step4] generateVideo 응답:", videoRes);
+                console.log("[VideoView] generateVideo 응답:", videoRes);
                 const responseDreamId = getParamNumber(
                     videoRes?.dreamId ?? videoRes?.id ?? videoRes?.dream_id,
                 );
@@ -136,7 +150,9 @@ export default function RecordStep4Screen() {
                     throw new Error('다른 꿈의 영상 응답을 받았습니다.');
                 }
 
-                const nextVideoUrl = videoRes?.mediaUrl ?? videoRes?.videoUrl;
+                const nextVideoUrl = buildAbsoluteApiUrl(
+                    videoRes?.mediaUrl ?? videoRes?.videoUrl,
+                );
 
                 if (!nextVideoUrl) {
                     throw new Error('영상 URL이 없습니다.');
@@ -162,16 +178,6 @@ export default function RecordStep4Screen() {
 
     useEffect(() => {
         let isCancelled = false;
-
-        const stopThemeMusic = async () => {
-            const currentSound = themeMusicRef.current;
-            themeMusicRef.current = null;
-
-            if (currentSound) {
-                await currentSound.stopAsync().catch(() => undefined);
-                await currentSound.unloadAsync().catch(() => undefined);
-            }
-        };
 
         const playThemeMusic = async () => {
             await stopThemeMusic();
@@ -215,7 +221,7 @@ export default function RecordStep4Screen() {
             isCancelled = true;
             stopThemeMusic();
         };
-    }, [mood, resolvedVideoUrl]);
+    }, [mood, resolvedVideoUrl, videoReloadKey, stopThemeMusic]);
 
     const showRatingModal = () => {
         setHasTimerElapsed(true);
@@ -224,6 +230,11 @@ export default function RecordStep4Screen() {
 
     const handleSave = () => {
         setIsSaveModalVisible(true);
+    };
+
+    const handleReplay = () => {
+        setShowReplayButton(false);
+        setVideoReloadKey((key) => key + 1);
     };
 
     const handleSaveVideo = async () => {
@@ -290,21 +301,25 @@ export default function RecordStep4Screen() {
                     <View style={styles.videoWrapper}>
                         {resolvedVideoUrl ? (
                             <Video
+                                key={`${resolvedVideoUrl}-${videoReloadKey}`}
                                 source={{ uri: resolvedVideoUrl as string }}
                                 style={styles.video}
-                                resizeMode={ResizeMode.CONTAIN}
-                                shouldPlay
+                                resizeMode={ResizeMode.COVER}
+                                shouldPlay={!showReplayButton}
                                 rate={0.5}
                                 shouldCorrectPitch
                                 onPlaybackStatusUpdate={(status) => {
-                                    if (
-                                        status.isLoaded &&
-                                        status.didJustFinish &&
-                                        !isReviewMode &&
-                                        !hasTimerElapsed
-                                    ) {
-                                        themeMusicRef.current?.stopAsync().catch(() => undefined);
-                                        showRatingModal();
+                                    if (status.isLoaded && status.didJustFinish) {
+                                        stopThemeMusic();
+
+                                        if (isReviewMode) {
+                                            setShowReplayButton(true);
+                                            return;
+                                        }
+
+                                        if (!hasTimerElapsed) {
+                                            showRatingModal();
+                                        }
                                     }
                                 }}
                             />
@@ -345,6 +360,17 @@ export default function RecordStep4Screen() {
                                 <Text style={styles.loadingText}>영상을 생성하고 있어요. 잠시만 기다려주세요</Text>
                             </View>
                         )}
+                        {resolvedVideoUrl && showReplayButton ? (
+                            <Pressable
+                                style={styles.replayOverlayButton}
+                                onPress={handleReplay}
+                                accessibilityRole="button"
+                                accessibilityLabel="꿈 영상 다시 재생"
+                            >
+                                <Ionicons name="refresh" size={28} color="#FFFFFF" />
+                                <Text style={styles.replayOverlayText}>다시보기</Text>
+                            </Pressable>
+                        ) : null}
                     </View>
                 </View>
 
@@ -717,5 +743,27 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.18)',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    replayOverlayButton: {
+        position: 'absolute',
+        alignSelf: 'center',
+        top: '50%',
+        transform: [{ translateY: -34 }],
+        minWidth: 116,
+        height: 68,
+        borderRadius: 34,
+        backgroundColor: 'rgba(0, 0, 0, 0.58)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingHorizontal: 18,
+    },
+    replayOverlayText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
     },
 });

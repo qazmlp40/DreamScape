@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDreamRecord } from "../../contexts/DreamRecordContext";
+import { extractDreamTitle } from "../../utils/dreamNormalize";
 
 const colors = {
   text: "#1F2937",
@@ -45,7 +46,7 @@ const getParamNumber = (value: unknown) => {
   return Number.isFinite(numberValue) ? numberValue : undefined;
 };
 
-export default function RecordStep2Screen() {
+export default function AnalysisLoadingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
@@ -61,6 +62,7 @@ export default function RecordStep2Screen() {
 
   const {
     currentDreamText: contextDreamText = "",
+    setTitle,
     setAnalysis,
     updateRecordByLocalId,
   } = useDreamRecord();
@@ -115,10 +117,14 @@ export default function RecordStep2Screen() {
       const startedAt = Date.now();
       const dreamId = getParamNumber(params.dreamId);
       const localId = getParamValue(params.localId);
+      let generatedTitle = "";
+      let generatedSummary = "";
+      let generatedInterpretation = "";
+      let generatedTags: string[] = [];
 
-      console.log("[Step2] API_BASE_URL:", API_BASE_URL);
-      console.log("[Step2] dreamId:", dreamId);
-      console.log("[Step2] finalDreamText:", finalDreamText);
+      console.log("[AnalysisLoading] API_BASE_URL:", API_BASE_URL);
+      console.log("[AnalysisLoading] dreamId:", dreamId);
+      console.log("[AnalysisLoading] finalDreamText:", finalDreamText);
 
       try {
         let summary = finalDreamText ?? "";
@@ -126,8 +132,8 @@ export default function RecordStep2Screen() {
         let tags: string[] = [];
 
         if (dreamId) {
-          console.log("[Step2] summarizeDream 호출 dreamId:", dreamId);
-          console.log("[Step2] interpretDream 호출 dreamId:", dreamId);
+          console.log("[AnalysisLoading] summarizeDream 호출 dreamId:", dreamId);
+          console.log("[AnalysisLoading] interpretDream 호출 dreamId:", dreamId);
           
           const [summarizeResult, interpretResult] = await Promise.allSettled([
             dreamApi.summarizeDream(dreamId, finalDreamText),
@@ -136,13 +142,14 @@ export default function RecordStep2Screen() {
 
           if (summarizeResult.status === "fulfilled") {
             const summarizeRes = summarizeResult.value;
-            console.log("[Step2] dreamApi.summarizeDream 응답:", summarizeRes);
+            console.log("[AnalysisLoading] dreamApi.summarizeDream 응답:", summarizeRes);
 
             summary =
               summarizeRes.aiSummary ??
               summarizeRes.summary ??
               finalDreamText ??
               "";
+            generatedTitle = extractDreamTitle(summarizeRes);
           } else {
             console.log(
               "summarize failed:",
@@ -154,10 +161,10 @@ export default function RecordStep2Screen() {
 
           if (interpretResult.status === "fulfilled") {
             const interpretRes = interpretResult.value;
-            console.log("[Step2] dreamApi.interpretDream 응답:", interpretRes);
+            console.log("[AnalysisLoading] dreamApi.interpretDream 응답:", interpretRes);
 
             interpretation = interpretRes.aiInterpretation ?? "";
-            tags = interpretRes.tags ?? [];
+            tags = interpretRes.detectedKeywords ?? interpretRes.tags ?? [];
           } else {
             console.log(
               "interpret failed:",
@@ -168,7 +175,7 @@ export default function RecordStep2Screen() {
             tags = [];
           }
         } else {
-          console.warn("[Step2] dreamId가 없어 서버 분석을 건너뜁니다.");
+          console.warn("[AnalysisLoading] dreamId가 없어 서버 분석을 건너뜁니다.");
           summary = finalDreamText || "꿈 내용";
           interpretation = "꿈 해석을 준비 중입니다.";
         }
@@ -178,52 +185,40 @@ export default function RecordStep2Screen() {
           interpretation,
           tags,
         });
-        console.log("[Step2] analysis resolved before updateDream:", {
+        if (generatedTitle) {
+          setTitle(generatedTitle);
+        }
+        console.log("[AnalysisLoading] analysis resolved before updateDream:", {
           dreamId,
+          title: generatedTitle,
           finalDreamTextLength: finalDreamText.length,
           summary,
           interpretation,
           tags,
         });
-
-        // updateDream - 꿈 요약/ 해몽 서버 저장
-        if (dreamId) {
-          try {
-            console.log("[Step2] updateDream 저장 요청:", {
-              dreamId,
-              dreamTextLength: finalDreamText.length,
-              summary,
-              interpretation,
-            });
-            const updateRes = await dreamApi.updateDream(dreamId, {
-              dreamText: finalDreamText,
-              summary,
-              interpretation,
-            });
-            console.log("[Step2] summary/interpretation 서버 저장 완료:", updateRes);
-          } catch (error) {
-            console.error("[Step2] summary/interpretation 서버 저장 실패:", error);
-          }
-        }        
+        generatedSummary = summary;
+        generatedInterpretation = interpretation;
+        generatedTags = tags;
 
         if (localId) {
           updateRecordByLocalId(localId, {
             ...(dreamId ? { dreamId } : {}),
+            ...(generatedTitle ? { title: generatedTitle } : {}),
             analysis: {
               summary,
               interpretation,
               tags,
             },
           });
-          console.log("[Step2] local record에 dreamId/analysis 연결 완료:", {
+          console.log("[AnalysisLoading] local record에 dreamId/analysis 연결 완료:", {
             localId,
             dreamId,
           });
         } else {
-          console.log("[Step2] localId 없이 서버 dreamId 기준으로 계속 진행합니다.");
+          console.log("[AnalysisLoading] localId 없이 서버 dreamId 기준으로 계속 진행합니다.");
         }
       } catch (error) {
-        console.error("[Step2] API 호출 중 예상치 못한 에러:", error);
+        console.error("[AnalysisLoading] API 호출 중 예상치 못한 에러:", error);
         // 에러가 발생해도 기본값으로 진행
         setAnalysis({
           summary: finalDreamText || "꿈 내용",
@@ -305,11 +300,18 @@ export default function RecordStep2Screen() {
         const mood = getParamValue(params.mood);
 
         router.replace({
-          pathname: "/record/step3",
+          pathname: "/record/symbol-complete",
           params: {
             ...(dreamId ? { dreamId: String(dreamId) } : {}),
             ...(localId ? { localId } : {}),
             ...(mood ? { mood } : {}),
+            ...(generatedTitle ? { title: generatedTitle } : {}),
+            ...(generatedSummary ? { summary: generatedSummary } : {}),
+            ...(generatedInterpretation
+              ? { interpretation: generatedInterpretation }
+              : {}),
+            ...(generatedTags.length ? { tags: generatedTags.join(",") } : {}),
+            ...(finalDreamText ? { dreamText: finalDreamText } : {}),
             ...(selectedDate ? { selectedDate } : {}),
           },
         } as any);
@@ -325,6 +327,7 @@ export default function RecordStep2Screen() {
     params.selectedDate,
     router,
     setAnalysis,
+    setTitle,
     updateRecordByLocalId,
     checkOpacity,
     checkScale,

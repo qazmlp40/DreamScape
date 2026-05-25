@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Props = {
   title?: string;
   onBackPress?: () => void;
-  onMicPress?: () => void;
   rightText?: string;
   onRightPress?: () => void;
   showBack?: boolean;
@@ -21,7 +20,6 @@ const HEADER_CONTENT_HEIGHT = 56;
 export default function RecordHeader({
   title,
   onBackPress,
-  onMicPress,
   rightText,
   onRightPress,
   showBack = true,
@@ -79,17 +77,7 @@ export default function RecordHeader({
           <Text style={[styles.rightText, { color: textColor }]}>{rightText}</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity
-          onPress={onMicPress}
-          style={styles.side}
-          accessibilityRole="button"
-          accessibilityLabel="음성으로 입력"
-          disabled={!onMicPress}
-        >
-          {onMicPress ? (
-            <Ionicons name="mic-outline" size={24} color={iconColor} />
-          ) : null}
-        </TouchableOpacity>
+        <View style={styles.side} />
       )}
     </View>
   );

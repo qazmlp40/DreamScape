@@ -19,6 +19,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppDialog } from '../contexts/AppDialogContext';
 import { dreamApi } from '../services/dreamApi';
 import {
+    extractDreamInterpretation,
+    extractDreamSummary,
+    extractDreamText,
+    extractDreamTitle,
+} from '../utils/dreamNormalize';
+import {
     ambiguous_icon,
     anger_icon,
     excitement_icon,
@@ -132,11 +138,11 @@ export default function DreamEditScreen() {
                                     return '7';
                             }
                         })(),
-                        title: String(foundDream.title ?? foundDream.dreamTitle ?? ''),
-                        dreamText: String(foundDream.rawText ?? foundDream.content ?? ''),
+                        title: extractDreamTitle(foundDream),
+                        dreamText: extractDreamText(foundDream),
                         analysis: {
-                            summary: String(foundDream.aiSummary ?? foundDream.summary ?? ''),
-                            interpretation: String(foundDream.aiInterpretation ?? foundDream.interpretation ?? foundDream.analysisText ?? ''),
+                            summary: extractDreamSummary(foundDream),
+                            interpretation: extractDreamInterpretation(foundDream),
                             tags: foundDream.tags ?? [],
                         },
                     };
@@ -159,18 +165,6 @@ export default function DreamEditScreen() {
 
         loadDream();
     }, [dreamDate, dreamId]);
-
-    // 음성 텍스트가 전달되면 dreamText에 설정
-    useEffect(() => {
-        if (params.voiceText && typeof params.voiceText === 'string') {
-            setDreamText(params.voiceText);
-            setIsModified(true);
-            // 음성 텍스트가 있어도 dreamData가 없으면 기본 데이터 생성
-            if (!dreamData && dreamDate) {
-                setDreamData({ localId: '', date: dreamDate, mood: '1', dreamText: '', analysis: null });
-            }
-        }
-    }, [params.voiceText, dreamData, dreamDate]);
 
     // 🔥 키보드 이벤트 리스너
     useEffect(() => {
@@ -227,11 +221,6 @@ export default function DreamEditScreen() {
         } else {
             router.back();
         }
-    };
-
-    const handleMicPress = () => {
-        const returnPath = `/dream-edit?date=${dreamDate}${dreamId ? `&dreamId=${dreamId}` : ''}`;
-        router.push(`/voice-record?returnPath=${encodeURIComponent(returnPath)}`);
     };
 
     const handleComplete = async () => {
@@ -337,7 +326,6 @@ export default function DreamEditScreen() {
                 {/* 헤더 */}
                 <RecordHeader 
                     title="꿈 수정하기" 
-                    onMicPress={handleMicPress} 
                     onBackPress={handleBack}
                 />
                 

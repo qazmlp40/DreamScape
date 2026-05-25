@@ -3,7 +3,7 @@ import RecordHeader from '@/components/app/RecordHeader';
 import { dreamApi } from '@/services/dreamApi';
 import { clamp } from '@/utils/responsive';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
     Dimensions,
     Image,
@@ -19,15 +19,12 @@ import {
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { API_BASE_URL } from '../../constants/api';
 import { useAppDialog } from '../../contexts/AppDialogContext';
 import { useDreamRecord } from '../../contexts/DreamRecordContext';
 import IMAGES from '../assets/images';
 
 // 화면 크기
 const { width: screenWidth } = Dimensions.get('window');
-const containerWidth = Math.min(412, screenWidth);
-
 // Responsive helpers
 const HORIZONTAL_PADDING = Math.min(20, Math.round(screenWidth * 0.05));
 
@@ -55,13 +52,9 @@ const MOODS = [
 ];
 
 const FIXED_BUTTON_HEIGHT = 56;
-// TODO: Set API_BASE_URL in constants/api.ts to your backend IP:PORT (e.g., http://192.168.0.5:8080)
-const SERVER_URL = API_BASE_URL;
-
 export default function RecordStep1Screen() {
     const [selectedMood, setSelectedMood] = useState<string | null>(null);
     const [dreamContent, setDreamContent] = useState('');
-    const [isListening, setIsListening] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -69,15 +62,8 @@ export default function RecordStep1Screen() {
     const insets = useSafeAreaInsets();
     const BOTTOM_INSET = insets.bottom || 20;
     const scrollViewRef = React.useRef<KeyboardAwareScrollView>(null);
-    const { setMood, setDreamText, setAnalysis, saveRecord, updateRecordByLocalId } = useDreamRecord();
+    const { setMood, setDreamText, saveRecord, updateRecordByLocalId } = useDreamRecord();
 
-    // 음성 텍스트가 전달되면 dreamContent에 설정
-    useEffect(() => {
-        if (params.voiceText && typeof params.voiceText === 'string') {
-            setDreamContent(params.voiceText);
-        }
-    }, [params.voiceText]);
-    
     // [step 1 - 꿈 기록 화면]
     // 서버 dreamId를 플로우의 기준으로 삼고, 로컬 record는 즉시 화면 복구용 보조 캐시로만 사용한다.
     const submitDreamToServer = async (emotion: string, content: string, selectedDate?: string) => {
@@ -168,7 +154,7 @@ export default function RecordStep1Screen() {
             }
 
             router.replace({
-	                pathname: '/record/step2',
+	                pathname: '/record/analysis-loading',
 	                params: {
                     dreamId: String(dreamId),
                     dreamText: trimmedContent,
@@ -179,14 +165,10 @@ export default function RecordStep1Screen() {
 	            } as any);
     };
 
-    const handleMicPress = async () => {
-        router.push('/voice-record');
-    };
-
     return (
         <View style={styles.container}>
             {/* 헤더 */}
-            <RecordHeader title="꿈 기록" onMicPress={handleMicPress} backIcon="arrow-back" />
+            <RecordHeader title="꿈 기록" backIcon="arrow-back" />
 
             {/* 콘텐츠 */}
             <KeyboardAwareScrollView
@@ -243,6 +225,9 @@ export default function RecordStep1Screen() {
                                     source={selectedMood && selectedMood !== mood.id ? mood.nImage : mood.image} 
                                     style={styles.moodImage} 
                                 />
+                                {selectedMood === mood.id ? (
+                                    <Text style={styles.moodName}>{mood.name}</Text>
+                                ) : null}
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -376,12 +361,11 @@ const styles = StyleSheet.create({
     },
     moodItem: {
         display: 'flex',
-        width: 48,
-        height: 48,
+        width: 58,
+        minHeight: 72,
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 12,
-        overflow: 'hidden',
     },
     moodItemSelected: {
         borderWidth: 3,
@@ -395,6 +379,14 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         resizeMode: 'contain',
+    },
+    moodName: {
+        marginTop: 4,
+        fontSize: 12,
+        lineHeight: 16,
+        fontWeight: '600',
+        color: colors.text,
+        textAlign: 'center',
     },
 
     moodSectionTitle: {

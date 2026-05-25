@@ -1,10 +1,23 @@
-import FriendIcon from "@/assets/images/icons/dream_symbol/friend.svg";
+import DreamSymbolIcon from "@/components/app/DreamSymbolIcon";
 import RecordHeader from "@/components/app/RecordHeader";
 import { KakaoShareIcon } from "@/components/ui/KakaoShareIcon";
 import { API_BASE_URL, DEV_MOCK_DREAMS } from "@/constants/api";
 import { dreamApi, getMockDreamById } from "@/services/dreamApi";
+import {
+  extractDreamDate,
+  extractDreamId,
+  extractDreamInterpretation,
+  extractDreamSummary,
+  extractDreamTags,
+  extractDreamText,
+  extractDreamTitle,
+  extractDreamVideoUrl,
+  firstText,
+  getParamNumber,
+  getParamValue,
+} from "@/utils/dreamNormalize";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -34,39 +47,7 @@ type DreamViewRecord = {
   summary?: string;
   interpretation?: string;
   videoUrl?: string;
-};
-
-const getParamValue = (value: unknown) => {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-
-  return typeof value === "string" && value.trim() ? value : undefined;
-};
-
-const getParamNumber = (value: unknown) => {
-  const rawValue = getParamValue(value);
-  if (!rawValue) {
-    return undefined;
-  }
-
-  const numberValue = Number(rawValue);
-  return Number.isFinite(numberValue) ? numberValue : undefined;
-};
-
-const firstText = (...values: (string | null | undefined)[]) => {
-  return values.find((value) => value?.trim())?.trim();
-};
-
-const getNestedText = (source: any, paths: string[]) => {
-  for (const path of paths) {
-    const value = path.split(".").reduce((acc, key) => acc?.[key], source);
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return undefined;
+  tags?: string[];
 };
 
 const buildAbsoluteUrl = (url?: string) => {
@@ -90,6 +71,7 @@ export default function DreamViewScreen() {
   const [remoteRecord, setRemoteRecord] = useState<DreamViewRecord | null>(
     null,
   );
+  const analysisBackfillRef = useRef<Set<number>>(new Set());
 
   const fetchDreamId = getParamValue(params.id) ?? getParamValue(params.dreamId);
 
@@ -114,6 +96,7 @@ export default function DreamViewScreen() {
                 summary: mockDream.aiSummary ?? mockDream.rawText,
                 interpretation: mockDream.aiInterpretation,
                 videoUrl: mockDream.mediaUrl ?? undefined,
+                tags: mockDream.tags ?? [],
               }
             : null,
         );
@@ -122,14 +105,12 @@ export default function DreamViewScreen() {
 
       try {
         const data = await dreamApi.getDreamById(Number(fetchDreamId));
-        const fetchedDreamId = Number(
-          data.dreamId ?? data.id ?? getParamNumber(fetchDreamId),
-        );
+        const fetchedDreamId = extractDreamId(data) ?? getParamNumber(fetchDreamId);
         const expectedDreamId = getParamNumber(fetchDreamId);
 
         if (
           expectedDreamId !== undefined &&
-          Number.isFinite(fetchedDreamId) &&
+          fetchedDreamId !== undefined &&
           fetchedDreamId !== expectedDreamId
         ) {
           setRemoteRecord(null);
@@ -137,46 +118,15 @@ export default function DreamViewScreen() {
         }
 
         setRemoteRecord({
-          dreamId: Number.isFinite(fetchedDreamId) ? fetchedDreamId : undefined,
-          date: data.date ?? data.dreamDate ?? data.createdAt?.slice?.(0, 10),
-          title: data.title || data.dreamTitle,
+          dreamId: fetchedDreamId,
+          date: extractDreamDate(data),
+          title: extractDreamTitle(data),
           mood: data.mood || data.emotion,
-          dreamText:
-            getNestedText(data, ["rawText", "content", "dreamText", "text"]) ??
-            undefined,
-          summary:
-            getNestedText(data, [
-              "aiSummary",
-              "summary",
-              "analysis.aiSummary",
-              "analysis.summary",
-              "dreamAnalysis.aiSummary",
-              "dreamAnalysis.summary",
-              "result.aiSummary",
-              "result.summary",
-            ]) ?? undefined,
-          interpretation:
-            getNestedText(data, [
-              "aiInterpretation",
-              "interpretation",
-              "analysisText",
-              "analysis.aiInterpretation",
-              "analysis.interpretation",
-              "analysis.analysisText",
-              "dreamAnalysis.aiInterpretation",
-              "dreamAnalysis.interpretation",
-              "result.aiInterpretation",
-              "result.interpretation",
-            ]) ?? undefined,
-          videoUrl:
-            getNestedText(data, [
-              "mediaUrl",
-              "videoUrl",
-              "video.mediaUrl",
-              "video.videoUrl",
-              "media.mediaUrl",
-              "media.videoUrl",
-            ]) ?? undefined,
+          dreamText: extractDreamText(data),
+          summary: extractDreamSummary(data),
+          interpretation: extractDreamInterpretation(data),
+          videoUrl: extractDreamVideoUrl(data),
+          tags: extractDreamTags(data),
         });
       } catch (error) {
         console.error("꿈 상세 보기 데이터 불러오기 실패:", error);
@@ -220,6 +170,7 @@ export default function DreamViewScreen() {
           getParamValue(params.interpretation),
         ) ?? "",
       videoUrl: firstText(remoteRecord?.videoUrl, getParamValue(params.videoUrl)),
+      tags: remoteRecord?.tags ?? [],
     };
   }, [params, remoteRecord]);
 
@@ -230,17 +181,76 @@ export default function DreamViewScreen() {
     }
 
     router.push({
-      pathname: "/record/step4",
+      pathname: "/record/video-view",
       params: {
         mode: "review",
         ...(dream.id ? { id: dream.id } : {}),
         ...(dream.dreamId ? { dreamId: String(dream.dreamId) } : {}),
         ...(dream.date ? { date: dream.date } : {}),
         ...(dream.mood ? { mood: dream.mood } : {}),
+        title: dream.title,
+        ...(dream.summary ? { summary: dream.summary } : {}),
+        ...(dream.interpretation ? { interpretation: dream.interpretation } : {}),
+        ...(dream.dreamText ? { dreamText: dream.dreamText } : {}),
+        ...(dream.tags.length ? { tags: dream.tags.join(",") } : {}),
         videoUrl: dream.videoUrl,
       },
     } as any);
   };
+
+  useEffect(() => {
+    const backfillAnalysis = async () => {
+      if (!dream.dreamId || analysisBackfillRef.current.has(dream.dreamId)) {
+        return;
+      }
+
+      const needsSummary = !dream.summary && Boolean(dream.dreamText);
+      const needsInterpretation = !dream.interpretation;
+
+      if (!needsSummary && !needsInterpretation) {
+        return;
+      }
+
+      analysisBackfillRef.current.add(dream.dreamId);
+
+      try {
+        const [summarizeResult, interpretResult] = await Promise.allSettled([
+          needsSummary
+            ? dreamApi.summarizeDream(dream.dreamId, dream.dreamText)
+            : Promise.resolve(null),
+          needsInterpretation
+            ? dreamApi.interpretDream(dream.dreamId)
+            : Promise.resolve(null),
+        ]);
+
+        const summarizeRes =
+          summarizeResult.status === "fulfilled" ? summarizeResult.value : null;
+        const interpretRes =
+          interpretResult.status === "fulfilled" ? interpretResult.value : null;
+        const summary =
+          summarizeRes?.aiSummary ?? summarizeRes?.summary ?? undefined;
+        const title = extractDreamTitle(summarizeRes);
+        const interpretation =
+          interpretRes?.aiInterpretation ??
+          interpretRes?.interpretation ??
+          interpretRes?.analysisText ??
+          undefined;
+
+        setRemoteRecord((prev) => ({
+          ...(prev ?? {}),
+          dreamId: dream.dreamId,
+          ...(title ? { title } : {}),
+          ...(summary ? { summary } : {}),
+          ...(interpretation ? { interpretation } : {}),
+          tags: interpretRes?.detectedKeywords ?? interpretRes?.tags ?? prev?.tags,
+        }));
+      } catch (error) {
+        console.error("꿈 다시보기 분석 보강 실패:", error);
+      }
+    };
+
+    backfillAnalysis();
+  }, [dream.dreamId, dream.dreamText, dream.interpretation, dream.summary]);
 
   const handleShare = async () => {
     const videoShareUrl = buildAbsoluteUrl(dream.videoUrl);
@@ -266,7 +276,7 @@ export default function DreamViewScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView edges={[]} style={styles.container}>
-        <RecordHeader showBack rightText="영상 보기" onRightPress={handleReplayVideo} />
+        <RecordHeader showBack />
 
         <ScrollView
           style={styles.scrollView}
@@ -276,11 +286,16 @@ export default function DreamViewScreen() {
           <Text style={styles.title}>{dream.title}</Text>
 
           <TouchableOpacity
-            style={styles.videoBox}
+            style={styles.videoLink}
             onPress={handleReplayVideo}
             activeOpacity={0.85}
           >
-            <FriendIcon width={116} height={116} />
+            <DreamSymbolIcon
+              tags={dream.tags}
+              text={`${dream.title} ${dream.summary} ${dream.interpretation} ${dream.dreamText}`}
+              width={116}
+              height={116}
+            />
             <Text style={styles.videoButtonText}>
               {dream.videoUrl ? "영상 다시보기" : "저장된 영상 없음"}
             </Text>
@@ -336,12 +351,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 24,
   },
-  videoBox: {
+  videoLink: {
     width: "100%",
     aspectRatio: 16 / 9,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 28,

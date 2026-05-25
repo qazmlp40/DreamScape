@@ -95,10 +95,10 @@ function AuthenticatedStack() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="record/step1" options={{ headerShown: false }} />
-      <Stack.Screen name="record/step2" options={{ headerShown: false }} />
-      <Stack.Screen name="record/step3" options={{ headerShown: false }} />
-      <Stack.Screen name="record/step4" options={{ headerShown: false }} />
-      <Stack.Screen name="record/step5" options={{ headerShown: false }} />
+      <Stack.Screen name="record/analysis-loading" options={{ headerShown: false }} />
+      <Stack.Screen name="record/symbol-complete" options={{ headerShown: false }} />
+      <Stack.Screen name="record/result-view" options={{ headerShown: false }} />
+      <Stack.Screen name="record/video-view" options={{ headerShown: false }} />
       <Stack.Screen name="setting" options={{ headerShown: false }} />
       <Stack.Screen name="inquiry" options={{ headerShown: false }} />
       <Stack.Screen name="dream-edit" options={{ headerShown: false }} />
