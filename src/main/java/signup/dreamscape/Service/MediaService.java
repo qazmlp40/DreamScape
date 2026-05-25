@@ -62,14 +62,9 @@ public class MediaService {
         DreamEntity dreamEntity = dreamRepository.findById(dreamId) // 얘가 옵셔널 타입임.. 예외처리 필요
                 .orElseThrow(() -> new IllegalArgumentException(("존재하지 않는 꿈 id=" + dreamId))); // orElseThrow = 없으면 예외 던져 (옵셔널에서만 씀)
         String aiSummary = dreamEntity.getAiSummary();
-//
-        // 제 1분위기 추출
-//        DreamAnalysisEntity dreamAnalysisEntity = dreamAnalysisRepository.findById(dreamId)
-//                .orElseThrow(() -> new IllegalArgumentException(("존재하지 않는 꿈 id=" + dreamId)));
-//        String firstMood = dreamAnalysisEntity.getMood();
 
-        // 임의 코드 (제1분위기)
-        String firstMood = "proclamation";
+        // 제 1분위기 추출
+        String firstMood = dreamEntity.getMood();
 
         // 1.2 프롬프트 만들기
         // 1.2.1 지피티 api 불러서 무드 + 영어 요약본 만들어주기
@@ -143,9 +138,16 @@ public class MediaService {
             String videoUrl = getVedioUrl(fileId);
             log.info("videoUrl = " + videoUrl);
 
+            DreamMediaEntity dreamMediaEntity = new DreamMediaEntity();
+            dreamMediaEntity.setDreamId(dreamId);
+            dreamMediaEntity.setMediaUrl(videoUrl);
+
+            DreamMediaEntity saved = dreamMediaRepository.save(dreamMediaEntity);
+
             // 디티오 return
             return MediaResponseDTO.builder()
-                    .mediaUrl(videoUrl)
+                    .mediaUrl(saved.getMediaUrl())
+                    .mediaId(saved.getMediaId())
                     .build();
 
         } catch (Exception e){

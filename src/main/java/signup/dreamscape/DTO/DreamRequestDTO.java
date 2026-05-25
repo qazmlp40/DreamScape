@@ -16,7 +16,6 @@ import java.util.List;
 @Schema(description = "꿈 기록 생성 요청")
 public class DreamRequestDTO {
 
-    @NotBlank(message = "제목은 필수 입력값입니다")
     @Size(min = 1, max = 100, message = "제목은 1자 이상 100자 이하여야 합니다")
     @Schema(description = "꿈 제목", example = "바다 위를 나는 꿈")
     private String title;

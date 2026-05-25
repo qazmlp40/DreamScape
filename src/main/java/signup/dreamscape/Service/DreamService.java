@@ -25,7 +25,7 @@ public class DreamService {
         DreamEntity saved = dreamRepository.save(
                 DreamEntity.builder()
                         .userId(userId)
-                        .title(dto.getTitle())
+                        .title(null)
                         .rawText(dto.getRawText())
                         .mood(dto.getMood())
                         .aiSummary(null)     // DreamRequestDTO에 없으므로 일단 null

@@ -37,5 +37,5 @@ public class DreamEntity {
     private Long userId; // 실제로는 user테이블과 일대다연결
 
     @Column
-    private String mood;
+    private String mood; // 감정 태그를 여기다가 저장한다
 }

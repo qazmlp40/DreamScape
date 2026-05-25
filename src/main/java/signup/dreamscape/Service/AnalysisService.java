@@ -64,7 +64,11 @@ public class AnalysisService {
 
     // ========== 프롬프트 상수 ==========
     private static final String SYSTEM_PROMPT =
-            "너는 '꿈 일기 정리 도우미'야. 한국어로 간결하게 정리해.";
+            "너는 꿈 일기 정리 도우미야. 반드시 아래 JSON 형식으로만 응답해. 마크다운 쓰지 마.\n" +
+                    "{\n" +
+                    "  \"title\": \"꿈 제목\",\n" +
+                    "  \"summary\": \"꿈 요약 내용\"\n" +
+                    "}";
 
     private static final String USER_PROMPT_TEMPLATE =
             "아래 꿈 내용을 요약해줘.\n";
@@ -87,28 +91,47 @@ public class AnalysisService {
 
 
     // 꿈 요약
-    public DreamResponseDTO summarizeText(Long dreamId, String text){
-        if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("꿈 텍스트는 비어있을 수 없습니다");
-        }
+    public DreamResponseDTO summarizeText(Long dreamId){
         // dreamId null 체크 (로컬에서 추가)
         if (dreamId == null) {
             throw new IllegalArgumentException("dreamId는 필수입니다");
             }
 
+        // 아이디로 꿈 조회
+        DreamEntity dreamEntity = dreamRepository.findById(dreamId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 꿈입니다. id=" + dreamId));
+        String text = dreamEntity.getRawText(); // 로우 텍스트 받아오기
+
         try {
             JSONArray messages = makeSummaryMessages(text);
             JSONObject requestBody = makeRequestBody(messages);
             Request request = makeRequest(requestBody);
-            String summaryText = callOpenAIAPI(request);
+            String rawResponse = callOpenAIAPI(request);
 
-            // 드림아이디로 기존에 저장되었던 꿈 조회
-            DreamEntity dreamEntity = dreamRepository.findById(dreamId).orElseThrow(()
-                    -> new IllegalArgumentException("존재하지 않는 꿈입니다. id=" + dreamId));
+
+            // 마크다운 제거
+            rawResponse = rawResponse
+                    .replaceAll("```json\\s*", "") // 찾을 패턴, 바꿀 문자열
+                    .replaceAll("```\\s*", "")
+                    .trim();
+
+            // Json 파싱
+            String title;
+            String summary;
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(rawResponse);
+            title = jsonNode.get("title").asText();
+            summary = jsonNode.get("summary").asText();
+
+
+
             dreamEntity.setRawText(text);
 
             // 기존 꿈이랑 같은 행에 저장
-            dreamEntity.setAiSummary(summaryText);
+            dreamEntity.setAiSummary(summary);
+            dreamEntity.setTitle(title);
+
 
             // 디비에 저장
             DreamEntity savedDream = dreamRepository.save(dreamEntity);
@@ -117,6 +140,7 @@ public class AnalysisService {
             DreamResponseDTO responseDTO = new DreamResponseDTO();
             responseDTO.setAiSummary(savedDream.getAiSummary());
             responseDTO.setDreamId(savedDream.getDreamId());
+            responseDTO.setTitle(savedDream.getTitle());
 
             return responseDTO;
 
