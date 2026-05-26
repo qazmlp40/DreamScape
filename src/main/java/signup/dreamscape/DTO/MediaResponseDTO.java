@@ -11,6 +11,8 @@ import lombok.*;
 @Schema(description = "생성된 영상 정보 응답")
 public class MediaResponseDTO {
 
+    private Long dreamId;
+
     @Schema(description = "미디어(이미지/영상) 접근 URL", example = "https://s3.cloud.com/media/result_01.jpg")
     private String mediaUrl;
 

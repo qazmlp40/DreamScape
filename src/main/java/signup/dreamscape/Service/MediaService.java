@@ -146,6 +146,7 @@ public class MediaService {
 
             // 디티오 return
             return MediaResponseDTO.builder()
+                    .dreamId(saved.getDreamId())
                     .mediaUrl(saved.getMediaUrl())
                     .mediaId(saved.getMediaId())
                     .build();
