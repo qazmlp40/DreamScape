@@ -221,6 +221,16 @@ public class AnalysisService {
             analysisEntity.setDream(dream);
             dreamAnalysisRepository.save(analysisEntity);
 
+            // DreamSymbolMapEntity에 저장
+            // 추출된 여러 개의 상징을 반복문으로 DreamSymbolMap 테이블에 각각 저장
+            for (DreamSymbolEntity symbol : symbols) {
+                DreamSymbolMapEntity mapEntity = DreamSymbolMapEntity.builder()
+                        .dream(dream)
+                        .symbol(symbol)
+                        .build();
+                dreamSymbolMapRepository.save(mapEntity);
+            }
+
             // 10. DTO 리턴
             DreamResponseDTO dreamResponse = new DreamResponseDTO();
             dreamResponse.setAiInterpretation(interpretation);
