@@ -4,6 +4,7 @@ import signup.dreamscape.DTO.DreamChartRequestDTO;
 import signup.dreamscape.DTO.DreamChartResponseDTO;
 import signup.dreamscape.DTO.DreamKeywordResponseDTO;
 import signup.dreamscape.Repository.DreamAnalysisRepository;
+import signup.dreamscape.Repository.DreamRepository;
 import signup.dreamscape.Repository.DreamSymbolMapRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -20,7 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DreamChartService {
 
-    private final DreamAnalysisRepository dreamAnalysisRepository;
+    private final DreamRepository dreamRepository;
     private final DreamSymbolMapRepository dreamSymbolMapRepository;
 
     // 고정된 감정 순서
@@ -61,7 +62,7 @@ public class DreamChartService {
 
     // DB에서 감정 데이터를 가져와서 고정된 순서(Map)에 맞게 세팅
     private Map<String, Long> getMoodDistribution(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
-        List<Object[]> moodResults = dreamAnalysisRepository.findMoodDistribution(userId, startDate, endDate);
+        List<Object[]> moodResults = dreamRepository.findMoodDistribution(userId, startDate, endDate);
 
         Map<String, Long> moodDistribution = new LinkedHashMap<>();
         for (String mood : MOOD_ORDER) {
