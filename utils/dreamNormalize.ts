@@ -92,6 +92,7 @@ export const extractDreamDate = (dream: any) => {
   const rawDate = firstText(
     getNestedValue(dream, ["date"]),
     getNestedValue(dream, ["dreamDate"]),
+    getNestedValue(dream, ["recordedAt"]),
     getNestedValue(dream, ["createdAt"]),
     getNestedValue(dream, ["updatedAt"]),
     getNestedValue(dream, ["dream.date"]),

@@ -54,6 +54,7 @@ const extractDreamDate = (dream: any) => {
   const rawDate =
     dream?.date ??
     dream?.dreamDate ??
+    dream?.recordedAt ??
     dream?.createdAt ??
     dream?.updatedAt ??
     "";
@@ -332,25 +333,82 @@ const DEFAULT_DREAM_KEYWORDS = [
   "나비",
   "용",
   "뱀",
+  "까마귀",
+  "의사",
+  "연예인",
+  "땀",
+  "머리",
+  "심장", 
+  "몸",
+  "주방", 
+  "창고",
+  "학교",
+  "시장",
+  "무덤",
+  "부모",
+  "부부",
+  "자녀",
+  "형제",
+  "조상",
+  "선생님",
+  "친구",
+  "물",
+  "땅",
+  "산",
+  "돌",
+  "강",
+  "바다",
+  "불",
+  "연기",
+  "달",
+  "별",
+  "비",
+  "눈",
+  "번개",
+  "벼락",
+  "서리",
+  "태양",
+  "구름",
+  "하늘",
+  "무지개",
+  "노을"
 ];
 
-const WORD_CLOUD_SLOTS = [
-  { left: "5%", top: 10, width: "38%" },
-  { left: "42%", top: 0, width: "30%" },
-  { left: "68%", top: 28, width: "28%" },
-  { left: "22%", top: 42, width: "42%" },
-  { left: "56%", top: 68, width: "38%" },
-  { left: "4%", top: 82, width: "34%" },
-  { left: "34%", top: 98, width: "34%" },
-  { left: "70%", top: 112, width: "26%" },
-  { left: "14%", top: 132, width: "34%" },
-  { left: "49%", top: 146, width: "34%" },
-  { left: "28%", top: 166, width: "42%" },
-] as const;
+const MAX_CLOUD_KEYWORDS = 50;
+
+const hashKeyword = (keyword: string) => {
+  let hash = 0;
+  for (let i = 0; i < keyword.length; i += 1) {
+    hash = (hash * 31 + keyword.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+};
+
+const createSeededRandom = (seed: number) => {
+  let value = seed || 1;
+  return () => {
+    value = (value * 1664525 + 1013904223) >>> 0;
+    return value / 4294967296;
+  };
+};
+
+const boxesOverlap = (
+  a: { left: number; top: number; width: number; height: number },
+  b: { left: number; top: number; width: number; height: number },
+) => {
+  // [키워드 간격] 값이 작을수록 단어들이 더 촘촘하게 배치
+  const padding = 2.5;
+  return !(
+    a.left + a.width + padding < b.left ||
+    b.left + b.width + padding < a.left ||
+    a.top + a.height + padding < b.top ||
+    b.top + b.height + padding < a.top
+  );
+};
 
 // 키워드 클라우드 컴포넌트 (백엔드 연동 버전)
 const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
-  const { s } = useScale();
+  const { s, width } = useScale();
 
   const keywordCountMap = new Map<string, number>();
 
@@ -364,9 +422,15 @@ const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
 
   const sortedKeywords = Array.from(keywordCountMap.entries())
     .map(([keyword, count]) => ({ keyword, count }))
-    .sort((a, b) => b.count - a.count || a.keyword.localeCompare(b.keyword));
+    .sort((a, b) => b.count - a.count || a.keyword.localeCompare(b.keyword))
+    .slice(0, MAX_CLOUD_KEYWORDS);
   const maxFreq = Math.max(...sortedKeywords.map((item) => item.count), 1);
   const minFreq = Math.min(...sortedKeywords.map((item) => item.count), 1);
+  // [키워드 전체 영역 - 가로] "이번 달 꿈 키워드" 아래에서 단어들이 배치
+  const cloudWidth = Math.max(width - s(28), s(300));
+  // 키워드 클라우드 컨테이너 높이
+  // [키워드 전체 영역 - 세로] 값이 커질수록 키워드 영역이 아래로 길어짐
+  const cloudHeight = s(width < 330 ? 305 : 285);
 
   const getRatio = (freq: number) => {
     if (maxFreq === minFreq) return 0;
@@ -375,7 +439,8 @@ const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
 
   const getWordFontSize = (freq: number) => {
     const ratio = getRatio(freq);
-    return s(17 + ratio * 31);
+    // [키워드 글자 크기] 집계 수가 많을수록 커지고, 이 수식이 최대 크기를 제한
+    return s(13 + ratio * 15);
   };
 
   const getWordColor = (freq: number) => {
@@ -391,24 +456,105 @@ const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
 
   const getWordOpacity = (freq: number) => {
     const ratio = getRatio(freq);
-    return 0.6 + ratio * 0.4;
+    return 0.58 + ratio * 0.42;
   };
 
+  const placedBoxes: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  }[] = [];
+  const keywordLayout = sortedKeywords.map((item, index) => {
+    const ratio = getRatio(item.count);
+    const fontSize = getWordFontSize(item.count);
+    const estimatedWidth = Math.min(
+      cloudWidth * (ratio > 0.72 ? 0.7 : 0.52),
+      Math.max(fontSize * item.keyword.length * 1.02 + s(4), fontSize * 3.2),
+    );
+    // [키워드 충돌 박스 높이] 단어가 차지한다고 가정
+    const estimatedHeight = fontSize * 1.08;
+    const random = createSeededRandom(hashKeyword(item.keyword) + index * 97);
+    let bestBox = {
+      left: Math.max(
+        0,
+        cloudWidth / 2 - estimatedWidth / 2 + (random() - 0.5) * cloudWidth * 0.2,
+      ),
+      top: Math.max(
+        0,
+        cloudHeight / 2 - estimatedHeight / 2 + (random() - 0.5) * cloudHeight * 0.18,
+      ),
+      width: estimatedWidth,
+      height: estimatedHeight,
+    };
+
+    // [랜덤 배치 시도] 후보 위치를 여러 번 뽑아 겹치지 않는 자리를 찾음
+    for (let attempt = 0; attempt < 220; attempt += 1) {
+      const angle = attempt * 0.78 + random() * 0.22;
+      const outerBias = index / Math.max(sortedKeywords.length - 1, 1);
+      const minRadius = outerBias * 0.34;
+      const radius =
+        minRadius + (1 - minRadius) * Math.sqrt(attempt) / Math.sqrt(220);
+      const jitterX = (random() - 0.5) * cloudWidth * 0.05;
+      const jitterY = (random() - 0.5) * cloudHeight * 0.05;
+      // [키워드 위치 분포] 둥글게 뭉치되, 중심 위치에 약간의 흔들림을 줍니다.
+      const anchorX = cloudWidth / 2 + (random() - 0.5) * cloudWidth * 0.2;
+      const anchorY = cloudHeight / 2 + (random() - 0.5) * cloudHeight * 0.18;
+      const centerX =
+        anchorX +
+        Math.cos(angle) * radius * cloudWidth * 0.63 +
+        jitterX;
+      const centerY =
+        anchorY +
+        Math.sin(angle) * radius * cloudHeight * 0.58 +
+        jitterY;
+      const candidate = {
+        left: Math.min(
+          Math.max(0, centerX - estimatedWidth / 2),
+          cloudWidth - estimatedWidth,
+        ),
+        top: Math.min(
+          Math.max(0, centerY - estimatedHeight / 2),
+          cloudHeight - estimatedHeight,
+        ),
+        width: estimatedWidth,
+        height: estimatedHeight,
+      };
+
+      if (!placedBoxes.some((box) => boxesOverlap(candidate, box))) {
+        bestBox = candidate;
+        break;
+      }
+
+      bestBox = candidate;
+    }
+
+    placedBoxes.push(bestBox);
+
+    return {
+      ...item,
+      fontSize,
+      ratio,
+      left: bestBox.left,
+      top: bestBox.top,
+      width: estimatedWidth,
+    };
+  });
+
   return (
-    <View style={{ width: "100%", paddingHorizontal: s(16), marginTop: s(16) }}>
+    <View style={{ width: "100%", paddingLeft: s(8), paddingRight: s(8), marginTop: s(16) }}>
       <Text
         style={[
           keywordStyles.sectionTitle,
-          { marginBottom: s(16), fontSize: s(16) },
+          { marginBottom: s(4), fontSize: s(16), width: "100%" },
         ]}
       >
         {title}
       </Text>
 
-      <View style={[keywordStyles.cloudContainer, { height: s(198), marginTop: s(20) }]}>
-        {sortedKeywords.map((item, index) => {
-          const slot = WORD_CLOUD_SLOTS[index % WORD_CLOUD_SLOTS.length];
-
+      {/* [키워드 컨테이너] 모든 키워드 Text가 absolute로 배치되는 부모 영역 */}
+      <View style={[keywordStyles.cloudContainer, { height: cloudHeight,  marginTop: s(4), marginBottom: s(8)}]}>
+        {keywordLayout.map((item, index) => {
           return (
             <Text
               key={`${item.keyword}-${index}`}
@@ -416,18 +562,21 @@ const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
                 keywordStyles.cloudWord,
                 {
                   color: getWordColor(item.count),
-                  fontSize: getWordFontSize(item.count),
-                  left: slot.left,
+                  fontSize: item.fontSize,
+                  left: item.left,
                   opacity: getWordOpacity(item.count),
-                  top: s(slot.top),
-                  width: slot.width,
+                  top: item.top,
+                  width: item.width,
+                  // [키워드 굵기] 빈도 비율이 높은 단어만 더 굵게 강조
                   fontWeight:
-                    item.count === maxFreq && maxFreq > 0
+                    item.ratio > 0.72
                       ? ("800" as const)
                       : ("700" as const),
                 },
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
             >
               {item.keyword}
             </Text>
@@ -726,6 +875,7 @@ const Chart = () => {
     슬픔: "sad",
     분노: "anger",
     공포: "fear",
+    미묘: "mixed",
     혼란: "mixed",
     감동: "touched",
     신남: "excited",
@@ -1266,8 +1416,9 @@ const Chart = () => {
             width: "100%",
             height: s(8),
             backgroundColor: "#EEE",
-            marginTop: s(32),
+            marginTop: s(28),
             marginBottom: s(8),
+            marginRight: s(8),
           }}
         />
 
@@ -1389,10 +1540,12 @@ const keywordStyles = StyleSheet.create({
     fontFamily: "Roboto",
   },
   cloudContainer: {
+    // [키워드 컨테이너 공통 스타일]
     position: "relative",
     width: "100%",
   },
   cloudWord: {
+    // [키워드 텍스트 공통 스타일] 위치/크기/색상은 렌더링 시 동적으로 주입
     fontFamily: "Roboto",
     position: "absolute",
     textAlign: "center",

@@ -137,14 +137,14 @@ export const dreamApi = {
       title: data.title,
       rawText: data.dreamText,
       mood: data.mood,
-      date: data.date,
+      recordedAt: data.date
     });
 
     const response = await api.post(`/api/dreams/${userId}`, {
       title: data.title,
       rawText: data.dreamText,
       mood: data.mood,
-      date: data.date, // 캘린더에서 선택한 꿈 날짜
+      recordedAt: data.date // 캘린더에서 선택한 꿈 날짜
     });
 
     console.log("[DreamApi] saveDream raw response:", response.data);
@@ -161,6 +161,8 @@ export const dreamApi = {
   getDreams: async () => {
     const token = await tokenStorage.getToken(); // accessToken
     const userId = await AsyncStorage.getItem("userId");
+    console.log("userId:", userId);
+    console.log("token 있음?:", Boolean(token));
 
     if (!token || !userId) { // 토큰 없으면 꿈 목록 조회 못함
       throw new Error("userId가 없습니다. 다시 로그인하세요.");

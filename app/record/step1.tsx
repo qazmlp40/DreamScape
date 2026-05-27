@@ -92,25 +92,24 @@ export default function RecordStep1Screen() {
         }
       };
 
-      // 서버로 보낼 때는 영어로 변환
       const convertMoodToServerMood = (moodId: string) => {
         switch (moodId) {
           case "1":
-            return "happy";
+            return "행복";
           case "2":
-            return "sad";
+            return "슬픔";
           case "3":
-            return "anger";
+            return "분노";
           case "4":
-            return "excitement";
+            return "신남";
           case "5":
-            return "impressed";
+            return "감동";
           case "6":
-            return "scared";
+            return "공포";
           case "7":
-            return "ambiguous";
+            return "미묘";
           default:
-            return "ambiguous";
+            return "미묘";
         }
       };
 
