@@ -36,6 +36,34 @@ public class DreamController {
         return ResponseEntity.ok(response);
     }
 
+    // 새로 추가: 캘린더용 특정 날짜 꿈 조회
+    @Operation(summary = "특정 날짜의 꿈 목록 조회")
+    @GetMapping("/user/{userId}/date/{date}")
+    public ResponseEntity<List<DreamResponseDTO>> getDreamsByDate(
+            @Parameter(description = "조회할 유저 ID")
+            @PathVariable Long userId,
+            @Parameter(description = "조회할 날짜 (yyyy-MM-dd)", example = "2026-05-10")
+            @PathVariable String date) {
+
+        List<DreamResponseDTO> response = dreamService.getDreamsByDate(userId, date);
+        return ResponseEntity.ok(response);
+    }
+
+    // 새로 추가: 차트용 월별 꿈 조회
+    @Operation(summary = "특정 월의 꿈 목록 조회")
+    @GetMapping("/user/{userId}/month")
+    public ResponseEntity<List<DreamResponseDTO>> getDreamsByMonth(
+            @Parameter(description = "조회할 유저 ID")
+            @PathVariable Long userId,
+            @Parameter(description = "연도", example = "2026")
+            @RequestParam int year,
+            @Parameter(description = "월", example = "5")
+            @RequestParam int month) {
+
+        List<DreamResponseDTO> response = dreamService.getDreamsByMonth(userId, year, month);
+        return ResponseEntity.ok(response);
+    }
+
     // 꿈 생성
     @Operation(summary = "새로운 꿈 기록 생성")
     @PostMapping("/{userId}")

@@ -4,6 +4,7 @@ package signup.dreamscape.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -38,4 +39,7 @@ public class DreamEntity {
 
     @Column
     private String mood; // 감정 태그를 여기다가 저장한다
+
+    @Column
+    private LocalDate recordedAt; // 날짜만 저장 추가 (2026-05-27), 사용자가 선택한 꿈 날짜
 }

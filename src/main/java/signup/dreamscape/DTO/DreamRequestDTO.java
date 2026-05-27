@@ -30,4 +30,8 @@ public class DreamRequestDTO {
 
     @Schema(description = "꿈 기록 시 선택한 감정", example = "행복")
     private String mood;
+
+    // 추가
+    @Schema(description = "사용자가 선택한 꿈 날짜", example = "2026-05-10")
+    private String recordedAt;
 }
