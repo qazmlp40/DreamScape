@@ -43,7 +43,7 @@ public class DreamChartService {
 
         // 4) 키워드 조회
         List<DreamKeywordResponseDTO> topKeywords = dreamSymbolMapRepository.findTopKeywords(
-                request.getUserId(), startDate, endDate, PageRequest.of(0, 15)
+                request.getUserId(), startDate, endDate, PageRequest.of(0, 50)
         );
 
         // 6) 응답 DTO 생성

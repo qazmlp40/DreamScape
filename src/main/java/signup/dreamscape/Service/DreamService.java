@@ -114,7 +114,12 @@ public class DreamService {
                 .rawText(e.getRawText())
                 .aiSummary(e.getAiSummary())
                 .createdAt(e.getCreatedAt())
-                .recordedAt(e.getRecordedAt().atStartOfDay()) // recordedAt을 createdAt으로 매핑(현 시점)
+                // .recordedAt(e.getRecordedAt().atStartOfDay()) // recordedAt을 createdAt으로 매핑(현 시점)
+                .recordedAt(
+                        e.getRecordedAt() != null
+                                ? e.getRecordedAt().atStartOfDay()
+                                : e.getCreatedAt()
+                )
                 .aiInterpretation(null)
                 .mood(e.getMood())
                 .tag(null)
