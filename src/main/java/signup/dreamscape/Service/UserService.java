@@ -311,4 +311,48 @@ public class UserService {
                 .message("로그아웃 성공")
                 .build();
     }
+    // 아이디 찾기: 이름 + 닉네임으로 이메일 찾기
+    public UserResponseDTO findEmail(String name, String userNickName) {
+        return userRepository.findByNameAndUserNickName(name, userNickName)
+                .map(user -> UserResponseDTO.builder()
+                        .userId(user.getUserId())
+                        .email(user.getEmail())
+                        .name(user.getName())
+                        .userNickName(user.getUserNickName())
+                        .message("아이디 찾기 성공")
+                        .build())
+                .orElseGet(() -> UserResponseDTO.builder()
+                        .message("일치하는 사용자를 찾을 수 없습니다.")
+                        .build());
+    }
+
+    // 비밀번호 찾기: 이메일 + 이름 확인 후 임시 비밀번호 발급
+    @Transactional
+    public UserResponseDTO resetPassword(String email, String name) {
+        Optional<UserEntity> optionalUser = userRepository.findByEmailAndName(email, name);
+
+        if (optionalUser.isEmpty()) {
+            return UserResponseDTO.builder()
+                    .email(email)
+                    .message("일치하는 사용자를 찾을 수 없습니다.")
+                    .build();
+        }
+
+        UserEntity user = optionalUser.get();
+
+        String tempPassword = "temp" + System.currentTimeMillis();
+
+        String encodedPassword = passwordEncoder.encode(tempPassword);
+        user.setPassword(encodedPassword);
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+
+        return UserResponseDTO.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .message("임시 비밀번호가 발급되었습니다. 임시 비밀번호: " + tempPassword)
+                .build();
+    }
 }

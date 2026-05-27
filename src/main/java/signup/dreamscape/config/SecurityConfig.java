@@ -56,7 +56,9 @@ public class SecurityConfig {
                                 "/error",
                                 "/analysis/**",
                                 "/api/media/**",
-                                "/api/dreams/**"
+                                "/api/dreams/**",
+                                "/t_user/find-email",
+                                "/t_user/find-password"
 
                         ).permitAll()
                         .anyRequest().authenticated()

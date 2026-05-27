@@ -11,6 +11,8 @@ import signup.dreamscape.DTO.UserRequestDTO;
 import signup.dreamscape.DTO.UserResponseDTO;
 import signup.dreamscape.Security.JwtProvider;
 import signup.dreamscape.Service.UserService;
+import signup.dreamscape.DTO.FindEmailRequestDTO;
+import signup.dreamscape.DTO.FindPasswordRequestDTO;
 
 import java.util.List;
 import java.util.Map;
@@ -108,5 +110,20 @@ public class UserController {
                     "accessToken", token
             );
         }
+    }
+    // 아이디 찾기
+    @PostMapping("/find-email")
+    public ResponseEntity<UserResponseDTO> findEmail(@RequestBody FindEmailRequestDTO requestDTO) {
+        return ResponseEntity.ok(
+                userService.findEmail(requestDTO.getName(), requestDTO.getUserNickName())
+        );
+    }
+
+    // 비밀번호 찾기 / 임시 비밀번호 발급
+    @PostMapping("/find-password")
+    public ResponseEntity<UserResponseDTO> findPassword(@RequestBody FindPasswordRequestDTO requestDTO) {
+        return ResponseEntity.ok(
+                userService.resetPassword(requestDTO.getEmail(), requestDTO.getName())
+        );
     }
 }
