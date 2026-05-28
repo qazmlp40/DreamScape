@@ -249,7 +249,7 @@ const Signup: React.FC = () => {
 
     if (PW !== checkPW) {
       setPwError(true);
-      setGlobalErr("비밀번호를 잘못 입력하였습니다");
+      setGlobalErr("비밀번호를 다시 확인해 주세요.");
       return;
     }
 
@@ -302,7 +302,7 @@ const Signup: React.FC = () => {
       const responseMessage = data?.message?.trim() || text?.trim();
 
       if (!res.ok) {
-        setGlobalErr(responseMessage || "회원가입에 실패했습니다.");
+        setGlobalErr(responseMessage || "회원가입을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.");
         return;
       }
 
@@ -315,9 +315,9 @@ const Signup: React.FC = () => {
     } catch (e: any) {
       // 타임아웃과 일반 에러 구분
       if (e.name === "AbortError") {
-        setGlobalErr("서버 응답 시간 초과. 네트워크를 확인해주세요.");
+        setGlobalErr("서버 응답 시간이 초과되었습니다. 네트워크 상태를 확인해 주세요.");
       } else {
-        setGlobalErr(`서버 연결 실패: ${API_BASE_URL}`);
+        setGlobalErr("서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
       }
     } finally {
       setIsSubmitting(false);

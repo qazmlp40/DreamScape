@@ -2,6 +2,7 @@ import DreamSymbolIcon from "@/components/app/DreamSymbolIcon";
 import RecordHeader from "@/components/app/RecordHeader";
 import { KakaoShareIcon } from "@/components/ui/KakaoShareIcon";
 import { API_BASE_URL, DEV_MOCK_DREAMS } from "@/constants/api";
+import { useAppDialog } from "@/contexts/AppDialogContext";
 import { dreamApi, getMockDreamById } from "@/services/dreamApi";
 import {
   extractDreamDate,
@@ -19,7 +20,6 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   ScrollView,
   Share,
   StyleSheet,
@@ -67,6 +67,7 @@ const buildAbsoluteUrl = (url?: string) => {
 
 export default function DreamViewScreen() {
   const router = useRouter();
+  const { showDialog } = useAppDialog();
   const params = useLocalSearchParams();
   const [remoteRecord, setRemoteRecord] = useState<DreamViewRecord | null>(
     null,
@@ -176,7 +177,7 @@ export default function DreamViewScreen() {
 
   const handleReplayVideo = () => {
     if (!dream.videoUrl) {
-      Alert.alert("안내", "저장된 영상이 없습니다.");
+      showDialog({ title: "안내", message: "저장된 영상이 없어요." });
       return;
     }
 
@@ -268,7 +269,7 @@ export default function DreamViewScreen() {
       });
     } catch (error) {
       console.error("꿈 공유 실패:", error);
-      Alert.alert("오류", "공유에 실패했습니다.");
+      showDialog({ title: "오류", message: "공유를 완료하지 못했어요. 잠시 후 다시 시도해 주세요." });
     }
   };
 
@@ -304,14 +305,14 @@ export default function DreamViewScreen() {
           <Text style={styles.sectionLabel}>꿈 요약</Text>
           <View style={styles.contentBox}>
             <Text style={styles.summaryText}>
-              {dream.summary || "아직 요약이 없습니다."}
+              {dream.summary || "아직 요약이 없어요."}
             </Text>
           </View>
 
           <Text style={styles.sectionLabel}>꿈 해몽</Text>
           <View style={styles.contentBox}>
             <Text style={styles.interpretationText}>
-              {dream.interpretation || "아직 해몽이 없습니다."}
+              {dream.interpretation || "아직 해몽이 없어요."}
             </Text>
           </View>
         </ScrollView>

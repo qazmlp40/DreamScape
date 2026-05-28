@@ -115,7 +115,7 @@ export default function RecordStep1Screen() {
 
     const handleNext = async () => {
         if (!(selectedMood && dreamContent.trim())) {
-            showDialog({ title: '입력 필요', message: '감정과 꿈 내용을 모두 입력해주세요.' });
+            showDialog({ title: '안내', message: '감정과 꿈 내용을 모두 입력해 주세요.' });
             return;
           }
         
@@ -131,7 +131,7 @@ export default function RecordStep1Screen() {
           const res = await submitDreamToServer(selectedMood, trimmedContent, selectedDate);
         
           if (!res?.dreamId) {
-            showDialog({ title: '오류', message: '꿈 저장에 실패했어요. 다시 시도해주세요.' });
+            showDialog({ title: '오류', message: '꿈을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.' });
             return;
           }
         

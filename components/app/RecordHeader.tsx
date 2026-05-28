@@ -23,7 +23,7 @@ export default function RecordHeader({
   rightText,
   onRightPress,
   showBack = true,
-  backIcon = 'chevron-back',
+  backIcon = 'arrow-back',
   variant = 'light',
   style,
 }: Props) {

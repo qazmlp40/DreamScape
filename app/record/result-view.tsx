@@ -9,7 +9,7 @@ import Constants from "expo-constants";
 import * as MediaLibrary from "expo-media-library";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { captureRef } from "react-native-view-shot";
 import { API_BASE_URL, APP_SCHEME, DEV_MOCK_DREAMS } from "../../constants/api";
@@ -28,6 +28,7 @@ import {
   extractDreamDate,
   extractDreamId,
   extractDreamInterpretation,
+  extractDreamMediaId,
   extractDreamSummary,
   extractDreamTags,
   extractDreamText,
@@ -106,6 +107,7 @@ type RemoteDreamRecord = {
   summary?: string;
   interpretation?: string;
   videoUrl?: string;
+  mediaId?: number;
   tags?: string[];
 };
 
@@ -121,6 +123,7 @@ type DreamResultViewModel = {
   summary: string;
   interpretation: string;
   videoUrl?: string;
+  mediaId?: number;
   tags: string[];
 };
 
@@ -202,6 +205,7 @@ const buildDreamResultViewModel = ({
       getParamValue(params.videoUrl),
       canUseCurrentRecord ? currentRecord.videoUrl : undefined,
     ) ?? undefined;
+  const mediaId = remoteRecord?.mediaId ?? getParamNumber(params.mediaId);
   const tags =
     remoteRecord?.tags ??
     localRecord?.analysis?.tags ??
@@ -224,6 +228,7 @@ const buildDreamResultViewModel = ({
     summary,
     interpretation,
     videoUrl,
+    mediaId,
     tags,
   };
 };
@@ -321,6 +326,7 @@ export default function ResultViewScreen() {
           summary: extractDreamSummary(data),
           interpretation: extractDreamInterpretation(data),
           videoUrl: extractDreamVideoUrl(data),
+          mediaId: extractDreamMediaId(data),
           tags: extractDreamTags(data),
         });
       } catch (error) {
@@ -538,6 +544,7 @@ export default function ResultViewScreen() {
           ...(prev ?? {}),
           dreamId: dreamResult.dreamId,
           videoUrl,
+          mediaId: getParamNumber(videoRes.mediaId),
         }));
 
         if (dreamResult.localId) {
@@ -567,7 +574,10 @@ export default function ResultViewScreen() {
 
   const handleShareKakao = async () => {
     if (!KAKAO_APP_KEY) {
-      Alert.alert("오류", "카카오 앱 키가 설정되지 않았습니다.");
+      showDialog({
+        title: "오류",
+        message: "카카오 앱 키가 설정되지 않았어요.",
+      });
       return;
     }
 
@@ -639,10 +649,10 @@ export default function ResultViewScreen() {
         await shareWithSystemSheet();
       } catch (fallbackError) {
         console.error("시스템 공유 실패:", fallbackError);
-        Alert.alert(
-          "오류",
-          "공유에 실패했습니다. 카카오 개발자 콘솔의 네이티브 앱 키, 패키지명, 키 해시 설정을 확인해주세요.",
-        );
+        showDialog({
+          title: "오류",
+          message: "공유를 완료하지 못했어요. 카카오 설정을 확인한 뒤 다시 시도해 주세요.",
+        });
       }
     }
   };
@@ -677,6 +687,7 @@ export default function ResultViewScreen() {
           ? { dreamId: String(dreamResult.dreamId) }
           : {}),
         ...(dreamResult.videoUrl ? { videoUrl: dreamResult.videoUrl } : {}),
+        ...(dreamResult.mediaId ? { mediaId: String(dreamResult.mediaId) } : {}),
       },
     } as any);
   };
@@ -705,7 +716,7 @@ export default function ResultViewScreen() {
         message: "이미지가 갤러리에 저장되었습니다.",
       });
     } catch (error) {
-      showDialog({ title: "오류", message: "이미지 저장에 실패했습니다." });
+      showDialog({ title: "오류", message: "이미지를 저장하지 못했어요. 잠시 후 다시 시도해 주세요." });
       console.error(error);
     }
   };
@@ -751,7 +762,7 @@ export default function ResultViewScreen() {
           <Text style={styles.sectionLabel}>꿈 해몽</Text>
           <View style={styles.optionsWrapper}>
             <Text style={styles.interpretationText}>
-              {dreamResult.interpretation || "아직 해몽이 없습니다."}
+              {dreamResult.interpretation || "아직 해몽이 없어요."}
             </Text>
           </View>
         </ScrollView>

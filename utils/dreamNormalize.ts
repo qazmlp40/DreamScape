@@ -7,6 +7,10 @@ export const getParamValue = (value: unknown) => {
 };
 
 export const getParamNumber = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
   const rawValue = getParamValue(value);
   if (!rawValue) {
     return undefined;
@@ -187,6 +191,28 @@ export const extractDreamVideoUrl = (dream: any) => {
     getNestedValue(dream, ["record.mediaUrl"]),
     getNestedValue(dream, ["record.videoUrl"]),
   ) ?? "";
+};
+
+export const extractDreamMediaId = (dream: any) => {
+  const mediaId = Number(
+    getNestedValue(dream, [
+      "mediaId",
+      "media_id",
+      "video.mediaId",
+      "video.media_id",
+      "media.id",
+      "media.mediaId",
+      "media.media_id",
+      "dreamMedia.id",
+      "dreamMedia.mediaId",
+      "result.mediaId",
+      "result.media_id",
+      "dream.mediaId",
+      "record.mediaId",
+    ]),
+  );
+
+  return Number.isFinite(mediaId) ? mediaId : undefined;
 };
 
 export const extractDreamTags = (dream: any) => {

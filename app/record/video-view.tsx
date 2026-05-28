@@ -39,6 +39,10 @@ const getParamValue = (value: unknown) => {
 };
 
 const getParamNumber = (value: unknown) => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
     const rawValue = getParamValue(value);
     if (!rawValue) {
         return undefined;
@@ -60,6 +64,9 @@ export default function VideoViewScreen() {
     const [feedbackReason, setFeedbackReason] = useState('');
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
     const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
+    const [resolvedMediaId, setResolvedMediaId] = useState<number | undefined>(
+        getParamNumber(params.mediaId),
+    );
     const [videoError, setVideoError] = useState<string | null>(null);
     const [videoReloadKey, setVideoReloadKey] = useState(0);
     const [showReplayButton, setShowReplayButton] = useState(false);
@@ -99,7 +106,8 @@ export default function VideoViewScreen() {
         setSelectedRating(0);
         setFeedbackReason('');
         setShowReplayButton(false);
-    }, [dreamIdParam, localId, remoteDreamId]);
+        setResolvedMediaId(getParamNumber(params.mediaId));
+    }, [dreamIdParam, localId, remoteDreamId, params.mediaId]);
 
     useEffect(() => {
         let isCancelled = false;
@@ -123,7 +131,7 @@ export default function VideoViewScreen() {
             // 리뷰 모드일 땐 영상 재생성 안되게 함
             if (isReviewMode) {
                 console.log("[VideoView] review mode + videoUrl 없음: 영상 재생성 중단");
-                setVideoError('저장된 영상이 없습니다.');
+                setVideoError('저장된 영상이 없어요.');
                 return;
             }
 
@@ -159,6 +167,7 @@ export default function VideoViewScreen() {
                 }
 
                 if (!isCancelled) {
+                    setResolvedMediaId(getParamNumber(videoRes?.mediaId));
                     setResolvedVideoUrl(nextVideoUrl);
                 }
             } catch (error) {
@@ -243,7 +252,7 @@ export default function VideoViewScreen() {
             showDialog({ title: '안내', message: '목 버전에서는 영상 저장 기능이 아직 비활성화되어 있어요.' });
         } catch (error) {
             console.error('영상 저장 오류:', error);
-            showDialog({ title: '오류', message: '영상 저장에 실패했습니다.' });
+            showDialog({ title: '오류', message: '영상을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.' });
         }
     };
 
@@ -281,12 +290,22 @@ export default function VideoViewScreen() {
                 JSON.stringify(feedbackList),
             );
 
+            if (!resolvedMediaId) {
+                throw new Error('평가 대상 mediaId가 없습니다.');
+            }
+
+            await dreamApi.saveMediaRating({
+                mediaId: resolvedMediaId,
+                rating: selectedRating,
+                comment: feedbackReason.trim(),
+            });
+
             navigateToHome();
         } catch (error) {
             console.error('꿈 영상 평가 저장 실패:', error);
             showDialog({
                 title: '오류',
-                message: '평가를 저장하지 못했어요. 잠시 후 다시 시도해주세요.',
+                message: '평가를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.',
             });
         } finally {
             setIsSubmittingFeedback(false);
@@ -306,7 +325,6 @@ export default function VideoViewScreen() {
                                 style={styles.video}
                                 resizeMode={ResizeMode.COVER}
                                 shouldPlay={!showReplayButton}
-                                rate={0.5}
                                 shouldCorrectPitch
                                 onPlaybackStatusUpdate={(status) => {
                                     if (status.isLoaded && status.didJustFinish) {
@@ -327,7 +345,7 @@ export default function VideoViewScreen() {
                             <View style={styles.videoStateCard}>
                                 <Text style={styles.videoStateTitle}>{videoError}</Text>
                                 <Text style={styles.videoStateMessage}>
-                                    잠시 후 다시 시도해주세요.
+                                    잠시 후 다시 시도해 주세요.
                                 </Text>
                                 <Pressable
                                     style={styles.retryButton}
@@ -357,7 +375,7 @@ export default function VideoViewScreen() {
                         ) : (
                             <View style={styles.loadingCard}>
                                 <Text style={styles.loadingTitle}>꿈 영상을 불러오는 중이에요</Text>
-                                <Text style={styles.loadingText}>영상을 생성하고 있어요. 잠시만 기다려주세요</Text>
+                                <Text style={styles.loadingText}>장면을 영상으로 정리하는 중이에요</Text>
                             </View>
                         )}
                         {resolvedVideoUrl && showReplayButton ? (
@@ -382,7 +400,7 @@ export default function VideoViewScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="이전 화면으로 이동"
                         >
-                            <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
+                            <Ionicons name="arrow-back" size={26} color="#FFFFFF" />
                         </Pressable>
                         <Pressable
                             style={styles.reviewIconButton}
@@ -436,7 +454,7 @@ export default function VideoViewScreen() {
                             <Text style={styles.ratingCaption}>
                                 {selectedRating
                                     ? `${selectedRating}점으로 평가했어요`
-                                    : '1점에서 5점 사이로 선택해주세요'}
+                                    : '1점에서 5점 사이로 선택해 주세요'}
                             </Text>
 
                             {selectedRating > 0 && selectedRating <= 3 ? (
@@ -543,7 +561,7 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: '700',
         color: '#FFFFFF',
-        letterSpacing: -0.4,
+        letterSpacing: 0,
         textAlign: 'center',
     },
     loadingText: {
@@ -557,8 +575,8 @@ const styles = StyleSheet.create({
     videoStateCard: {
         width: '100%',
         maxWidth: 320,
-        minHeight: 120,
-        borderRadius: 12,
+        minHeight: 132,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: 'rgba(255, 255, 255, 0.96)',

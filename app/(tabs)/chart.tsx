@@ -1067,7 +1067,7 @@ const Chart = () => {
   
       const userIdStr = await AsyncStorage.getItem("userId");
       if (!userIdStr) {
-        setChartError("userId가 없습니다.");
+        setChartError("로그인 정보가 없어요. 다시 로그인해 주세요.");
         return;
       }
   
@@ -1112,7 +1112,7 @@ const Chart = () => {
       setTopKeywords(data?.topKeywords ?? []);
     } catch (error) {
       console.error("차트 조회 실패:", error);
-      setChartError("차트 데이터를 불러오지 못했습니다.");
+      setChartError("차트 데이터를 불러오지 못했어요.");
       setChartData({
         happy: 0,
         sad: 0,
@@ -1188,7 +1188,7 @@ const Chart = () => {
         style={{
           flexDirection: "row",
           justifyContent: "space-between",
-          paddingTop: s(20),
+          paddingTop: s(16),
           paddingHorizontal: s(16),
         }}
       >
@@ -1381,7 +1381,7 @@ const Chart = () => {
         style={{
           position: "absolute",
           paddingHorizontal: s(16),
-          marginTop: s(183),
+          marginTop: s(172),
         }}
       >
         {displayValue > 0 && (
@@ -1396,7 +1396,7 @@ const Chart = () => {
       </View>
 
       {/* 감정 바 차트 + 키워드 */}
-      <View style={{ position: "absolute", width: "100%", marginTop: s(282) }}>
+      <View style={{ position: "absolute", width: "100%", marginTop: s(268) }}>
         <EmotionBarChart
           emotions={EMOTIONS}
           data={currentEmotionData}
@@ -1416,7 +1416,7 @@ const Chart = () => {
             width: "100%",
             height: s(8),
             backgroundColor: "#EEE",
-            marginTop: s(28),
+            marginTop: s(22),
             marginBottom: s(8),
             marginRight: s(8),
           }}

@@ -5,15 +5,17 @@ type Props = {
   title?: string;
   message?: string;
   children?: ReactNode;
+  action?: ReactNode;
   style?: ViewStyle;
 };
 
-export default function EmptyStateCard({ title, message, children, style }: Props) {
+export default function EmptyStateCard({ title, message, children, action, style }: Props) {
   return (
     <View style={[styles.card, style]}>
       {children}
       {!!title && <Text style={styles.title}>{title}</Text>}
       {!!message && <Text style={styles.message}>{message}</Text>}
+      {!!action && <View style={styles.action}>{action}</View>}
     </View>
   );
 }
@@ -21,8 +23,8 @@ export default function EmptyStateCard({ title, message, children, style }: Prop
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    minHeight: 120,
-    borderRadius: 12,
+    minHeight: 132,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
@@ -43,5 +45,10 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     lineHeight: 18,
     textAlign: 'center',
+  },
+  action: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 18,
   },
 });

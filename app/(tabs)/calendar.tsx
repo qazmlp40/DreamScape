@@ -1,4 +1,5 @@
 import NoteIcon from "@/assets/images/icons/note_mini.svg";
+import EmptyStateCard from "@/components/app/EmptyStateCard";
 import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -372,7 +373,7 @@ export default function CalendarScreen() {
     if (isFutureDateString(selectedDate)) {
       showDialog({
         title: "미래 날짜 선택 불가",
-        message: "오늘 이후 날짜에는 꿈을 기록할 수 없습니다.",
+        message: "오늘 이후 날짜에는 꿈을 기록할 수 없어요.",
       });
       return;
     }
@@ -429,7 +430,7 @@ export default function CalendarScreen() {
     if (isFutureDateString(day.dateString)) {
       showDialog({
         title: "미래 날짜 선택 불가",
-        message: "오늘 이후 날짜는 선택할 수 없습니다.",
+        message: "오늘 이후 날짜는 선택할 수 없어요.",
       });
       return;
     }
@@ -467,8 +468,8 @@ export default function CalendarScreen() {
 
       {/* 🔥 SafeAreaView로 감싸기 (홈과 동일) */}
       <SafeAreaView style={styles.safeContentArea}>
-        {/* 🔥 상단 헤더 - 홈 스타일 적용 */}
-        <View style={styles.topHeader}>
+        {/* 상단 헤더 */}
+        <View style={styles.chartStyleHeader}>
           <Text style={styles.headerTitle}>꿈 캘린더</Text>
 
           {hasDreamRecord && (
@@ -558,22 +559,25 @@ export default function CalendarScreen() {
           </View>
 
           {isLoading ? (
-            <View style={styles.emptyBox}>
+            <EmptyStateCard title="꿈 기록을 불러오는 중이에요" style={styles.emptyBox}>
               <ActivityIndicator size="small" color={colors.recordButtonColor} />
-              <Text style={styles.emptyText}>꿈 기록을 불러오는 중이에요</Text>
-            </View>
+            </EmptyStateCard>
           ) : isError ? (
-            <View style={styles.emptyBox}>
+            <EmptyStateCard
+              title="꿈 기록을 불러오지 못했어요"
+              style={styles.emptyBox}
+              action={
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  activeOpacity={0.8}
+                  onPress={loadDreams}
+                >
+                  <Text style={styles.retryButtonText}>다시 시도</Text>
+                </TouchableOpacity>
+              }
+            >
               <NoteIcon />
-              <Text style={styles.emptyText}>꿈 기록을 불러오지 못했어요</Text>
-              <TouchableOpacity
-                style={styles.retryButton}
-                activeOpacity={0.8}
-                onPress={loadDreams}
-              >
-                <Text style={styles.retryButtonText}>다시 시도</Text>
-              </TouchableOpacity>
-            </View>
+            </EmptyStateCard>
           ) : hasDreamRecord ? (
             // 기록이 있을 때
             <>
@@ -610,7 +614,7 @@ export default function CalendarScreen() {
                         {dream.dreamText ||
                           dream.summary ||
                           dream.interpretation ||
-                          "아직 해몽이 없습니다."}
+                          "아직 해몽이 없어요."}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -619,12 +623,9 @@ export default function CalendarScreen() {
           ) : isEmpty ? (
             // 기록이 없을 때
             <>
-              <View style={styles.emptyBox}>
+              <EmptyStateCard title="아직 꿈을 기록하지 않았어요!" style={styles.emptyBox}>
                 <NoteIcon />
-                <Text style={styles.emptyText}>
-                  아직 꿈을 기록하지 않았어요!
-                </Text>
-              </View>
+              </EmptyStateCard>
             </>
           ) : null}
         </ScrollView>
@@ -660,27 +661,24 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: REQUIRED_BOTTOM_PADDING,
   },
 
-  // 🔥 상단 헤더 - 홈 스타일 적용
-  topHeader: {
+  chartStyleHeader: {
     width: "100%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 0, // SafeAreaView가 처리
-    paddingBottom: 16,
+    paddingLeft: 16,
+    paddingRight: 20,
+    paddingTop: 16,
   },
 
-  // 🔥 헤더 타이틀 - 홈과 동일한 스타일
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: colors.text,
-    marginLeft: -4,
   },
 
   editButton: {
@@ -695,17 +693,19 @@ const styles = StyleSheet.create({
     width: CALENDAR_WIDTH,
     backgroundColor: "#FFF",
     marginTop: scale(16),
-    borderRadius: scale(16),
+    borderRadius: scale(8),
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingBottom: scale(12),
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
     }),
   },
@@ -877,15 +877,18 @@ const styles = StyleSheet.create({
 
   interpretationCard: {
     width: "100%",
-    padding: scale(14),
+    minHeight: scale(132),
+    padding: scale(16),
     backgroundColor: "#FFFFFF",
-    borderRadius: scale(12),
+    borderRadius: scale(8),
+    borderWidth: 1,
+    borderColor: colors.border,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.12,
-        shadowRadius: 2,
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
       },
       android: {
         elevation: 2,
@@ -940,18 +943,21 @@ const styles = StyleSheet.create({
   // 빈 상태 박스
   emptyBox: {
     width: scale(380),
+    minHeight: scale(132),
     paddingVertical: scale(32),
     paddingHorizontal: scale(16),
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: scale(16),
+    borderRadius: scale(8),
     backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: colors.border,
     ...Platform.select({
       ios: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.15,
-        shadowRadius: 1,
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
       },
       android: {
         elevation: 2,
@@ -981,7 +987,6 @@ const styles = StyleSheet.create({
   retryButton: {
     height: scale(40),
     minWidth: scale(112),
-    marginTop: scale(18),
     paddingHorizontal: scale(18),
     borderRadius: scale(8),
     backgroundColor: colors.recordButtonColor,

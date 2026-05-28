@@ -7,6 +7,7 @@ import { router, Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useState } from 'react';
 import {
+  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -16,11 +17,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import GoogleIcon from './Icons/google.svg';
-import Logo from './Icons/logo';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export const BASE_WIDTH = 412;
+const DREAMSCAPE_LOGO = require('../../assets/images/dreamscape-logo-stacked.png');
 
 function useScale() {
   const width = useWindowDimensions().width;
@@ -52,7 +53,7 @@ const Input: React.FC<InputProps> = ({ value, setValue, placeholder, secureTextE
         style={[
           styles.input,
           error && styles.input_error,
-          { paddingHorizontal: s(16), paddingVertical: s(20) },
+          { height: s(56), paddingHorizontal: s(16) },
         ]}
         onChangeText={setValue}
         value={value}
@@ -78,7 +79,7 @@ const CompleteBtn: React.FC<CompleteBtnProps> = ({ onPress, disabled = false, ti
       style={[
         styles.button,
         disabled ? styles.button_disabled : styles.button_active,
-        { height: s(60) },
+        { height: s(56) },
       ]}
       onPress={disabled ? undefined : onPress}
     >
@@ -168,7 +169,7 @@ const Login: React.FC = () => {
       if (e.name === 'AbortError') {
         setGlobalErr('서버 응답 시간이 초과되었습니다. 네트워크 상태를 확인해 주세요.');
       } else {
-        setGlobalErr(`서버 연결에 실패했습니다: ${API_BASE_URL}`);
+        setGlobalErr('서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.');
       }
     } finally {
       setLoading(false);
@@ -189,7 +190,7 @@ const Login: React.FC = () => {
 
       if (result.type !== 'success' || !('url' in result) || !result.url) {
         if (result.type !== 'cancel' && result.type !== 'dismiss') {
-          setGoogleErr('구글 로그인 흐름을 완료하지 못했습니다.');
+          setGoogleErr('구글 로그인을 완료하지 못했어요.');
         }
         return;
       }
@@ -221,13 +222,13 @@ const Login: React.FC = () => {
       }
 
       if (!accessToken) {
-        setGoogleErr('구글 로그인 응답에 accessToken 이 없습니다.');
+        setGoogleErr('구글 로그인 정보를 확인하지 못했어요.');
         return;
       }
 
       await completeLogin(accessToken, userId, refreshToken);
     } catch {
-      setGoogleErr(`구글 로그인 연결에 실패했습니다: ${API_BASE_URL}`);
+      setGoogleErr('구글 로그인에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {
       setGoogleLoading(false);
     }
@@ -237,13 +238,17 @@ const Login: React.FC = () => {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
-        <View style={[styles.logo_container, { marginTop: s(116), marginBottom: s(32) }]}>
-          <Logo />
+        <View style={[styles.logo_container, { marginTop: s(72) }]}>
+          <Image
+            source={DREAMSCAPE_LOGO}
+            style={[styles.logoImage, { width: s(224), height: s(118) }]}
+            resizeMode="contain"
+          />
         </View>
 
-        <View style={[styles.input_container, { marginTop: s(32), marginHorizontal: s(32) }]}>
+        <View style={[styles.form_container, { marginTop: s(52), marginHorizontal: s(32) }]}>
           <Input value={userID} setValue={setUserID} placeholder="이메일" />
-          <View style={{ height: 32 }} />
+          <View style={{ height: s(16) }} />
           <Input
             value={userPW}
             setValue={setUserPW}
@@ -254,46 +259,51 @@ const Login: React.FC = () => {
           {!!globalErr && (
             <Text style={[styles.error_text, { marginTop: s(8) }]}>{globalErr}</Text>
           )}
-        </View>
 
-        <View style={[styles.link_container, { marginTop: s(16), marginHorizontal: s(32) }]}>
-          <Text style={styles.link}>아이디 비밀번호 찾기 |</Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-            <Text style={styles.link}> 회원가입하기</Text>
+          <TouchableOpacity style={[styles.find_link, { marginTop: s(14) }]}>
+            <Text style={styles.link}>아이디/비밀번호 찾기</Text>
           </TouchableOpacity>
-        </View>
 
-        <View
-          style={[
-            styles.button_container,
-            { position: 'absolute', left: s(16), right: s(16), bottom: s(23) },
-          ]}
-        >
-          <CompleteBtn
-            onPress={handleLogin}
-            disabled={isDisabled || loading}
-            title={loading ? '처리중..' : '완료'}
-          />
-        </View>
+          <View style={{ marginTop: s(22) }}>
+            <CompleteBtn
+              onPress={handleLogin}
+              disabled={isDisabled || loading}
+              title={loading ? '로그인 중..' : '로그인'}
+            />
+          </View>
 
-        <View style={[styles.google_container, { marginTop: s(44) }]}>
-          <View style={styles.google_divider_container}>
-            <View style={[styles.divider, { width: s(125), marginRight: s(16) }]} />
+          <View style={[styles.google_divider_container, { marginTop: s(34) }]}>
+            <View style={[styles.divider, { flex: 1, marginRight: s(12) }]} />
             <Text style={styles.google_text1}>간편 로그인</Text>
-            <View style={[styles.divider, { width: s(125), marginLeft: s(16) }]} />
+            <View style={[styles.divider, { flex: 1, marginLeft: s(12) }]} />
           </View>
 
-          <View style={[styles.google_btn_container, { marginTop: s(32) }]}>
-            <TouchableOpacity onPress={handleGoogleLogin} disabled={googleLoading}>
-              <GoogleIcon />
-            </TouchableOpacity>
-            <Text style={[styles.google_text2, { marginTop: s(8) }]}>
-              {googleLoading ? '로그인 중..' : '구글'}
+          <TouchableOpacity
+            style={[styles.google_button, { height: s(56), marginTop: s(18) }]}
+            onPress={handleGoogleLogin}
+            disabled={googleLoading}
+            activeOpacity={0.82}
+          >
+            <View style={styles.google_icon_wrap}>
+              <GoogleIcon width={22} height={22} />
+            </View>
+            <Text style={styles.google_text2}>
+              {googleLoading ? '로그인 중..' : 'Google로 계속하기'}
             </Text>
-            {!!googleErr && (
-              <Text style={[styles.error_text, { marginTop: s(8) }]}>{googleErr}</Text>
-            )}
-          </View>
+          </TouchableOpacity>
+
+          {!!googleErr && (
+            <Text style={[styles.error_text, { marginTop: s(8), textAlign: 'center' }]}>
+              {googleErr}
+            </Text>
+          )}
+        </View>
+
+        <View style={[styles.signup_container, { marginBottom: s(26) }]}>
+          <Text style={styles.signup_text}>계정이 없으신가요?</Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
+            <Text style={styles.signup_link}> 회원가입</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -312,20 +322,22 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  input_container: {},
-  link_container: {
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+  logoImage: {
+    alignSelf: 'center',
+  },
+  form_container: {
+    width: 'auto',
+  },
+  find_link: {
+    alignSelf: 'flex-end',
   },
   link: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Roboto-Regular',
-    color: '#999',
+    color: '#8B8B8B',
     textAlign: 'left',
     fontWeight: '400',
   },
-  button_container: {},
   error_text: {
     color: '#FF3D3D',
     fontSize: 12,
@@ -338,12 +350,13 @@ const styles = StyleSheet.create({
     boxShadow: '0px 0px 1.5px rgba(0, 0, 0, 0.25)' as any,
     flexDirection: 'row',
     alignItems: 'center',
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Roboto-Nomal',
-    color: '#999',
+    color: '#282828',
     textAlign: 'left',
     fontWeight: '400',
     borderRadius: 8,
+    backgroundColor: '#FFFFFF',
   },
   input_error: {
     width: '100%',
@@ -352,8 +365,6 @@ const styles = StyleSheet.create({
     boxShadow: '0px 0px 1.5px rgba(0, 0, 0, 0.25)' as any,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
     borderRadius: 8,
   },
   button: {
@@ -377,20 +388,17 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#999',
+    backgroundColor: '#E5E7EB',
   },
   google_text1: {
-    color: '#474747',
-    fontSize: 14,
+    color: '#8B8B8B',
+    fontSize: 13,
     fontWeight: '400',
   },
   google_text2: {
-    color: '#000',
-    fontSize: 14,
-    fontWeight: '400',
-  },
-  google_container: {
-    width: '100%',
+    color: '#282828',
+    fontSize: 15,
+    fontWeight: '600',
   },
   google_divider_container: {
     width: '100%',
@@ -398,9 +406,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  google_btn_container: {
+  google_button: {
     width: '100%',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 10,
+  },
+  google_icon_wrap: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signup_container: {
+    marginTop: 'auto',
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signup_text: {
+    fontSize: 14,
+    color: '#8B8B8B',
+    fontFamily: 'Roboto-Regular',
+    fontWeight: '400',
+  },
+  signup_link: {
+    fontSize: 14,
+    color: '#BB7CFF',
+    fontFamily: 'Roboto-Regular',
+    fontWeight: '700',
   },
 });

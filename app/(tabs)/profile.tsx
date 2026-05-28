@@ -60,17 +60,19 @@ const profileMenuBtnStyles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: 8,
     backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
 
     // iOS Shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.06,
-    shadowRadius: 5,
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
 
     // Android Shadow
-    elevation: 5,
+    elevation: 2,
   },
   label: {
     color: '#282828',
@@ -192,7 +194,7 @@ const Profile = () => {
       if (!userId || !accessToken) {
         showDialog({
           title: '오류',
-          message: '회원 정보를 찾을 수 없습니다. 다시 로그인 해주세요.',
+          message: '회원 정보를 찾지 못했어요. 다시 로그인해 주세요.',
         });
         return;
       }
@@ -207,8 +209,8 @@ const Profile = () => {
   
       if (!res.ok) {
         showDialog({
-          title: '탈퇴 실패',
-          message: `회원탈퇴 요청에 실패했습니다. (${res.status})`,
+          title: '오류',
+          message: '회원 탈퇴를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.',
         });
         return;
       }
@@ -220,7 +222,7 @@ const Profile = () => {
       console.error('회원탈퇴 처리 중 오류:', error);
       showDialog({
         title: '오류',
-        message: '회원탈퇴 중 문제가 발생했습니다.',
+        message: '회원 탈퇴를 완료하지 못했어요. 잠시 후 다시 시도해 주세요.',
       });
     }
   };
@@ -229,7 +231,11 @@ const Profile = () => {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={styles.container}>
-        <View style={[styles.menu_container, { marginTop: s(44) }]}>
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { fontSize: s(18) }]}>프로필</Text>
+        </View>
+
+        <View style={[styles.menu_container, { marginTop: s(16) }]}>
           <Profile_Menu_Btn
             label={'프로필 설정'}
             icon={<Profile_Icon />}
@@ -282,6 +288,16 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     flex: 1,
+  },
+  header: {
+    width: '100%',
+    paddingLeft: 16,
+    paddingTop: 16,
+  },
+  headerTitle: {
+    color: '#1F2937',
+    fontFamily: 'Roboto',
+    fontWeight: '700',
   },
   menu_container: {
     width: '100%',

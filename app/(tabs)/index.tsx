@@ -5,6 +5,7 @@ import { Link, Stack } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Platform,
   Pressable,
   SafeAreaView,
@@ -37,7 +38,10 @@ const colors = {
 
 const FIXED_BUTTON_HEIGHT = 60;
 const IOS_SAFE_AREA_INSET = Platform.OS === 'ios' ? 34 : 0;
-const REQUIRED_BOTTOM_PADDING = 72 + FIXED_BUTTON_HEIGHT + 16 + 20;
+const PRIMARY_BUTTON_BOTTOM = 0;
+const CARD_TO_BUTTON_GAP = 48;
+const REQUIRED_BOTTOM_PADDING = PRIMARY_BUTTON_BOTTOM + FIXED_BUTTON_HEIGHT + CARD_TO_BUTTON_GAP;
+const DREAMSCAPE_LOGO_WIDE = require('../../assets/images/dreamscape-logo-wide.png');
 
 type HomeDream = {
   id: string;
@@ -131,6 +135,14 @@ export default function TabsIndex() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.header}>
+            <Image
+              source={DREAMSCAPE_LOGO_WIDE}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+          </View>
+
           <View style={styles.heroSection}>
             <NoteIcon />
             <Text style={styles.heroText}>오늘의 꿈을 기록해보세요</Text>
@@ -203,7 +215,7 @@ export default function TabsIndex() {
                         {dream.dreamText ||
                           dream.summary ||
                           dream.interpretation ||
-                          '아직 해몽이 없습니다.'}
+                          '아직 해몽이 없어요.'}
                       </Text>
                     </Pressable>
                   </Link>
@@ -247,11 +259,20 @@ const styles = StyleSheet.create({
     paddingBottom: REQUIRED_BOTTOM_PADDING,
     alignItems: 'center',
   },
+  header: {
+    width: '100%',
+    paddingTop: 16,
+    alignItems: 'flex-start',
+  },
+  headerLogo: {
+    width: 150,
+    height: 27,
+  },
   heroSection: {
     width: '100%',
     alignItems: 'center',
-    marginTop: 124,
-    marginBottom: 48,
+    marginTop: 84,
+    marginBottom: 32,
   },
   heroText: {
     color: '#1A1A1A',
@@ -271,6 +292,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 380,
     gap: 12,
+    marginBottom: CARD_TO_BUTTON_GAP,
   },
   stateBox: {
     width: '100%',
@@ -357,7 +379,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
-    bottom: IOS_SAFE_AREA_INSET - 20,
+    bottom: PRIMARY_BUTTON_BOTTOM,
     left: 18,
     right: 18,
     zIndex: 10,

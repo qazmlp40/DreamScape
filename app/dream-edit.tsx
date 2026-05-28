@@ -101,7 +101,14 @@ export default function DreamEditScreen() {
                 if (foundDream) {
                     const normalizedDream = {
                         dreamId: Number(foundDream.dreamId ?? foundDream.id ?? dreamId),
-                        date: String(foundDream.date ?? foundDream.dreamDate ?? foundDream.createdAt ?? dreamDate ?? '').slice(0, 10),
+                        date: String(
+                            foundDream.date ??
+                            foundDream.dreamDate ??
+                            foundDream.recordedAt ??
+                            dreamDate ??
+                            foundDream.createdAt ??
+                            '',
+                        ).slice(0, 10),
                         mood: (() => {
                             const mood = String(foundDream.mood ?? foundDream.emotion ?? '7').trim();
                             switch (mood) {
@@ -225,7 +232,7 @@ export default function DreamEditScreen() {
 
     const handleComplete = async () => {
         if (!dreamText.trim()) {
-            showDialog({ title: '알림', message: '꿈 내용을 입력해주세요.' });
+            showDialog({ title: '안내', message: '꿈 내용을 입력해 주세요.' });
             return;
         }
 
@@ -262,7 +269,7 @@ export default function DreamEditScreen() {
             console.error('Dream update error:', error);
             showDialog({
                 title: '오류',
-                message: '꿈 수정에 실패했어요. 잠시 후 다시 시도해주세요.',
+                message: '꿈을 수정하지 못했어요. 잠시 후 다시 시도해 주세요.',
             });
         }
     };
@@ -326,6 +333,7 @@ export default function DreamEditScreen() {
                 {/* 헤더 */}
                 <RecordHeader 
                     title="꿈 수정하기" 
+                    backIcon="arrow-back"
                     onBackPress={handleBack}
                 />
                 
@@ -367,7 +375,7 @@ export default function DreamEditScreen() {
                 ]}>
                     <TextInput
                         style={styles.textInput}
-                        placeholder="꿈 내용을 입력해주세요..."
+                        placeholder="꿈 내용을 입력해 주세요..."
                         placeholderTextColor={colors.placeholder}
                         multiline
                         textAlignVertical="top"

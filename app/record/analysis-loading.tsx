@@ -396,7 +396,7 @@ export default function AnalysisLoadingScreen() {
             />
           </Animated.View>
         </View>
-        <Text style={styles.loadingTitle}>로딩 중</Text>
+        <Text style={styles.loadingTitle}>꿈 기록을 분석하는 중이에요</Text>
         <Text style={styles.loadingText}>
           장면과 감정을 정리해서 해석을 준비하는 중이에요
         </Text>
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: colors.accentText,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
     textAlign: "center",
   },
   loadingText: {

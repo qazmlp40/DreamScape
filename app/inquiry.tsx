@@ -1,4 +1,4 @@
-
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -20,20 +20,6 @@ function useScale() {
   const s = (px: number) => px * (width / BASE_WIDTH);
   return { s, width };
 }
-
-/* -----------------------------------------
-📌 Back_Btn (병합)
------------------------------------------- */
-import Svg, { Path } from "react-native-svg";
-const Back_Btn = () => {
-  const { s } = useScale();
-  const W = 48, H = 48;
-  return (
-    <Svg width={s(W)} height={s(H)} viewBox="0 0 48 48" fill="none">
-      <Path d="M27.4102 19.4102L22.8301 24L27.4102 28.5898L26 30L20 24L26 18L27.4102 19.4102Z" fill="#2E2E34"/>
-    </Svg>
-  );
-};
 
 /* -----------------------------------------
 📌 Profile_input (병합)
@@ -118,7 +104,7 @@ const Inquiry = () => {
         ]}
       >
         <TouchableOpacity style={{ zIndex: 1 }} onPress={() => router.back()}>
-          <Back_Btn />
+          <Ionicons name="arrow-back" size={s(24)} color="#2E2E34" />
         </TouchableOpacity>
         <Text style={styles.header_text}>문의하기</Text>
       </View>

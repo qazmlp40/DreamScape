@@ -14,6 +14,9 @@ type MockDreamRecord = {
   aiInterpretation?: string;
   tags?: string[];
   mediaUrl?: string;
+  date?: string;
+  dreamDate?: string;
+  recordedAt?: string;
   createdAt: string;
 };
 
@@ -30,7 +33,7 @@ export const getMockDreamById = (dreamId: number) => {
 
 const buildMockSummary = (dreamText: string) => {
   const trimmed = dreamText.trim();
-  if (!trimmed) return "기록된 꿈이 아직 없습니다.";
+  if (!trimmed) return "기록된 꿈이 아직 없어요.";
   return trimmed.length > 60 ? `${trimmed.slice(0, 60)}...` : trimmed;
 };
 
@@ -41,6 +44,9 @@ const buildMockInterpretation = (mood: string) => {
 
 type DreamClientPatch = {
   title?: string;
+  date?: string;
+  dreamDate?: string;
+  recordedAt?: string;
   aiSummary?: string;
   aiInterpretation?: string;
   detectedKeywords?: string[];
@@ -115,7 +121,7 @@ export const dreamApi = {
     const userId = await AsyncStorage.getItem("userId");
 
     if (!userId) {
-      throw new Error("userId가 없습니다. 다시 로그인하세요.");
+      throw new Error("로그인 정보가 없어요. 다시 로그인해 주세요.");
     }
 
     if (DEV_MOCK_DREAMS) {
@@ -126,7 +132,10 @@ export const dreamApi = {
         title: data.title,
         rawText: data.dreamText,
         mood: data.mood,
-        createdAt: new Date().toISOString(),
+        date: data.date,
+        dreamDate: data.date,
+        recordedAt: `${data.date}T00:00:00`,
+        createdAt: `${data.date}T00:00:00`,
       };
       mockDreamStore.set(dreamId, mockDream);
       return { dreamId };
@@ -148,9 +157,20 @@ export const dreamApi = {
     });
 
     console.log("[DreamApi] saveDream raw response:", response.data);
+    const dreamId = Number(
+      response.data?.dreamId ?? response.data?.id ?? response.data?.dream_id,
+    );
+    if (Number.isFinite(dreamId)) {
+      await patchDreamClientCache(dreamId, {
+        date: data.date,
+        dreamDate: data.date,
+        recordedAt: `${data.date}T00:00:00`,
+      });
+    }
     console.log("[DreamApi] saveDream response date:", {
       date: response.data?.date,
       dreamDate: response.data?.dreamDate,
+      recordedAt: response.data?.recordedAt,
       createdAt: response.data?.createdAt,
     });
 
@@ -165,7 +185,7 @@ export const dreamApi = {
     console.log("token 있음?:", Boolean(token));
 
     if (!token || !userId) { // 토큰 없으면 꿈 목록 조회 못함
-      throw new Error("userId가 없습니다. 다시 로그인하세요.");
+      throw new Error("로그인 정보가 없어요. 다시 로그인해 주세요.");
     }
 
     if (DEV_MOCK_DREAMS) {
@@ -272,6 +292,25 @@ export const dreamApi = {
     return response.data;
   },
 
+  saveMediaRating: async (data: {
+    mediaId: number;
+    rating: number;
+    comment?: string;
+  }) => {
+    if (DEV_MOCK_DREAMS) {
+      return { message: "mock rating saved" };
+    }
+
+    console.log("[DreamApi] saveMediaRating request:", data);
+    const response = await api.post("/api/media/rating", {
+      mediaId: data.mediaId,
+      rating: data.rating,
+      comment: data.comment ?? "",
+    });
+    console.log("[DreamApi] saveMediaRating response:", response.data);
+    return response.data;
+  },
+
   // AI 영상 생성
   generateVideo: async (dreamId: number) => {
     if (DEV_MOCK_DREAMS) {
@@ -319,6 +358,14 @@ export const dreamApi = {
 
     try {
       return await request;
+    } catch (error: any) {
+      console.error("[DreamApi] generateVideo failed:", {
+        dreamId,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+      throw error;
     } finally {
       videoGeneratingPromises.delete(dreamId);
     }

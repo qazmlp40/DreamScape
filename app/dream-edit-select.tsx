@@ -1,4 +1,5 @@
 import NoteIcon from "@/assets/images/icons/note_mini.svg";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -186,7 +187,7 @@ export default function DreamEditSelectScreen() {
 
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>{"<"}</Text>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.headerTitle}>수정할 꿈 선택</Text>
         <View style={styles.backButton} />
@@ -255,11 +256,6 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: "center",
     justifyContent: "center",
-  },
-  backText: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: colors.text,
   },
   headerTitle: {
     fontSize: 18,

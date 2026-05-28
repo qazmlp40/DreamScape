@@ -1,4 +1,5 @@
 // Profile_Setting.tsx (useScale + Back_Btn + Profile_input + CompleteBtn 통합 버전)
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -12,7 +13,6 @@ import {
   View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 /* -----------------------------------------
 📌 useScale (통합)
@@ -25,30 +25,6 @@ function useScale() {
   const s = (px: number) => px * (width / BASE_WIDTH);
   return { s, width };
 }
-
-/* -----------------------------------------
-📌 Back_Btn (통합)
------------------------------------------- */
-
-const Back_Btn = () => {
-  const { s } = useScale();
-  const W = 48;
-  const H = 48;
-
-  return (
-    <Svg
-      width={s(W)}
-      height={s(H)}
-      viewBox="0 0 48 48"
-      fill="none"
-    >
-      <Path
-        d="M27.4102 19.4102L22.8301 24L27.4102 28.5898L26 30L20 24L26 18L27.4102 19.4102Z"
-        fill="#2E2E34"
-      />
-    </Svg>
-  );
-};
 
 /* -----------------------------------------
 📌 Profile_input (통합)
@@ -185,7 +161,7 @@ const Setting = () => {
         ]}
       >
         <TouchableOpacity style={{ zIndex: 1 }} onPress={() => navigation.goBack()}>
-          <Back_Btn />
+          <Ionicons name="arrow-back" size={s(24)} color="#2E2E34" />
         </TouchableOpacity>
         <Text style={styles.header_text}>프로필</Text>
       </View>
