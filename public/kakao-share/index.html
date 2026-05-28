@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>DreamScape 꿈 리플레이</title>
+    <meta
+      name="description"
+      content="DreamScape에서 기록한 꿈의 요약, 해몽, 영상 리플레이를 확인해 보세요."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="DreamScape" />
+    <meta property="og:title" content="DreamScape 꿈 리플레이" />
+    <meta
+      property="og:description"
+      content="기록한 꿈을 요약, 해몽, 영상으로 다시 보는 DreamScape 공유 페이지입니다."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#7C4DFF" />
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --line: #e7e0f7;
+        --brand: #7c4dff;
+        --brand-deep: #5b36d6;
+        --surface: #ffffff;
+        --wash: #f7f2ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+          "Noto Sans KR", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 20% 12%, rgba(124, 77, 255, 0.16), transparent 30%),
+          linear-gradient(180deg, #fbf8ff 0%, #ffffff 58%, #f6f0ff 100%);
+      }
+
+      main {
+        width: min(100%, 480px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: max(28px, env(safe-area-inset-top)) 22px
+          max(28px, env(safe-area-inset-bottom));
+        display: flex;
+        flex-direction: column;
+      }
+
+      .brand {
+        width: 164px;
+        height: auto;
+        margin: 12px 0 44px;
+        display: block;
+      }
+
+      .hero {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 22px;
+      }
+
+      .preview {
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        padding: 28px 24px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: 0 24px 70px rgba(73, 50, 128, 0.14);
+      }
+
+      .label {
+        margin: 0 0 12px;
+        color: var(--brand-deep);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 8vw, 42px);
+        line-height: 1.12;
+        letter-spacing: 0;
+      }
+
+      .summary {
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.65;
+      }
+
+      .symbolRow {
+        display: flex;
+        gap: 8px;
+        margin-top: 22px;
+        flex-wrap: wrap;
+      }
+
+      .symbol {
+        min-width: 42px;
+        height: 42px;
+        padding: 0 14px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--wash);
+        color: var(--brand-deep);
+        font-weight: 800;
+        font-size: 14px;
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      .button {
+        width: 100%;
+        min-height: 56px;
+        border: 0;
+        border-radius: 18px;
+        padding: 0 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .primary {
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+        box-shadow: 0 14px 32px rgba(124, 77, 255, 0.24);
+      }
+
+      .secondary {
+        color: var(--brand-deep);
+        background: #ffffff;
+        border: 1px solid var(--line);
+      }
+
+      .note {
+        margin: 14px 0 0;
+        color: #8b7ca9;
+        font-size: 13px;
+        line-height: 1.5;
+        text-align: center;
+      }
+
+      @media (min-width: 720px) {
+        main {
+          justify-content: center;
+        }
+
+        .brand {
+          margin-top: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg
+        class="brand"
+        viewBox="0 0 420 90"
+        role="img"
+        aria-label="DreamScape"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <text
+          x="0"
+          y="64"
+          fill="#744DA8"
+          font-size="58"
+          font-family="Arial Rounded MT Bold, Arial, sans-serif"
+          font-weight="900"
+        >
+          DreamScape
+        </text>
+      </svg>
+
+      <section class="hero">
+        <article class="preview">
+          <p class="label">DreamScape Share</p>
+          <h1 id="share-title">꿈 리플레이가 도착했어요</h1>
+          <p id="share-summary" class="summary">
+            기록한 꿈의 요약, 해몽, 영상 리플레이를 앱에서 이어서 확인해 보세요.
+          </p>
+          <div id="symbol-row" class="symbolRow" aria-label="꿈 키워드"></div>
+        </article>
+
+        <div class="actions">
+          <a id="open-app" class="button primary" href="dreamscape://record/result-view">
+            앱에서 꿈 보기
+          </a>
+          <a id="open-video" class="button secondary" href="#" hidden>영상 바로 보기</a>
+          <p class="note">앱이 열리지 않으면 DreamScape 설치 후 다시 눌러 주세요.</p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const title = params.get("title");
+      const summary = params.get("summary");
+      const openUrl = params.get("open");
+      const videoUrl = params.get("videoUrl");
+      const tags = (params.get("tags") || "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .slice(0, 4);
+
+      if (title) {
+        document.title = `${title} | DreamScape`;
+        document.getElementById("share-title").textContent = title;
+      }
+
+      if (summary) {
+        document.getElementById("share-summary").textContent = summary;
+      }
+
+      if (openUrl) {
+        document.getElementById("open-app").setAttribute("href", openUrl);
+      }
+
+      if (videoUrl) {
+        const videoButton = document.getElementById("open-video");
+        videoButton.removeAttribute("hidden");
+        videoButton.setAttribute("href", videoUrl);
+      }
+
+      if (tags.length) {
+        const row = document.getElementById("symbol-row");
+        tags.forEach((tag) => {
+          const chip = document.createElement("span");
+          chip.className = "symbol";
+          chip.textContent = tag;
+          row.appendChild(chip);
+        });
+      }
+    </script>
+  </body>
+</html>

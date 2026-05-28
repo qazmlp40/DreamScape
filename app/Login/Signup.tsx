@@ -434,11 +434,10 @@ const Signup: React.FC = () => {
               },
             ]}
           >
-            {/* 완료 버튼 - 제출 중일 때 "처리중..." 표시 */}
             <CompleteBtn
               onPress={handleSignup}
               disabled={isDisabled || isSubmitting}
-              title={isSubmitting ? "처리중..." : "완료"}
+              title={isSubmitting ? "가입 중.." : "회원가입"}
             />
           </View>
         </View>

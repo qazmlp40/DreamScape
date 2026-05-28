@@ -16,7 +16,7 @@ import { API_BASE_URL, APP_SCHEME, DEV_MOCK_DREAMS } from "../../constants/api";
 import {
   KAKAO_APP_KEY,
   KAKAO_SHARE_IMAGE_URL,
-  KAKAO_SHARE_WEB_URL,
+  buildKakaoSharePageUrl,
 } from "../../constants/kakao";
 import { useAppDialog } from "../../contexts/AppDialogContext";
 import {
@@ -585,10 +585,6 @@ export default function ResultViewScreen() {
     const publicVideoShareUrl = isPublicHttpsUrl(videoShareUrl)
       ? videoShareUrl
       : undefined;
-    const publicWebShareUrl = isPublicHttpsUrl(KAKAO_SHARE_WEB_URL)
-      ? KAKAO_SHARE_WEB_URL
-      : undefined;
-    const shareUrl = publicVideoShareUrl ?? publicWebShareUrl;
     const shareTitle = dreamResult.title || "제목없는 꿈";
     const shareDescription =
       dreamResult.summary ||
@@ -604,6 +600,17 @@ export default function ResultViewScreen() {
       }).filter(([, value]) => Boolean(value)),
     ) as Record<string, string>;
     const appShareUrl = buildAppShareUrl(appShareParams);
+    const sharePageUrl = buildKakaoSharePageUrl({
+      title: shareTitle,
+      summary: shareDescription,
+      open: appShareUrl,
+      ...(dreamResult.tags.length ? { tags: dreamResult.tags.join(",") } : {}),
+      ...(publicVideoShareUrl ? { videoUrl: publicVideoShareUrl } : {}),
+    });
+    const publicWebShareUrl = isPublicHttpsUrl(sharePageUrl)
+      ? sharePageUrl
+      : undefined;
+    const shareUrl = publicWebShareUrl ?? publicVideoShareUrl;
     const kakaoLink: KakaoTemplateLink = {
       androidExecutionParams: appShareParams,
       iosExecutionParams: appShareParams,
