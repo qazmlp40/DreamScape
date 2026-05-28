@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface DreamSymbolMapRepository extends JpaRepository<DreamSymbolMapEntity, Long> {
@@ -15,11 +15,11 @@ public interface DreamSymbolMapRepository extends JpaRepository<DreamSymbolMapEn
     @Query("SELECT new signup.dreamscape.DTO.DreamKeywordResponseDTO(ds.symbol.keyword, COUNT(ds)) " +
             "FROM DreamSymbolMapEntity ds " +
             "WHERE ds.dream.userId = :userId " +
-            "AND ds.dream.createdAt BETWEEN :startDate AND :endDate " +
+            "AND ds.dream.recordedAt BETWEEN :startDate AND :endDate " +
             "GROUP BY ds.symbol.keyword " +
             "ORDER BY COUNT(ds) DESC")
     List<DreamKeywordResponseDTO> findTopKeywords(@Param("userId") Long userId,
-                                                  @Param("startDate") LocalDateTime startDate,
-                                                  @Param("endDate") LocalDateTime endDate,
+                                                  @Param("startDate") LocalDate startDate,
+                                                  @Param("endDate") LocalDate endDate,
                                                   Pageable pageable);
 }

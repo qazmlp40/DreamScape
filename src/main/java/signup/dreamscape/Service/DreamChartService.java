@@ -3,7 +3,6 @@ package signup.dreamscape.Service;
 import signup.dreamscape.DTO.DreamChartRequestDTO;
 import signup.dreamscape.DTO.DreamChartResponseDTO;
 import signup.dreamscape.DTO.DreamKeywordResponseDTO;
-import signup.dreamscape.Repository.DreamAnalysisRepository;
 import signup.dreamscape.Repository.DreamRepository;
 import signup.dreamscape.Repository.DreamSymbolMapRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,8 +10,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +32,8 @@ public class DreamChartService {
         LocalDate baseDate = request.getBaseDate() != null ? request.getBaseDate() : LocalDate.now();
 
         // 2) rangeType에 따른 날짜 범위 계산 → LocalDateTime으로 변환
-        LocalDateTime endDate = baseDate.atTime(LocalTime.MAX);
-        LocalDateTime startDate = calculateStartDate(baseDate, request.getRangeType());
+        LocalDate endDate = baseDate;
+        LocalDate startDate = calculateStartDate(baseDate, request.getRangeType());
 
         // 3) 감정 분포 데이터 조회 및 매핑
         Map<String, Long> moodDistribution = getMoodDistribution(request.getUserId(), startDate, endDate);
@@ -51,17 +48,17 @@ public class DreamChartService {
     }
 
     // rangeType에 따른 시작일 계산
-    private LocalDateTime calculateStartDate(LocalDate baseDate, String rangeType) {
+    private LocalDate calculateStartDate(LocalDate baseDate, String rangeType) {
         // NullPointerException 방지를 위해 equalsIgnoreCase 사용
         if ("MONTHLY".equalsIgnoreCase(rangeType)) {
-            return baseDate.minusMonths(1).atStartOfDay();
+            return baseDate.minusMonths(1);
         }
         // 그 외의 경우(WEEKLY 포함) 기본적으로 1주일 전으로 계산
-        return baseDate.minusWeeks(1).atStartOfDay();
+        return baseDate.minusWeeks(1);
     }
 
     // DB에서 감정 데이터를 가져와서 고정된 순서(Map)에 맞게 세팅
-    private Map<String, Long> getMoodDistribution(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
+    private Map<String, Long> getMoodDistribution(Long userId, LocalDate startDate, LocalDate endDate) {
         List<Object[]> moodResults = dreamRepository.findMoodDistribution(userId, startDate, endDate);
 
         Map<String, Long> moodDistribution = new LinkedHashMap<>();
