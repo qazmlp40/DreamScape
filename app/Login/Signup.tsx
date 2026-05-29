@@ -358,7 +358,7 @@ const Signup: React.FC = () => {
               <View style={{ height: s(16) }} />
               <Input value={email} setValue={setEmail} placeholder="이메일" />
               <View style={{ height: s(16) }} />
-              <Input value={ID} setValue={setID} placeholder="아이디" />
+              <Input value={ID} setValue={setID} placeholder="닉네임" />
               <View style={{ height: s(16) }} />
               <Input
                 value={PW}

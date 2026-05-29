@@ -371,7 +371,8 @@ const DEFAULT_DREAM_KEYWORDS = [
   "구름",
   "하늘",
   "무지개",
-  "노을"
+  "노을",
+  "기타"
 ];
 
 const MAX_CLOUD_KEYWORDS = 50;

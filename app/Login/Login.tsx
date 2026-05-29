@@ -260,7 +260,10 @@ const Login: React.FC = () => {
             <Text style={[styles.error_text, { marginTop: s(8) }]}>{globalErr}</Text>
           )}
 
-          <TouchableOpacity style={[styles.find_link, { marginTop: s(14) }]}>
+          <TouchableOpacity
+            style={[styles.find_link, { marginTop: s(14) }]}
+            onPress={() => router.push('/(auth)/find-account')}
+          >
             <Text style={styles.link}>아이디/비밀번호 찾기</Text>
           </TouchableOpacity>
 
