@@ -248,7 +248,7 @@ const ChartModeToggle = ({ isWeekly, onChangeMode }: ChartModeToggleProps) => {
         </Text>
       </TouchableOpacity>
 
-      {/* 달력 버튼 */}
+      {/* 월간 버튼 */}
       <TouchableOpacity
         style={[
           toggleStyles.segment,
@@ -264,7 +264,7 @@ const ChartModeToggle = ({ isWeekly, onChangeMode }: ChartModeToggleProps) => {
             { fontSize: s(12) },
           ]}
         >
-          달력
+          월간
         </Text>
       </TouchableOpacity>
     </View>
@@ -627,6 +627,7 @@ const EmotionBarChart = ({
           flexDirection: "row",
           alignItems: "flex-end",
           paddingHorizontal: s(42),
+          overflow: "visible",
         }}
       >
         {emotions.map((emotion) => {
@@ -658,7 +659,14 @@ const EmotionBarChart = ({
           return (
             <Pressable
               key={emotion.key}
-              style={{ alignItems: "center", flex: 1 }}
+              style={{
+                alignItems: "center",
+                flex: 1,
+                position: "relative",
+                overflow: "visible",
+                zIndex: showTooltip ? 20 : 1,
+                elevation: showTooltip ? 20 : 1,
+              }}
               onPress={() => {
                 if (isMax) onEmotionPress?.(emotion.key);
               }}
@@ -1132,6 +1140,10 @@ const Chart = () => {
   useEffect(() => {
     fetchChartData();
   }, [isWeekly, selectedMonthIndex, safeWeekIndex, selectedBaseDate]);
+
+  useEffect(() => {
+    setSelectedEmotion(null);
+  }, [selectedBaseDate]);
 
   // 해당 주차 기간 계산 (현재 주차 번호 사용)
   const weekNo = Number(weekKey.split("-")[2]);

@@ -1,5 +1,6 @@
 import { API_BASE_URL, API_JSON_HEADERS, DEV_MOCK_AUTH } from '@/constants/api';
 import { useAppDialog } from '@/contexts/AppDialogContext';
+import { Ionicons } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -163,69 +164,72 @@ const FindAccount: React.FC = () => {
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { paddingHorizontal: s(32), paddingTop: s(32), paddingBottom: s(32) },
+          { paddingHorizontal: s(8), paddingTop: s(32), paddingBottom: s(32) },
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>이전</Text>
+        <TouchableOpacity style={{ zIndex: 1 }} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={s(24)} color="#2E2E34" />
         </TouchableOpacity>
+        <View style={{paddingHorizontal: s(24), }}>
+          <View style={{alignItems: 'center'}}>
+            <Text style={[styles.title, { marginTop: s(28) }]}>아이디/비밀번호 찾기</Text>  
+          </View>
 
-        <Text style={[styles.title, { marginTop: s(28) }]}>아이디/비밀번호 찾기</Text>
+          <View style={[styles.segment, { marginTop: s(28), height: s(48) }]}>
+            <TouchableOpacity
+              style={[styles.segmentButton, isEmailMode && styles.segmentButtonActive]}
+              onPress={() => switchMode('email')}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.segmentText, isEmailMode && styles.segmentTextActive]}>
+                아이디 찾기
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.segmentButton, !isEmailMode && styles.segmentButtonActive]}
+              onPress={() => switchMode('password')}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.segmentText, !isEmailMode && styles.segmentTextActive]}>
+                비밀번호 찾기
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={[styles.segment, { marginTop: s(28), height: s(48) }]}>
+          <View style={{ marginTop: s(28) }}>
+            <Input value={name} setValue={setName} placeholder="이름" />
+            <View style={{ height: s(16) }} />
+            {isEmailMode ? (
+              <Input value={nickName} setValue={setNickName} placeholder="닉네임" />
+            ) : (
+              <Input
+                value={email}
+                setValue={setEmail}
+                placeholder="이메일"
+                keyboardType="email-address"
+              />
+            )}
+          </View>
+
+          {!!error && <Text style={[styles.errorText, { marginTop: s(10) }]}>{error}</Text>}
+
           <TouchableOpacity
-            style={[styles.segmentButton, isEmailMode && styles.segmentButtonActive]}
-            onPress={() => switchMode('email')}
-            activeOpacity={0.85}
+            activeOpacity={isDisabled || loading ? 1 : 0.85}
+            style={[
+              styles.submitButton,
+              isDisabled || loading ? styles.submitButtonDisabled : styles.submitButtonActive,
+              { height: s(56), marginTop: s(28) },
+            ]}
+            onPress={isDisabled || loading ? undefined : handleSubmit}
           >
-            <Text style={[styles.segmentText, isEmailMode && styles.segmentTextActive]}>
-              아이디 찾기
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.segmentButton, !isEmailMode && styles.segmentButtonActive]}
-            onPress={() => switchMode('password')}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.segmentText, !isEmailMode && styles.segmentTextActive]}>
-              비밀번호 찾기
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitText}>{isEmailMode ? '아이디 찾기' : '임시 비밀번호 받기'}</Text>
+            )}
           </TouchableOpacity>
         </View>
-
-        <View style={{ marginTop: s(28) }}>
-          <Input value={name} setValue={setName} placeholder="이름" />
-          <View style={{ height: s(16) }} />
-          {isEmailMode ? (
-            <Input value={nickName} setValue={setNickName} placeholder="닉네임" />
-          ) : (
-            <Input
-              value={email}
-              setValue={setEmail}
-              placeholder="이메일"
-              keyboardType="email-address"
-            />
-          )}
-        </View>
-
-        {!!error && <Text style={[styles.errorText, { marginTop: s(10) }]}>{error}</Text>}
-
-        <TouchableOpacity
-          activeOpacity={isDisabled || loading ? 1 : 0.85}
-          style={[
-            styles.submitButton,
-            isDisabled || loading ? styles.submitButtonDisabled : styles.submitButtonActive,
-            { height: s(56), marginTop: s(28) },
-          ]}
-          onPress={isDisabled || loading ? undefined : handleSubmit}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitText}>{isEmailMode ? '아이디 찾기' : '임시 비밀번호 받기'}</Text>
-          )}
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

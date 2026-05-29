@@ -204,7 +204,21 @@ const Signup: React.FC = () => {
 
   const [pwError, setPwError] = useState(false);
   const [globalErr, setGlobalErr] = useState("");
-  const { acceptedTerms } = useLocalSearchParams<{ acceptedTerms?: string }>();
+  const {
+    acceptedTerms,
+    username: usernameParam,
+    email: emailParam,
+    userId: userIdParam,
+    password: passwordParam,
+    passwordConfirm: passwordConfirmParam,
+  } = useLocalSearchParams<{
+    acceptedTerms?: string;
+    username?: string;
+    email?: string;
+    userId?: string;
+    password?: string;
+    passwordConfirm?: string;
+  }>();
   const [termChecked, setTermChecked] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -214,6 +228,25 @@ const Signup: React.FC = () => {
       setTermChecked(true);
     }
   }, [acceptedTerms]);
+
+  useEffect(() => {
+    if (usernameParam !== undefined) setUsername(usernameParam);
+    if (emailParam !== undefined) setEmail(emailParam);
+    if (userIdParam !== undefined) setID(userIdParam);
+    if (passwordParam !== undefined) setPW(passwordParam);
+    if (passwordConfirmParam !== undefined) setCheckPW(passwordConfirmParam);
+  }, [
+    usernameParam,
+    emailParam,
+    userIdParam,
+    passwordParam,
+    passwordConfirmParam,
+    setUsername,
+    setEmail,
+    setID,
+    setPW,
+    setCheckPW,
+  ]);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () =>
@@ -239,6 +272,19 @@ const Signup: React.FC = () => {
   const toggleTerms = useCallback(() => {
     setTermChecked((prev) => !prev);
   }, []);
+
+  const openTerms = useCallback(() => {
+    router.push({
+      pathname: "/(auth)/terms",
+      params: {
+        username,
+        email,
+        userId: ID,
+        password: PW,
+        passwordConfirm: checkPW,
+      },
+    });
+  }, [username, email, ID, PW, checkPW]);
 
   // 회원가입 처리 함수
   const handleSignup = useCallback(async () => {
@@ -405,7 +451,9 @@ const Signup: React.FC = () => {
             </View>
 
             {/* 약관 상세보기 */}
-            <View
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={openTerms}
               style={[
                 styles.terms_detail_container,
                 {
@@ -416,10 +464,8 @@ const Signup: React.FC = () => {
               ]}
             >
               <Text style={styles.detail_text}>이용약관 확인하기</Text>
-              <TouchableOpacity onPress={toggleTerms}>
-                <Right_Arrow />
-              </TouchableOpacity>
-            </View>
+              <Right_Arrow />
+            </TouchableOpacity>
           </KeyboardAwareScrollView>
 
           {/* 완료 버튼 */}
