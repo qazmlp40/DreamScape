@@ -9,7 +9,7 @@
  * 5. 에러 메시지 개선 - 타임아웃/연결 실패 시 구체적인 메시지 표시
  * 6. finally 블록 추가 - 에러 발생 시에도 isSubmitting 상태 초기화
  */
-import { API_BASE_URL, DEV_MOCK_AUTH } from "@/constants/api";
+import { API_BASE_URL, API_JSON_HEADERS, DEV_MOCK_AUTH } from "@/constants/api";
 import { MaterialIcons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -284,7 +284,7 @@ const Signup: React.FC = () => {
 
       const res = await fetch(`${API_BASE_URL}/t_user/signup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: API_JSON_HEADERS,
         body: JSON.stringify(payload),
         signal: controller.signal, // 타임아웃 신호
       });

@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/constants/api';
+import { API_BASE_URL, API_JSON_HEADERS } from '@/constants/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { router } from 'expo-router';
@@ -7,9 +7,7 @@ import { tokenStorage } from '../utils/tokenStorage';
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 180000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: API_JSON_HEADERS,
 });
 
 api.interceptors.request.use(

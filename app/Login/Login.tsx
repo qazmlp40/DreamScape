@@ -1,4 +1,4 @@
-import { API_BASE_URL, APP_SCHEME, DEV_MOCK_AUTH } from '@/constants/api';
+import { API_BASE_URL, API_JSON_HEADERS, APP_SCHEME, DEV_MOCK_AUTH } from '@/constants/api';
 import { tokenStorage } from '@/utils/tokenStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -22,6 +22,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export const BASE_WIDTH = 412;
 const DREAMSCAPE_LOGO = require('../../assets/images/dreamscape-logo-stacked.png');
+const FIND_ACCOUNT_ROUTE = '/find-account' as any;
 
 function useScale() {
   const width = useWindowDimensions().width;
@@ -148,7 +149,7 @@ const Login: React.FC = () => {
 
       const res = await fetch(`${API_BASE_URL}/t_user/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: API_JSON_HEADERS,
         body: JSON.stringify({ email: userID.trim(), password: userPW }),
         signal: controller.signal,
       });
@@ -262,7 +263,7 @@ const Login: React.FC = () => {
 
           <TouchableOpacity
             style={[styles.find_link, { marginTop: s(14) }]}
-            onPress={() => router.push('/(auth)/find-account')}
+            onPress={() => router.push(FIND_ACCOUNT_ROUTE)}
           >
             <Text style={styles.link}>아이디/비밀번호 찾기</Text>
           </TouchableOpacity>

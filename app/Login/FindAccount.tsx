@@ -1,4 +1,4 @@
-import { API_BASE_URL, DEV_MOCK_AUTH } from '@/constants/api';
+import { API_BASE_URL, API_JSON_HEADERS, DEV_MOCK_AUTH } from '@/constants/api';
 import { useAppDialog } from '@/contexts/AppDialogContext';
 import { router, Stack } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -81,7 +81,7 @@ const FindAccount: React.FC = () => {
 
     const res = await fetch(`${API_BASE_URL}/t_user/find-email`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: API_JSON_HEADERS,
       body: JSON.stringify({
         name: name.trim(),
         userNickName: nickName.trim(),
@@ -112,7 +112,7 @@ const FindAccount: React.FC = () => {
 
     const res = await fetch(`${API_BASE_URL}/t_user/find-password`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: API_JSON_HEADERS,
       body: JSON.stringify({
         email: email.trim().toLowerCase(),
         name: name.trim(),

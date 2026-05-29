@@ -25,5 +25,10 @@ export const APP_SCHEME =
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? getDefaultApiBaseUrl();
 
+export const API_JSON_HEADERS = {
+  "Content-Type": "application/json",
+  "ngrok-skip-browser-warning": "true",
+};
+
 export const DEV_MOCK_AUTH = process.env.EXPO_PUBLIC_DEV_MOCK_AUTH === "true";
 export const DEV_MOCK_DREAMS = process.env.EXPO_PUBLIC_DEV_MOCK_DREAMS === "true";
