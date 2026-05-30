@@ -11,6 +11,16 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.dreamscape",
       "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true,
+          "NSExceptionDomains": {
+            "52.87.76.168": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": true
+            }
+          }
+        },
         "LSApplicationQueriesSchemes": [
           "kakaokompassauth",
           "kakaolink",
@@ -31,6 +41,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "package": "com.anonymous.dreamscape",
+      "usesCleartextTraffic": true,
       "intentFilters": [
         {
           "action": "VIEW",

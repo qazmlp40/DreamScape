@@ -639,6 +639,8 @@ export default function ResultViewScreen() {
             title: shareTitle,
             description: shareDescription,
             imageUrl: KAKAO_SHARE_IMAGE_URL,
+            imageWidth: 800,
+            imageHeight: 400,
             link: kakaoLink,
           },
           buttons: [

@@ -2,134 +2,257 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>DreamScape 꿈 리플레이</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>DreamScape</title>
     <meta
       name="description"
-      content="DreamScape에서 기록한 꿈의 요약, 해몽, 영상 리플레이를 확인해 보세요."
+      content="DreamScape에서 공유된 꿈 기록을 확인해 보세요."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="DreamScape" />
-    <meta property="og:title" content="DreamScape 꿈 리플레이" />
+    <meta property="og:title" content="DreamScape" />
     <meta
       property="og:description"
-      content="기록한 꿈을 요약, 해몽, 영상으로 다시 보는 DreamScape 공유 페이지입니다."
+      content="공유된 꿈 기록을 DreamScape에서 확인해 보세요."
     />
+    <meta
+      property="og:image"
+      content="https://dreamscape-share.netlify.app/kakao-og.png"
+    />
+    <meta property="og:image:width" content="800" />
+    <meta property="og:image:height" content="400" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#7C4DFF" />
+    <meta name="theme-color" content="#5F009E" />
     <style>
       :root {
-        color-scheme: light;
-        --ink: #1f2937;
-        --muted: #6b7280;
-        --line: #e7e0f7;
-        --brand: #7c4dff;
-        --brand-deep: #5b36d6;
-        --surface: #ffffff;
-        --wash: #f7f2ff;
+        --p1: #bb7cff;
+        --p2: #b442ff;
+        --p3: #5f009e;
+        --p4: #40006b;
+        --p5: #220038;
+        --t1: #1a1a1a;
+        --t2: #7b7b7b;
+        --t5: #fefefe;
+        --bg: #f5f5f5;
+        --line: rgba(255, 255, 255, 0.62);
+        --glass: rgba(255, 255, 255, 0.66);
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html,
       body {
-        margin: 0;
-        min-height: 100vh;
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
-          "Noto Sans KR", "Segoe UI", sans-serif;
-        color: var(--ink);
-        background:
-          radial-gradient(circle at 20% 12%, rgba(124, 77, 255, 0.16), transparent 30%),
-          linear-gradient(180deg, #fbf8ff 0%, #ffffff 58%, #f6f0ff 100%);
+        min-height: 100%;
       }
 
-      main {
-        width: min(100%, 480px);
-        min-height: 100vh;
-        margin: 0 auto;
-        padding: max(28px, env(safe-area-inset-top)) 22px
-          max(28px, env(safe-area-inset-bottom));
-        display: flex;
-        flex-direction: column;
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+          "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+        color: var(--t1);
+        background:
+          radial-gradient(
+            circle at 16% 18%,
+            rgba(187, 124, 255, 0.5),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at 84% 16%,
+            rgba(180, 66, 255, 0.28),
+            transparent 24%
+          ),
+          linear-gradient(145deg, #fbf8ff 0%, #f4ecff 42%, #ffffff 100%);
+      }
+
+      .page {
+        min-height: 100svh;
+        padding: clamp(14px, 2.4vw, 32px);
+        display: grid;
+        place-items: center;
+      }
+
+      .wrap {
+        width: min(1240px, 100%);
+        min-height: calc(100svh - clamp(28px, 4.8vw, 64px));
+        border: 1px solid var(--line);
+        border-radius: clamp(28px, 4vw, 44px);
+        background: var(--glass);
+        box-shadow: 0 32px 90px rgba(64, 0, 107, 0.16);
+        backdrop-filter: blur(26px) saturate(1.14);
+        -webkit-backdrop-filter: blur(26px) saturate(1.14);
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(430px, 500px);
       }
 
       .brand {
-        width: 164px;
-        height: auto;
-        margin: 12px 0 44px;
-        display: block;
-      }
-
-      .hero {
-        flex: 1;
+        position: relative;
+        padding: clamp(34px, 5vw, 68px);
         display: flex;
         flex-direction: column;
         justify-content: center;
-        gap: 22px;
+        align-items: center;
+        text-align: center;
+        background:
+          radial-gradient(
+            circle at 50% 38%,
+            rgba(255, 255, 255, 0.88),
+            transparent 29%
+          ),
+          radial-gradient(
+            circle at 48% 46%,
+            rgba(187, 124, 255, 0.28),
+            transparent 44%
+          );
       }
 
-      .preview {
-        border: 1px solid var(--line);
+      .brand::after {
+        content: "";
+        position: absolute;
+        inset: 9%;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.48);
+        pointer-events: none;
+      }
+
+      .wordmark {
+        width: min(720px, 96%);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 22px 44px rgba(64, 0, 107, 0.18));
+      }
+
+      .panel {
+        border-left: 1px solid rgba(255, 255, 255, 0.62);
+        padding: clamp(22px, 3vw, 34px);
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.42);
+      }
+
+      .card {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.72);
         border-radius: 28px;
-        padding: 28px 24px;
-        background: rgba(255, 255, 255, 0.86);
-        box-shadow: 0 24px 70px rgba(73, 50, 128, 0.14);
+        padding: 28px;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
       }
 
       .label {
-        margin: 0 0 12px;
-        color: var(--brand-deep);
+        margin: 0 0 10px;
+        color: var(--p3);
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .title {
+        margin: 0;
+        color: var(--t1);
+        font-size: clamp(25px, 2.7vw, 34px);
+        line-height: 1.28;
+        letter-spacing: 0;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+      }
+
+      .summary {
+        margin: 16px 0 0;
+        color: var(--t2);
+        font-size: 16px;
+        line-height: 1.68;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+      }
+
+      .symbolHeader {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .symbolIcon {
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        color: var(--p3);
+        background: rgba(187, 124, 255, 0.16);
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .dreamText {
+        min-width: 0;
+      }
+
+      .detailGrid {
+        display: grid;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .detailBlock {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(95, 0, 158, 0.1);
+        background: rgba(255, 255, 255, 0.52);
+      }
+
+      .detailLabel {
+        margin: 0 0 8px;
+        color: var(--p3);
         font-size: 13px;
         font-weight: 800;
       }
 
-      h1 {
+      .detailText {
         margin: 0;
-        font-size: clamp(28px, 8vw, 42px);
-        line-height: 1.12;
-        letter-spacing: 0;
-      }
-
-      .summary {
-        margin: 18px 0 0;
-        color: var(--muted);
-        font-size: 16px;
-        line-height: 1.65;
+        color: var(--t1);
+        font-size: 15px;
+        line-height: 1.64;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
       }
 
       .symbolRow {
         display: flex;
-        gap: 8px;
-        margin-top: 22px;
         flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
       }
 
       .symbol {
-        min-width: 42px;
-        height: 42px;
+        min-height: 38px;
         padding: 0 14px;
         border-radius: 999px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: var(--wash);
-        color: var(--brand-deep);
-        font-weight: 800;
+        color: var(--p3);
+        background: rgba(187, 124, 255, 0.14);
         font-size: 14px;
+        font-weight: 800;
       }
 
       .actions {
+        margin-top: 18px;
         display: grid;
         gap: 10px;
       }
 
       .button {
-        width: 100%;
         min-height: 56px;
-        border: 0;
-        border-radius: 18px;
+        border-radius: 16px;
         padding: 0 18px;
         display: inline-flex;
         align-items: center;
@@ -137,121 +260,437 @@
         text-decoration: none;
         font-size: 16px;
         font-weight: 800;
-        cursor: pointer;
+        white-space: nowrap;
       }
 
       .primary {
-        color: #ffffff;
-        background: linear-gradient(135deg, var(--brand), var(--brand-deep));
-        box-shadow: 0 14px 32px rgba(124, 77, 255, 0.24);
+        color: var(--t5);
+        background: linear-gradient(135deg, var(--p2), var(--p3));
+        box-shadow: 0 14px 30px rgba(95, 0, 158, 0.22);
       }
 
       .secondary {
-        color: var(--brand-deep);
-        background: #ffffff;
-        border: 1px solid var(--line);
+        color: var(--p4);
+        border: 1px solid rgba(95, 0, 158, 0.14);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .videoButton {
+        margin-top: 18px;
+      }
+
+      .appButton {
+        margin-top: 10px;
       }
 
       .note {
-        margin: 14px 0 0;
-        color: #8b7ca9;
+        margin: 12px 0 0;
+        color: var(--t2);
         font-size: 13px;
         line-height: 1.5;
         text-align: center;
+        white-space: nowrap;
       }
 
-      @media (min-width: 720px) {
-        main {
-          justify-content: center;
+      @media (max-width: 920px) {
+        .page {
+          align-items: stretch;
+        }
+
+        .wrap {
+          grid-template-columns: 1fr;
+          min-height: calc(100svh - 28px);
         }
 
         .brand {
-          margin-top: 0;
+          min-height: clamp(280px, 42svh, 440px);
+        }
+
+        .panel {
+          border-left: 0;
+          border-top: 1px solid rgba(255, 255, 255, 0.62);
+          align-items: stretch;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .page {
+          display: grid;
+          place-items: center;
+          min-height: 100svh;
+          padding: 18px 14px 22px;
+        }
+
+        .wrap {
+          width: 100%;
+          min-height: auto;
+          border: 0;
+          border-radius: 0;
+          background: transparent;
+          box-shadow: none;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          overflow: visible;
+          display: block;
+        }
+
+        .brand {
+          min-height: 0;
+          padding: 0 0 20px;
+          align-items: center;
+          background: transparent;
+          text-align: center;
+        }
+
+        .brand::after {
+          display: none;
+        }
+
+        .wordmark {
+          width: min(212px, 62vw);
+          max-width: none;
+          filter: drop-shadow(0 8px 18px rgba(64, 0, 107, 0.1));
+        }
+
+        .panel {
+          padding: 0;
+          border: 0;
+          background: transparent;
+          display: flex;
+          justify-content: center;
+        }
+
+        .card {
+          width: min(100%, 390px);
+          border-radius: 24px;
+          min-height: auto;
+          padding: 22px 18px 18px;
+          background: rgba(255, 255, 255, 0.76);
+          box-shadow: 0 18px 48px rgba(64, 0, 107, 0.12);
+          display: block;
+        }
+
+        .symbolHeader {
+          align-items: center;
+          justify-content: flex-start;
+          gap: 10px;
+          margin-bottom: 10px;
+          text-align: left;
+        }
+
+        .symbolIcon {
+          width: 44px;
+          height: 44px;
+          border-radius: 15px;
+          font-size: 18px;
+        }
+
+        .dreamText {
+          text-align: left;
+        }
+
+        .label {
+          margin-bottom: 6px;
+        }
+
+        .title {
+          font-size: 25px;
+          line-height: 1.24;
+          text-align: left;
+        }
+
+        .symbolRow {
+          justify-content: flex-start;
+          margin-top: 10px;
+        }
+
+        .detailGrid {
+          gap: 8px;
+          margin-top: 12px;
+        }
+
+        .detailBlock {
+          padding: 13px 14px;
+          border-radius: 17px;
+          text-align: left;
+        }
+
+        .detailLabel {
+          margin-bottom: 6px;
+        }
+
+        .detailText {
+          font-size: 14px;
+          line-height: 1.52;
+          text-align: left;
+        }
+
+        .actions {
+          gap: 9px;
+          margin-top: 32px;
+          padding-top: 0;
+        }
+
+        .button {
+          min-height: 54px;
+        }
+
+        .note {
+          white-space: normal;
         }
       }
     </style>
   </head>
   <body>
-    <main>
-      <svg
-        class="brand"
-        viewBox="0 0 420 90"
-        role="img"
-        aria-label="DreamScape"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <text
-          x="0"
-          y="64"
-          fill="#744DA8"
-          font-size="58"
-          font-family="Arial Rounded MT Bold, Arial, sans-serif"
-          font-weight="900"
-        >
-          DreamScape
-        </text>
-      </svg>
-
-      <section class="hero">
-        <article class="preview">
-          <p class="label">DreamScape Share</p>
-          <h1 id="share-title">꿈 리플레이가 도착했어요</h1>
-          <p id="share-summary" class="summary">
-            기록한 꿈의 요약, 해몽, 영상 리플레이를 앱에서 이어서 확인해 보세요.
-          </p>
-          <div id="symbol-row" class="symbolRow" aria-label="꿈 키워드"></div>
-        </article>
-
-        <div class="actions">
-          <a id="open-app" class="button primary" href="dreamscape://record/result-view">
-            앱에서 꿈 보기
-          </a>
-          <a id="open-video" class="button secondary" href="#" hidden>영상 바로 보기</a>
-          <p class="note">앱이 열리지 않으면 DreamScape 설치 후 다시 눌러 주세요.</p>
+    <main class="page">
+      <section class="wrap">
+        <div class="brand" aria-label="DreamScape">
+          <img
+            class="wordmark"
+            src="./logo.png"
+            alt="DreamScape"
+          />
         </div>
+
+        <aside class="panel">
+          <div class="card">
+            <div class="symbolHeader">
+              <div id="symbol-icon" class="symbolIcon" aria-hidden="true"></div>
+              <div class="dreamText">
+                <p class="label">공유된 꿈</p>
+                <h1 id="share-title" class="title">제목 없는 꿈</h1>
+              </div>
+            </div>
+            <div id="symbol-row" class="symbolRow" aria-label="꿈 키워드"></div>
+
+            <div class="detailGrid">
+              <section id="summary-block" class="detailBlock">
+                <p class="detailLabel">꿈 요약</p>
+                <p id="share-summary" class="detailText">
+                  앱에서 꿈 기록을 확인해 보세요.
+                </p>
+              </section>
+              <section id="interpretation-block" class="detailBlock">
+                <p class="detailLabel">꿈 해몽</p>
+                <p id="share-interpretation" class="detailText">
+                  앱에서 꿈 해몽을 확인해 보세요.
+                </p>
+              </section>
+            </div>
+
+            <div class="actions">
+              <a id="open-video" class="button secondary" href="#" hidden
+                >영상 보기</a
+              >
+              <a
+                id="open-app"
+                class="button primary"
+                href="dreamscape://record/result-view"
+              >
+                앱에서 보기
+              </a>
+              <p class="note">앱이 열리지 않으면 DreamScape를 실행해 주세요.</p>
+            </div>
+          </div>
+        </aside>
       </section>
     </main>
 
     <script>
+      const API_BASE_URL = "http://52.87.76.168:8080";
       const params = new URLSearchParams(window.location.search);
-      const title = params.get("title");
-      const summary = params.get("summary");
-      const openUrl = params.get("open");
-      const videoUrl = params.get("videoUrl");
-      const tags = (params.get("tags") || "")
+      const fixMojibake = (value) => {
+        if (!value) return "";
+
+        let normalized = String(value);
+
+        for (let index = 0; index < 3; index += 1) {
+          if (!/%[0-9A-Fa-f]{2}/.test(normalized)) break;
+
+          try {
+            const decoded = decodeURIComponent(normalized);
+            if (decoded === normalized) break;
+            normalized = decoded;
+          } catch {
+            break;
+          }
+        }
+
+        if (!/[ÃÂêëíìîïð]/.test(normalized)) return normalized;
+
+        try {
+          return decodeURIComponent(
+            Array.from(normalized)
+              .map((char) =>
+                `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`,
+              )
+              .join(""),
+          );
+        } catch {
+          return normalized;
+        }
+      };
+
+      const parsePayload = () => {
+        const rawPayload = params.get("payload");
+        if (!rawPayload) return {};
+
+        try {
+          return JSON.parse(decodeURIComponent(rawPayload));
+        } catch {
+          try {
+            return JSON.parse(rawPayload);
+          } catch {
+            return {};
+          }
+        }
+      };
+      const payload = parsePayload();
+      const getValue = (key) => fixMojibake(payload[key] || params.get(key) || "");
+      const dreamId = getValue("dreamId");
+      const title = getValue("title");
+      const summary = getValue("summary");
+      const interpretation = getValue("interpretation");
+      const openUrl = getValue("open");
+      const videoUrl = getValue("videoUrl");
+      const rawTags = Array.isArray(payload.tags)
+        ? payload.tags.join(",")
+        : getValue("tags");
+      const tags = rawTags
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean)
         .slice(0, 4);
 
-      if (title) {
-        document.title = `${title} | DreamScape`;
-        document.getElementById("share-title").textContent = title;
-      }
+      const getDreamValue = (dream, keys) => {
+        for (const key of keys) {
+          const value = key.split(".").reduce((target, path) => target?.[path], dream);
+          if (typeof value === "string" && value.trim()) return value.trim();
+          if (Array.isArray(value) && value.length) return value;
+        }
+        return "";
+      };
+      const buildAppUrl = (screen) => {
+        const query = new URLSearchParams(
+          Object.entries({
+            id: dreamId,
+            dreamId,
+            mode: screen === "video" ? "review" : "view",
+          }).filter(([, value]) => Boolean(value)),
+        ).toString();
 
-      if (summary) {
-        document.getElementById("share-summary").textContent = summary;
-      }
+        return `dreamscape://${screen === "video" ? "record/video-view" : "dream-view"}${
+          query ? `?${query}` : ""
+        }`;
+      };
+      const resolvedOpenUrl = openUrl || buildAppUrl("dream");
+      let resolvedVideoUrl = videoUrl || "";
 
-      if (openUrl) {
-        document.getElementById("open-app").setAttribute("href", openUrl);
-      }
+      const openExternal = (url) => {
+        if (!url) return;
+        window.location.href = url;
+        setTimeout(() => {
+          if (!document.hidden) {
+            window.open(url, "_self");
+          }
+        }, 350);
+      };
 
-      if (videoUrl) {
+      const applyDreamData = (data) => {
+        const nextTitle =
+          getDreamValue(data, ["title", "dream.title", "record.title"]) || title;
+        const nextSummary =
+          getDreamValue(data, [
+            "aiSummary",
+            "summary",
+            "analysis.aiSummary",
+            "dream.aiSummary",
+            "record.aiSummary",
+            "rawText",
+          ]) || summary;
+        const nextInterpretation =
+          getDreamValue(data, [
+            "aiInterpretation",
+            "interpretation",
+            "analysis.aiInterpretation",
+            "dream.aiInterpretation",
+            "record.aiInterpretation",
+          ]) || interpretation;
+        const nextVideoUrl =
+          getDreamValue(data, [
+            "mediaUrl",
+            "videoUrl",
+            "originalMediaUrl",
+            "editedMediaUrl",
+          ]) || videoUrl;
+        resolvedVideoUrl = nextVideoUrl || resolvedVideoUrl;
+        const nextTags =
+          getDreamValue(data, ["detectedKeywords", "tags", "keywords"]) || tags;
+
+        document.getElementById("share-title").textContent =
+          nextTitle || "제목 없는 꿈";
+
+        if (nextTitle) {
+          document.title = `${nextTitle} | DreamScape`;
+        }
+
+        if (nextSummary) {
+          document.getElementById("share-summary").textContent = nextSummary;
+        }
+
+        if (nextInterpretation) {
+          document.getElementById("share-interpretation").textContent =
+            nextInterpretation;
+        }
+
         const videoButton = document.getElementById("open-video");
         videoButton.removeAttribute("hidden");
-        videoButton.setAttribute("href", videoUrl);
+        videoButton.setAttribute("href", resolvedVideoUrl || buildAppUrl("video"));
+
+        const normalizedTags = Array.isArray(nextTags)
+          ? nextTags.slice(0, 4)
+          : tags;
+
+        if (normalizedTags.length) {
+          const row = document.getElementById("symbol-row");
+          const symbolIcon = document.getElementById("symbol-icon");
+          symbolIcon.style.display = "inline-flex";
+          symbolIcon.textContent = String(normalizedTags[0]).slice(0, 1);
+
+          row.querySelectorAll(".symbol").forEach((chip) => chip.remove());
+          normalizedTags.forEach((tag) => {
+            const chip = document.createElement("span");
+            chip.className = "symbol";
+            chip.textContent = tag;
+            row.appendChild(chip);
+          });
+        }
+      };
+
+      applyDreamData({});
+
+      if (dreamId) {
+        fetch(`${API_BASE_URL}/api/dreams/${encodeURIComponent(dreamId)}`)
+          .then((response) => (response.ok ? response.json() : null))
+          .then((data) => {
+            if (data) applyDreamData(data);
+          })
+          .catch(() => {});
       }
 
-      if (tags.length) {
-        const row = document.getElementById("symbol-row");
-        tags.forEach((tag) => {
-          const chip = document.createElement("span");
-          chip.className = "symbol";
-          chip.textContent = tag;
-          row.appendChild(chip);
-        });
-      }
+      const openAppButton = document.getElementById("open-app");
+      const openVideoButton = document.getElementById("open-video");
+
+      openAppButton.setAttribute("href", resolvedOpenUrl);
+      openAppButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        openExternal(resolvedOpenUrl);
+      });
+
+      openVideoButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        openExternal(resolvedVideoUrl || buildAppUrl("video"));
+      });
     </script>
   </body>
 </html>

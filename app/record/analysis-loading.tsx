@@ -2,7 +2,7 @@ import { API_BASE_URL } from "@/constants/api";
 import { dreamApi } from "@/services/dreamApi";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Easing,
@@ -27,6 +27,7 @@ const colors = {
 };
 
 const MIN_LOADING_DURATION_MS = 5000;
+const ANALYSIS_RETRY_DELAY_MS = 3000;
 
 const getParamValue = (value: unknown) => {
   if (Array.isArray(value)) {
@@ -59,6 +60,9 @@ export default function AnalysisLoadingScreen() {
   const dotGroupOpacity = useRef(new Animated.Value(1)).current;
   const checkOpacity = useRef(new Animated.Value(0)).current;
   const checkScale = useRef(new Animated.Value(0.72)).current;
+  const [loadingText, setLoadingText] = useState(
+    "장면과 감정을 정리해서 해석을 준비하는 중이에요",
+  );
 
   const {
     currentDreamText: contextDreamText = "",
@@ -69,7 +73,7 @@ export default function AnalysisLoadingScreen() {
 
   const dreamTextParam = getParamValue(params.dreamText) ?? "";
 
-  const finalDreamText = contextDreamText || dreamTextParam || "";
+  const finalDreamText = dreamTextParam || contextDreamText || "";
 
   const runAnimation = (animation: Animated.CompositeAnimation) => {
     return new Promise<void>((resolve) => {
@@ -121,6 +125,7 @@ export default function AnalysisLoadingScreen() {
       let generatedSummary = "";
       let generatedInterpretation = "";
       let generatedTags: string[] = [];
+      let shouldNavigate = false;
 
       console.log("[AnalysisLoading] API_BASE_URL:", API_BASE_URL);
       console.log("[AnalysisLoading] dreamId:", dreamId);
@@ -132,52 +137,64 @@ export default function AnalysisLoadingScreen() {
         let tags: string[] = [];
 
         if (dreamId) {
-          console.log("[AnalysisLoading] summarizeDream 호출 dreamId:", dreamId);
-          console.log("[AnalysisLoading] interpretDream 호출 dreamId:", dreamId);
-          
-          const [summarizeResult, interpretResult] = await Promise.allSettled([
-            dreamApi.summarizeDream(dreamId, finalDreamText),
-            dreamApi.interpretDream(dreamId),
-          ]);
+          while (true) {
+            console.log("[AnalysisLoading] summarizeDream 호출 dreamId:", dreamId);
+            console.log("[AnalysisLoading] interpretDream 호출 dreamId:", dreamId);
+            setLoadingText("서버에서 꿈 분석 결과를 가져오는 중이에요");
 
-          if (summarizeResult.status === "fulfilled") {
-            const summarizeRes = summarizeResult.value;
-            console.log("[AnalysisLoading] dreamApi.summarizeDream 응답:", summarizeRes);
+            const [summarizeResult, interpretResult] = await Promise.allSettled([
+              dreamApi.summarizeDream(dreamId, finalDreamText),
+              dreamApi.interpretDream(dreamId),
+            ]);
 
-            summary =
-              summarizeRes.aiSummary ??
-              summarizeRes.summary ??
-              finalDreamText ??
-              "";
-            generatedTitle = extractDreamTitle(summarizeRes);
-          } else {
-            console.log(
-              "summarize failed:",
-              summarizeResult.reason?.response?.status,
-              summarizeResult.reason?.response?.data,
+            if (summarizeResult.status === "fulfilled") {
+              const summarizeRes = summarizeResult.value;
+              console.log("[AnalysisLoading] dreamApi.summarizeDream 응답:", summarizeRes);
+
+              summary =
+                summarizeRes.aiSummary ??
+                summarizeRes.summary ??
+                "";
+              generatedTitle = extractDreamTitle(summarizeRes);
+            } else {
+              console.log(
+                "summarize failed:",
+                summarizeResult.reason?.response?.status,
+                summarizeResult.reason?.response?.data,
+              );
+            }
+
+            if (interpretResult.status === "fulfilled") {
+              const interpretRes = interpretResult.value;
+              console.log("[AnalysisLoading] dreamApi.interpretDream 응답:", interpretRes);
+
+              interpretation =
+                interpretRes.aiInterpretation ??
+                interpretRes.interpretation ??
+                interpretRes.analysisText ??
+                "";
+              tags = interpretRes.detectedKeywords ?? interpretRes.tags ?? [];
+            } else {
+              console.log(
+                "interpret failed:",
+                interpretResult.reason?.response?.status,
+                interpretResult.reason?.response?.data,
+              );
+            }
+
+            if (summary && interpretation) {
+              break;
+            }
+
+            setLoadingText("분석 서버 응답을 기다리고 있어요");
+            await new Promise((resolve) =>
+              setTimeout(resolve, ANALYSIS_RETRY_DELAY_MS),
             );
-            summary = finalDreamText || "꿈 내용";
-          }
-
-          if (interpretResult.status === "fulfilled") {
-            const interpretRes = interpretResult.value;
-            console.log("[AnalysisLoading] dreamApi.interpretDream 응답:", interpretRes);
-
-            interpretation = interpretRes.aiInterpretation ?? "";
-            tags = interpretRes.detectedKeywords ?? interpretRes.tags ?? [];
-          } else {
-            console.log(
-              "interpret failed:",
-              interpretResult.reason?.response?.status,
-              interpretResult.reason?.response?.data,
-            );
-            interpretation = "꿈 해석을 준비 중입니다.";
-            tags = [];
           }
         } else {
           console.warn("[AnalysisLoading] dreamId가 없어 서버 분석을 건너뜁니다.");
-          summary = finalDreamText || "꿈 내용";
-          interpretation = "꿈 해석을 준비 중입니다.";
+          setLoadingText("꿈 정보를 찾지 못했어요");
+          return;
         }
 
         setAnalysis({
@@ -217,15 +234,16 @@ export default function AnalysisLoadingScreen() {
         } else {
           console.log("[AnalysisLoading] localId 없이 서버 dreamId 기준으로 계속 진행합니다.");
         }
+        shouldNavigate = true;
       } catch (error) {
         console.error("[AnalysisLoading] API 호출 중 예상치 못한 에러:", error);
-        // 에러가 발생해도 기본값으로 진행
-        setAnalysis({
-          summary: finalDreamText || "꿈 내용",
-          interpretation: "꿈 해석을 준비 중입니다.",
-          tags: [],
-        });
+        setLoadingText("분석 서버 응답을 기다리고 있어요");
+        return;
       } finally {
+        if (!shouldNavigate) {
+          return;
+        }
+
         const elapsed = Date.now() - startedAt;
         const remaining = MIN_LOADING_DURATION_MS - elapsed;
 
@@ -397,9 +415,7 @@ export default function AnalysisLoadingScreen() {
           </Animated.View>
         </View>
         <Text style={styles.loadingTitle}>꿈 기록을 분석하는 중이에요</Text>
-        <Text style={styles.loadingText}>
-          장면과 감정을 정리해서 해석을 준비하는 중이에요
-        </Text>
+        <Text style={styles.loadingText}>{loadingText}</Text>
       </View>
     </View>
   );

@@ -1,19 +1,6 @@
 import Constants from "expo-constants";
-import { Platform } from "react-native";
 
-const getDefaultApiBaseUrl = () => {
-  const expoHost = Constants.expoConfig?.hostUri?.split(":")[0];
-
-  if (expoHost && expoHost !== "localhost" && expoHost !== "127.0.0.1") {
-    return `http://${expoHost}:8080`;
-  }
-
-  if (Platform.OS === "android") {
-    return "http://10.0.2.2:8080";
-  }
-
-  return "http://localhost:8080";
-};
+const DEFAULT_API_BASE_URL = "http://52.87.76.168:8080";
 
 const expoScheme = Constants.expoConfig?.scheme;
 
@@ -23,11 +10,13 @@ export const APP_SCHEME =
   "dreamscape";
 
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? getDefaultApiBaseUrl();
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL;
+
+const shouldSkipNgrokWarning = API_BASE_URL.includes("ngrok-free.dev");
 
 export const API_JSON_HEADERS = {
   "Content-Type": "application/json",
-  "ngrok-skip-browser-warning": "true",
+  ...(shouldSkipNgrokWarning ? { "ngrok-skip-browser-warning": "true" } : {}),
 };
 
 export const DEV_MOCK_AUTH = process.env.EXPO_PUBLIC_DEV_MOCK_AUTH === "true";

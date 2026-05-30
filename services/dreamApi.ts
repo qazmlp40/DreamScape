@@ -23,7 +23,7 @@ type MockDreamRecord = {
 let mockDreamIdSeq = 1;
 const mockDreamStore = new Map<number, MockDreamRecord>();
 const videoGeneratingPromises = new Map<number, Promise<any>>();
-const DREAM_CLIENT_PATCH_STORAGE_KEY = "dreamClientPatches";
+const DREAM_CLIENT_PATCH_STORAGE_KEY = "dreamClientPatches:clean";
 
 const getMockDream = (dreamId: number) => mockDreamStore.get(dreamId);
 

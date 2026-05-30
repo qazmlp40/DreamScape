@@ -1,9 +1,17 @@
 import DreamSymbolIcon from "@/components/app/DreamSymbolIcon";
 import RecordHeader from "@/components/app/RecordHeader";
 import { KakaoShareIcon } from "@/components/ui/KakaoShareIcon";
-import { API_BASE_URL, DEV_MOCK_DREAMS } from "@/constants/api";
+import { API_BASE_URL, APP_SCHEME, DEV_MOCK_DREAMS } from "@/constants/api";
+import {
+  KAKAO_APP_KEY,
+  KAKAO_SHARE_IMAGE_URL,
+  buildKakaoSharePageUrl,
+} from "@/constants/kakao";
 import { useAppDialog } from "@/contexts/AppDialogContext";
 import { dreamApi, getMockDreamById } from "@/services/dreamApi";
+import type { KakaoTemplateLink } from "@react-native-kakao/share";
+import { shareFeedTemplate } from "@react-native-kakao/share";
+import Constants from "expo-constants";
 import {
   extractDreamDate,
   extractDreamId,
@@ -38,6 +46,34 @@ const colors = {
 };
 
 const FIXED_BUTTON_HEIGHT = 56;
+const isExpoGo = Constants.appOwnership === "expo";
+
+const isPublicHttpsUrl = (url?: string) => {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+
+    return (
+      parsedUrl.protocol === "https:" &&
+      hostname !== "localhost" &&
+      hostname !== "127.0.0.1" &&
+      !hostname.startsWith("192.168.") &&
+      !hostname.startsWith("10.")
+    );
+  } catch {
+    return false;
+  }
+};
+
+const buildAppShareUrl = (params: Record<string, string>) => {
+  const query = new URLSearchParams(params).toString();
+  return `${APP_SCHEME}://dream-view${query ? `?${query}` : ""}`;
+};
+
 type DreamViewRecord = {
   dreamId?: number;
   date?: string;
@@ -254,22 +290,86 @@ export default function DreamViewScreen() {
   }, [dream.dreamId, dream.dreamText, dream.interpretation, dream.summary]);
 
   const handleShare = async () => {
+    if (!KAKAO_APP_KEY) {
+      showDialog({ title: "오류", message: "카카오 앱 키가 설정되지 않았어요." });
+      return;
+    }
+
     const videoShareUrl = buildAbsoluteUrl(dream.videoUrl);
+    const publicVideoShareUrl = isPublicHttpsUrl(videoShareUrl)
+      ? videoShareUrl
+      : undefined;
     const description =
       dream.summary || dream.interpretation || "DreamScape에서 기록한 꿈이에요.";
-    const message = [dream.title, description, videoShareUrl]
-      .filter(Boolean)
-      .join("\n\n");
+    const appShareParams = Object.fromEntries(
+      Object.entries({
+        route: "dream-view",
+        id: dream.id ?? dream.dreamId?.toString(),
+        dreamId: dream.dreamId?.toString(),
+        mode: "view",
+      }).filter(([, value]) => Boolean(value)),
+    ) as Record<string, string>;
+    const appShareUrl = buildAppShareUrl(appShareParams);
+    const sharePageUrl = buildKakaoSharePageUrl({
+      ...(dream.dreamId ? { dreamId: String(dream.dreamId) } : {}),
+      title: dream.title,
+      summary: description,
+      open: appShareUrl,
+      ...(dream.tags.length ? { tags: dream.tags.join(",") } : {}),
+      ...(videoShareUrl ? { videoUrl: videoShareUrl } : {}),
+    });
+    const publicWebShareUrl = isPublicHttpsUrl(sharePageUrl)
+      ? sharePageUrl
+      : undefined;
+    const shareUrl = publicWebShareUrl ?? publicVideoShareUrl;
+    const kakaoLink: KakaoTemplateLink = {
+      androidExecutionParams: appShareParams,
+      iosExecutionParams: appShareParams,
+      ...(shareUrl ? { mobileWebUrl: shareUrl, webUrl: shareUrl } : {}),
+    };
 
-    try {
+    const shareWithSystemSheet = async () => {
+      const message = [dream.title, description, shareUrl].filter(Boolean).join("\n\n");
       await Share.share({
         title: dream.title,
         message,
-        ...(videoShareUrl ? { url: videoShareUrl } : {}),
+        ...(shareUrl ? { url: shareUrl } : {}),
+      });
+    };
+
+    if (isExpoGo) {
+      await shareWithSystemSheet();
+      return;
+    }
+
+    try {
+      await shareFeedTemplate({
+        template: {
+          content: {
+            title: dream.title,
+            description,
+            imageUrl: KAKAO_SHARE_IMAGE_URL,
+            imageWidth: 800,
+            imageHeight: 400,
+            link: kakaoLink,
+          },
+          buttons: [
+            {
+              title: publicVideoShareUrl ? "영상 보기" : "앱에서 보기",
+              link: kakaoLink,
+            },
+          ],
+        },
+        useWebBrowserIfKakaoTalkNotAvailable: true,
       });
     } catch (error) {
-      console.error("꿈 공유 실패:", error);
-      showDialog({ title: "오류", message: "공유를 완료하지 못했어요. 잠시 후 다시 시도해 주세요." });
+      console.error("카카오톡 꿈 공유 실패:", error);
+      try {
+        await shareWithSystemSheet();
+      } catch (fallbackError) {
+        console.error("시스템 꿈 공유 실패:", fallbackError);
+        showDialog({ title: "오류", message: "공유를 완료하지 못했어요. 잠시 후 다시 시도해 주세요." });
+      }
     }
   };
 
