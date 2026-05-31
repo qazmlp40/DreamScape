@@ -39,7 +39,9 @@ interface DreamKeywordItem {
 
 interface DreamChartResponse {
   moodDistribution: Record<string, number>;
-  topKeywords: DreamKeywordItem[];
+  topKeywords?: unknown;
+  keywords?: unknown;
+  keywordDistribution?: Record<string, number>;
 }
 
 // 차트용 꿈 타입
@@ -47,6 +49,9 @@ type ChartDream = {
   id: string;
   dreamId?: number;
   date: string;
+  mood?: string;
+  text: string;
+  keywords: string[];
 };
 
 // 날짜 추출/ 정규화 함수
@@ -62,6 +67,195 @@ const extractDreamDate = (dream: any) => {
   return typeof rawDate === "string" ? rawDate.slice(0, 10) : "";
 };
 
+const extractChartDreamMood = (dream: any) => {
+  const rawMood = dream?.mood ?? dream?.emotion ?? dream?.dream?.mood ?? "";
+  return typeof rawMood === "string" || typeof rawMood === "number"
+    ? String(rawMood).trim()
+    : "";
+};
+
+const extractChartDreamText = (dream: any) => {
+  const textValues = [
+    dream?.rawText,
+    dream?.content,
+    dream?.dreamText,
+    dream?.text,
+    dream?.aiSummary,
+    dream?.summary,
+    dream?.aiInterpretation,
+    dream?.interpretation,
+    dream?.analysisText,
+    dream?.analysis?.summary,
+    dream?.analysis?.aiSummary,
+    dream?.analysis?.interpretation,
+    dream?.analysis?.aiInterpretation,
+    dream?.analysis?.analysisText,
+    dream?.dreamAnalysis?.summary,
+    dream?.dreamAnalysis?.interpretation,
+    dream?.result?.summary,
+    dream?.result?.interpretation,
+    dream?.dream?.rawText,
+    dream?.dream?.content,
+    dream?.record?.rawText,
+    dream?.record?.content,
+  ];
+
+  return textValues
+    .map((value) =>
+      typeof value === "string" || typeof value === "number"
+        ? String(value).trim()
+        : "",
+    )
+    .filter(Boolean)
+    .join(" ");
+};
+
+const normalizeKeywordText = (value: unknown) => {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return "";
+};
+
+const normalizeKeywordList = (rawKeywords: unknown): string[] => {
+  if (Array.isArray(rawKeywords)) {
+    return rawKeywords
+      .flatMap((item) => {
+        if (typeof item === "object" && item !== null) {
+          const keywordObject = item as Record<string, unknown>;
+          return normalizeKeywordText(
+            keywordObject.keyword ??
+              keywordObject.name ??
+              keywordObject.word ??
+              keywordObject.tag ??
+              keywordObject.tagName ??
+              keywordObject.value,
+          );
+        }
+
+        return normalizeKeywordText(item);
+      })
+      .filter(Boolean);
+  }
+
+  if (typeof rawKeywords === "string" && rawKeywords.trim()) {
+    return rawKeywords
+      .split(",")
+      .map((keyword) => keyword.trim())
+      .filter(Boolean);
+  }
+
+  if (rawKeywords && typeof rawKeywords === "object") {
+    return Object.entries(rawKeywords as Record<string, unknown>)
+      .filter(([, count]) => Number(count) > 0)
+      .map(([keyword]) => keyword.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const extractChartDreamKeywords = (dream: any) => {
+  const keywordSources = [
+    dream?.tags,
+    dream?.tag,
+    dream?.tagNames,
+    dream?.keywords,
+    dream?.keyword,
+    dream?.keywordNames,
+    dream?.detectedKeywords,
+    dream?.analysis?.tags,
+    dream?.analysis?.tagNames,
+    dream?.analysis?.keywords,
+    dream?.analysis?.detectedKeywords,
+    dream?.dreamAnalysis?.tags,
+    dream?.dreamAnalysis?.tagNames,
+    dream?.dreamAnalysis?.keywords,
+    dream?.dreamAnalysis?.detectedKeywords,
+    dream?.result?.tags,
+    dream?.result?.keywords,
+    dream?.result?.detectedKeywords,
+    dream?.dream?.tags,
+    dream?.dream?.keywords,
+    dream?.record?.tags,
+    dream?.record?.keywords,
+  ];
+
+  for (const source of keywordSources) {
+    const keywords = normalizeKeywordList(source);
+    if (keywords.length > 0) {
+      return keywords;
+    }
+  }
+
+  return [];
+};
+
+const extractKeywordsFromText = (text: string) => {
+  if (!text.trim()) {
+    return [];
+  }
+
+  return DEFAULT_DREAM_KEYWORDS.filter((keyword) => {
+    const normalizedKeyword = normalizeKeywordText(keyword);
+    return normalizedKeyword && text.includes(normalizedKeyword);
+  });
+};
+
+const normalizeTopKeywords = (data?: DreamChartResponse | null) => {
+  const keywordItems =
+    data?.topKeywords ?? data?.keywords ?? data?.keywordDistribution ?? [];
+
+  if (keywordItems && typeof keywordItems === "object" && !Array.isArray(keywordItems)) {
+    return Object.entries(keywordItems as Record<string, unknown>)
+      .map(([keyword, count]) => ({
+        keyword: keyword.trim(),
+        count: Number(count) || 0,
+      }))
+      .filter((item) => item.keyword);
+  }
+
+  if (!Array.isArray(keywordItems)) {
+    return [];
+  }
+
+  return keywordItems
+    .map((item) => {
+      if (typeof item === "object" && item !== null) {
+        const keywordObject = item as Record<string, unknown>;
+        return {
+          keyword: normalizeKeywordText(
+            keywordObject.keyword ??
+              keywordObject.name ??
+              keywordObject.word ??
+              keywordObject.tag ??
+              keywordObject.tagName ??
+              keywordObject.value,
+          ),
+          count: Number(
+            keywordObject.count ??
+              keywordObject.frequency ??
+              keywordObject.freq ??
+              keywordObject.total ??
+              keywordObject.value ??
+              1,
+          ) || 1,
+        };
+      }
+
+      return {
+        keyword: normalizeKeywordText(item),
+        count: 1,
+      };
+    })
+    .filter((item) => item.keyword);
+};
+
 const normalizeChartDream = (dream: any): ChartDream | null => {
   const dreamId = Number(
     dream?.dreamId ?? dream?.id ?? dream?.dream_id ?? dream?.dreamID,
@@ -74,6 +268,9 @@ const normalizeChartDream = (dream: any): ChartDream | null => {
     id: String(dreamId || dream?.id || date),
     dreamId: Number.isFinite(dreamId) ? dreamId : undefined,
     date,
+    mood: extractChartDreamMood(dream),
+    text: extractChartDreamText(dream),
+    keywords: extractChartDreamKeywords(dream),
   };
 };
 
@@ -418,7 +615,10 @@ const DreamKeywordCloud = ({ title, items }: KeywordCloudProps) => {
   });
 
   items.forEach((item) => {
-    keywordCountMap.set(item.keyword, item.count);
+    const keyword = normalizeKeywordText(item.keyword);
+    if (keyword) {
+      keywordCountMap.set(keyword, Number(item.count) || 1);
+    }
   });
 
   const sortedKeywords = Array.from(keywordCountMap.entries())
@@ -863,11 +1063,21 @@ const Chart = () => {
   });
   
   const [topKeywords, setTopKeywords] = useState<DreamKeywordItem[]>([]);
+  const [keywordPatches, setKeywordPatches] = useState<Record<string, string[]>>(
+    {},
+  );
   const [loading, setLoading] = useState(false);
   const [chartError, setChartError] = useState("");
 
   // 백엔드 <-> 프론트 키 매핑
   const moodLabelToEmotionKey: Record<string, EmotionKey> = {
+    "1": "happy",
+    "2": "sad",
+    "3": "anger",
+    "4": "excited",
+    "5": "touched",
+    "6": "fear",
+    "7": "mixed",
     happy: "happy",
     sad: "sad",
     anger: "anger",
@@ -891,6 +1101,21 @@ const Chart = () => {
   };
 
   // ✅ 2) helpers / MONTH_KEYS는 그 다음
+  const resolveMoodLabel = (label: unknown): EmotionKey | undefined => {
+    const mood = String(label ?? "").trim();
+    const normalizedMood = mood.toLowerCase();
+
+    if (mood === "행복") return "happy";
+    if (mood === "슬픔") return "sad";
+    if (mood === "분노") return "anger";
+    if (mood === "공포") return "fear";
+    if (mood === "미묘") return "mixed";
+    if (mood === "감동") return "touched";
+    if (mood === "신남") return "excited";
+
+    return moodLabelToEmotionKey[mood] ?? moodLabelToEmotionKey[normalizedMood];
+  };
+
   const pad2 = (n: number) => String(n).padStart(2, "0");
   const toMonthKey = (d: Date) =>
     `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
@@ -1004,6 +1229,12 @@ const Chart = () => {
     Math.max(WEEKS.length - 1, 0),
   );
 
+  useEffect(() => {
+    if (selectedWeekIndex !== safeWeekIndex) {
+      setSelectedWeekIndex(safeWeekIndex);
+    }
+  }, [selectedWeekIndex, safeWeekIndex]);
+
   // 실제 사용할 weekKey
   const weekKey = WEEK_KEYS_FOR_MONTH[safeWeekIndex];
 
@@ -1032,7 +1263,9 @@ const Chart = () => {
     const weekNoNum = Number(weekNoStr);
   
     const startDay = 1 + (weekNoNum - 1) * 7;
-    const endDate = new Date(yearNum, monthNum, startDay + 6);
+    const lastDayInMonth = new Date(yearNum, monthNum + 1, 0).getDate();
+    const endDay = Math.min(startDay + 6, lastDayInMonth);
+    const endDate = new Date(yearNum, monthNum, endDay);
   
     const yyyy = endDate.getFullYear();
     const mm = String(endDate.getMonth() + 1).padStart(2, "0");
@@ -1040,6 +1273,56 @@ const Chart = () => {
   
     return `${yyyy}-${mm}-${dd}`;
   }, [isWeekly, monthKey, weekKey]);
+
+  const isDreamInSelectedRange = (dream: ChartDream) => {
+    const date = safeDate(dream.date);
+    if (!date) return false;
+    if (date.getFullYear() !== year) return false;
+    if (date.getMonth() !== monthIndexForRange) return false;
+
+    if (!isWeekly) {
+      return true;
+    }
+
+    const [, , weekNoStr] = weekKey.split("-");
+    const selectedWeekNo = Number(weekNoStr);
+    return getWeekNoInMonth(date) === selectedWeekNo;
+  };
+
+  const buildLocalChartData = () => {
+    const nextEmotionData: Record<EmotionKey, number> = {
+      happy: 0,
+      sad: 0,
+      anger: 0,
+      fear: 0,
+      mixed: 0,
+      touched: 0,
+      excited: 0,
+    };
+    const keywordCountMap = new Map<string, number>();
+
+    dreams.filter(isDreamInSelectedRange).forEach((dream) => {
+      const emotionKey = resolveMoodLabel(dream.mood);
+      if (emotionKey) {
+        nextEmotionData[emotionKey] += 1;
+      }
+
+      const keywords =
+        dream.keywords.length > 0
+          ? dream.keywords
+          : keywordPatches[dream.id] ?? extractKeywordsFromText(dream.text);
+
+      keywords.forEach((keyword) => {
+        keywordCountMap.set(keyword, (keywordCountMap.get(keyword) ?? 0) + 1);
+      });
+    });
+
+    const nextKeywords = Array.from(keywordCountMap.entries())
+      .map(([keyword, count]) => ({ keyword, count }))
+      .sort((a, b) => b.count - a.count || a.keyword.localeCompare(b.keyword));
+
+    return { emotionData: nextEmotionData, keywords: nextKeywords };
+  };
 
   console.log("[Chart] filter dreams:", dreams.map((d) => d.date));
   console.log("[Chart] MONTH_KEYS:", MONTH_KEYS);
@@ -1066,6 +1349,59 @@ const Chart = () => {
   useEffect(() => {
     fetchDreamsForFilter();
   }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchMissingKeywords = async () => {
+      const missingKeywordDreams = dreams
+        .filter(isDreamInSelectedRange)
+        .filter(
+          (dream) =>
+            dream.dreamId &&
+            dream.keywords.length === 0 &&
+            !keywordPatches[dream.id],
+        );
+
+      if (missingKeywordDreams.length === 0) {
+        return;
+      }
+
+      const nextKeywordPatches: Record<string, string[]> = {};
+
+      await Promise.all(
+        missingKeywordDreams.map(async (dream) => {
+          try {
+            const detail = await dreamApi.getDreamById(Number(dream.dreamId));
+            let keywords = extractChartDreamKeywords(detail);
+
+            if (keywords.length === 0) {
+              keywords = extractKeywordsFromText(extractChartDreamText(detail));
+            }
+
+            nextKeywordPatches[dream.id] = keywords;
+          } catch (error) {
+            const status = (error as any)?.response?.status;
+            console.log("[Chart] keyword fallback skipped:", {
+              dreamId: dream.dreamId,
+              status,
+            });
+            nextKeywordPatches[dream.id] = [];
+          }
+        }),
+      );
+
+      if (!isCancelled && Object.keys(nextKeywordPatches).length > 0) {
+        setKeywordPatches((prev) => ({ ...prev, ...nextKeywordPatches }));
+      }
+    };
+
+    fetchMissingKeywords();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [dreams, selectedBaseDate, keywordPatches]);
   
 
   // API 호출 
@@ -1097,7 +1433,7 @@ const Chart = () => {
 
       console.log("[Chart] response data:", data);
       console.log("[Chart] moodDistribution:", data?.moodDistribution);
-      console.log("[Chart] topKeywords:", data?.topKeywords);
+      console.log("[Chart] topKeywords:", normalizeTopKeywords(data));
 
       const moodDistribution = data?.moodDistribution ?? {};
       const nextEmotionData: Record<EmotionKey, number> = {
@@ -1111,14 +1447,24 @@ const Chart = () => {
       };
   
       Object.entries(moodDistribution).forEach(([label, count]) => {
-        const emotionKey = moodLabelToEmotionKey[String(label.trim())];
+        const emotionKey = resolveMoodLabel(label);
         if (emotionKey) {
           nextEmotionData[emotionKey] = Number(count);
         }
       });
   
-      setChartData(nextEmotionData);
-      setTopKeywords(data?.topKeywords ?? []);
+      const hasServerEmotionData = Object.values(nextEmotionData).some(
+        (count) => count > 0,
+      );
+      const localChartData = buildLocalChartData();
+      const serverTopKeywords = normalizeTopKeywords(data);
+
+      setChartData(
+        hasServerEmotionData ? nextEmotionData : localChartData.emotionData,
+      );
+      setTopKeywords(
+        serverTopKeywords.length ? serverTopKeywords : localChartData.keywords,
+      );
     } catch (error) {
       console.error("차트 조회 실패:", error);
       setChartError("차트 데이터를 불러오지 못했어요.");
@@ -1139,7 +1485,14 @@ const Chart = () => {
 
   useEffect(() => {
     fetchChartData();
-  }, [isWeekly, selectedMonthIndex, safeWeekIndex, selectedBaseDate]);
+  }, [
+    isWeekly,
+    selectedMonthIndex,
+    safeWeekIndex,
+    selectedBaseDate,
+    dreams,
+    keywordPatches,
+  ]);
 
   useEffect(() => {
     setSelectedEmotion(null);
@@ -1294,7 +1647,7 @@ const Chart = () => {
                 paddingVertical: ITEM_HEIGHT * 2,
               }}
               renderItem={({ item, index }) => {
-                const diff = Math.abs(index - selectedWeekIndex);
+                const diff = Math.abs(index - safeWeekIndex);
 
                 let fontSize = s(16);
                 let opacity = 0.1;
