@@ -454,14 +454,10 @@
 
         <aside class="panel">
           <div class="card">
-            <div class="symbolHeader">
-              <div id="symbol-icon" class="symbolIcon" aria-hidden="true"></div>
-              <div class="dreamText">
-                <p class="label">공유된 꿈</p>
-                <h1 id="share-title" class="title">제목 없는 꿈</h1>
-              </div>
+            <div class="dreamText">
+              <p class="label">공유된 꿈</p>
+              <h1 id="share-title" class="title">제목 없는 꿈</h1>
             </div>
-            <div id="symbol-row" class="symbolRow" aria-label="꿈 키워드"></div>
 
             <div class="detailGrid">
               <section id="summary-block" class="detailBlock">
@@ -553,14 +549,6 @@
       const interpretation = getValue("interpretation");
       const openUrl = getValue("open");
       const videoUrl = getValue("videoUrl");
-      const rawTags = Array.isArray(payload.tags)
-        ? payload.tags.join(",")
-        : getValue("tags");
-      const tags = rawTags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-        .slice(0, 4);
 
       const getDreamValue = (dream, keys) => {
         for (const key of keys) {
@@ -624,9 +612,6 @@
             "editedMediaUrl",
           ]) || videoUrl;
         resolvedVideoUrl = nextVideoUrl || resolvedVideoUrl;
-        const nextTags =
-          getDreamValue(data, ["detectedKeywords", "tags", "keywords"]) || tags;
-
         document.getElementById("share-title").textContent =
           nextTitle || "제목 없는 꿈";
 
@@ -647,24 +632,6 @@
         videoButton.removeAttribute("hidden");
         videoButton.setAttribute("href", resolvedVideoUrl || buildAppUrl("video"));
 
-        const normalizedTags = Array.isArray(nextTags)
-          ? nextTags.slice(0, 4)
-          : tags;
-
-        if (normalizedTags.length) {
-          const row = document.getElementById("symbol-row");
-          const symbolIcon = document.getElementById("symbol-icon");
-          symbolIcon.style.display = "inline-flex";
-          symbolIcon.textContent = String(normalizedTags[0]).slice(0, 1);
-
-          row.querySelectorAll(".symbol").forEach((chip) => chip.remove());
-          normalizedTags.forEach((tag) => {
-            const chip = document.createElement("span");
-            chip.className = "symbol";
-            chip.textContent = tag;
-            row.appendChild(chip);
-          });
-        }
       };
 
       applyDreamData({});

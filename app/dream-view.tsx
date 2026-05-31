@@ -313,9 +313,9 @@ export default function DreamViewScreen() {
     const sharePageUrl = buildKakaoSharePageUrl({
       ...(dream.dreamId ? { dreamId: String(dream.dreamId) } : {}),
       title: dream.title,
-      summary: description,
+      summary: dream.summary,
+      interpretation: dream.interpretation,
       open: appShareUrl,
-      ...(dream.tags.length ? { tags: dream.tags.join(",") } : {}),
       ...(videoShareUrl ? { videoUrl: videoShareUrl } : {}),
     });
     const publicWebShareUrl = isPublicHttpsUrl(sharePageUrl)

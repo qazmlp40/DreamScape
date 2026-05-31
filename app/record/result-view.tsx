@@ -601,10 +601,11 @@ export default function ResultViewScreen() {
     ) as Record<string, string>;
     const appShareUrl = buildAppShareUrl(appShareParams);
     const sharePageUrl = buildKakaoSharePageUrl({
+      ...(dreamResult.dreamId ? { dreamId: String(dreamResult.dreamId) } : {}),
       title: shareTitle,
-      summary: shareDescription,
+      summary: dreamResult.summary,
+      interpretation: dreamResult.interpretation,
       open: appShareUrl,
-      ...(dreamResult.tags.length ? { tags: dreamResult.tags.join(",") } : {}),
       ...(publicVideoShareUrl ? { videoUrl: publicVideoShareUrl } : {}),
     });
     const publicWebShareUrl = isPublicHttpsUrl(sharePageUrl)
