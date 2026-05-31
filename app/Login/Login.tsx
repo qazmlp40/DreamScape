@@ -1,10 +1,8 @@
-import { API_BASE_URL, API_JSON_HEADERS, APP_SCHEME, DEV_MOCK_AUTH } from '@/constants/api';
+import { API_BASE_URL, API_JSON_HEADERS, DEV_MOCK_AUTH } from '@/constants/api';
 import { tokenStorage } from '@/utils/tokenStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
 import { router, Stack } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useState } from 'react';
 import {
   Image,
@@ -17,8 +15,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import GoogleIcon from './Icons/google.svg';
-
-WebBrowser.maybeCompleteAuthSession();
 
 export const BASE_WIDTH = 412;
 const DREAMSCAPE_LOGO = require('../../assets/images/dreamscape-logo-stacked.png');
@@ -101,11 +97,6 @@ const Login: React.FC = () => {
 
   const isDisabled = userID.trim() === '' || userPW.trim() === '';
 
-  const redirectUri = makeRedirectUri({
-    scheme: APP_SCHEME,
-    path: 'oauth',
-  });
-
   const completeLogin = async (
     accessToken: string,
     userId?: string | number,
@@ -185,55 +176,13 @@ const Login: React.FC = () => {
       setGoogleLoading(true);
 
       const authUrl = `${API_BASE_URL}/oauth2/authorization/google`;
-
-      // OAuth 로그인 후 앱 딥링크로 결과 받기
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-      if (result.type !== 'success' || !('url' in result) || !result.url) {
-        if (result.type !== 'cancel' && result.type !== 'dismiss') {
-          setGoogleErr('구글 로그인을 완료하지 못했어요.');
-        }
-        return;
-      }
-
-      // 딥링크 URL에서 토큰 추출
-      const { queryParams } = Linking.parse(result.url);
-
-      const accessToken =
-        typeof queryParams?.accessToken === 'string'
-          ? queryParams.accessToken
-          : typeof queryParams?.token === 'string'
-            ? queryParams.token
-            : undefined;
-
-      const refreshToken =
-        typeof queryParams?.refreshToken === 'string' ? queryParams.refreshToken : undefined;
-
-      const userId =
-        typeof queryParams?.userId === 'string' || typeof queryParams?.userId === 'number'
-          ? queryParams.userId
-          : undefined;
-
-      const errorMessage =
-        typeof queryParams?.error === 'string' ? queryParams.error : undefined;
-
-      if (errorMessage) {
-        setGoogleErr(errorMessage);
-        return;
-      }
-
-      if (!accessToken) {
-        setGoogleErr('구글 로그인 정보를 확인하지 못했어요.');
-        return;
-      }
-
-      await completeLogin(accessToken, userId, refreshToken);
+      await Linking.openURL(authUrl);
     } catch {
       setGoogleErr('구글 로그인에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.');
     } finally {
       setGoogleLoading(false);
     }
-  }, [googleLoading, redirectUri]);
+  }, [googleLoading]);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#fff' }}>

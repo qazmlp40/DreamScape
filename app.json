@@ -42,7 +42,27 @@
       },
       "package": "com.anonymous.dreamscape",
       "usesCleartextTraffic": true,
+      // "intentFilters": [
+      //   {
+      //     "action": "VIEW",
+      //     "data": [
+      //       {
+      //         "scheme": "kakaodc20c43cdf2f8ffdc24ad4c184a1b6cb"
+      //       }
+      //     ],
+      //     "category": ["BROWSABLE", "DEFAULT"]
+      //   }
+      // ]
       "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "dreamscape"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
         {
           "action": "VIEW",
           "data": [
