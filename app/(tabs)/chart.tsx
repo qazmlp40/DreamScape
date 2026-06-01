@@ -1,5 +1,6 @@
 import { api } from "@/services/api";
 import { dreamApi } from "@/services/dreamApi";
+import { getDreamListFromResponse } from "@/utils/dreamNormalize";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -840,16 +841,7 @@ const EmotionBarChart = ({
 
           const isMax = count === maxCount && maxCount > 0;
 
-          // 최다 동점 감정들 key 모으기
-          const maxKeys = emotions
-            .map((e) => e.key)
-            .filter((key) => (data[key] ?? 0) === maxCount && maxCount > 0);
-
-          const maxTieCount = maxKeys.length;
-
-          // ✅ 동점이면 "선택된 최다"만 숫자 보이기 / 단독 1등이면 자동 표시
-          const shouldShowMaxLabel =
-            isMax && (maxTieCount === 1 || selectedEmotion === emotion.key);
+          const shouldShowMaxLabel = isMax && isHighlighted;
 
           // 기본은 회색, highlightedKey만 컬러
           const barColor = isHighlighted ? emotion.color : "#E3E3E3";
@@ -1334,11 +1326,10 @@ const Chart = () => {
   const fetchDreamsForFilter = async () => {
     try {
       const response = await dreamApi.getDreams();
+      const dreamList = getDreamListFromResponse(response);
 
       // 날짜 데이터로 정규화
-      const nextDreams = Array.isArray(response)
-        ? response.map(normalizeChartDream).filter(Boolean)
-        : [];
+      const nextDreams = dreamList.map(normalizeChartDream).filter(Boolean);
   
       setDreams(nextDreams as ChartDream[]);
     } catch (error) {
@@ -1458,13 +1449,18 @@ const Chart = () => {
         (count) => count > 0,
       );
       const localChartData = buildLocalChartData();
+      const hasLocalDreamsInRange = dreams.some(isDreamInSelectedRange);
       const serverTopKeywords = normalizeTopKeywords(data);
 
       setChartData(
-        hasServerEmotionData ? nextEmotionData : localChartData.emotionData,
+        hasLocalDreamsInRange || !hasServerEmotionData
+          ? localChartData.emotionData
+          : nextEmotionData,
       );
       setTopKeywords(
-        serverTopKeywords.length ? serverTopKeywords : localChartData.keywords,
+        hasLocalDreamsInRange || !serverTopKeywords.length
+          ? localChartData.keywords
+          : serverTopKeywords,
       );
     } catch (error) {
       console.error("차트 조회 실패:", error);

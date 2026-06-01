@@ -60,11 +60,11 @@ function AuthenticatedStack() {
 
       const rootSegment = segments[0];
       const isAuthRoute = rootSegment === '(auth)' || rootSegment === 'oauth';
-
-      setIsReady(true);
+      let currentToken = token;
 
       if (!hasHandledInitialRoute.current) {
         hasHandledInitialRoute.current = true;
+        setIsReady(true);
 
         if (!isAuthRoute) {
           router.replace('/(auth)/login');
@@ -72,7 +72,19 @@ function AuthenticatedStack() {
         }
       }
 
-      if (!token && !isAuthRoute) {
+      if (!currentToken && !isAuthRoute) {
+        const storedToken = await tokenStorage.getToken();
+        if (!mounted) return;
+
+        if (storedToken) {
+          currentToken = storedToken;
+          setToken(storedToken);
+        }
+      }
+
+      setIsReady(true);
+
+      if (!currentToken && !isAuthRoute) {
         router.replace('/(auth)/login');
         return;
       }
