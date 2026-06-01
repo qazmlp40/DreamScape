@@ -1,6 +1,7 @@
 import FixedBottomButton from '@/components/app/FixedBottomButton';
 import RecordHeader from '@/components/app/RecordHeader';
 import { dreamApi } from '@/services/dreamApi';
+import { moodIdToServerMood } from '@/utils/mood';
 import { clamp } from '@/utils/responsive';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -77,7 +78,7 @@ export default function RecordStep1Screen() {
             date,
             title: '',
             dreamText: content,
-            mood: convertMoodToServerMood(emotion),
+            mood: moodIdToServerMood(emotion),
           });
           console.log('[Step1] saveDream response:', saved);
       
@@ -89,27 +90,6 @@ export default function RecordStep1Screen() {
           return null;
         } finally {
           setIsSubmitting(false);
-        }
-      };
-
-      const convertMoodToServerMood = (moodId: string) => {
-        switch (moodId) {
-          case "1":
-            return "행복";
-          case "2":
-            return "슬픔";
-          case "3":
-            return "분노";
-          case "4":
-            return "신남";
-          case "5":
-            return "감동";
-          case "6":
-            return "공포";
-          case "7":
-            return "미묘";
-          default:
-            return "미묘";
         }
       };
 

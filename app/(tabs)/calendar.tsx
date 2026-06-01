@@ -29,6 +29,7 @@ import {
   extractDreamVideoUrl,
   getDreamListFromResponse,
 } from "../../utils/dreamNormalize";
+import { normalizeMoodId } from "../../utils/mood";
 import {
   ambiguous_icon,
   anger_icon,
@@ -176,50 +177,6 @@ const moodIcons: { [key: string]: any } = {
   "7": ambiguous_icon,
 };
 
-const normalizeMood = (moodValue: unknown) => {
-  const value = String(moodValue ?? "").trim();
-
-  switch (value) {
-    case "1":
-    case "행복":
-    case "행복함":
-    case "happy":
-      return "1";
-    case "2":
-    case "슬픔":
-    case "sad":
-      return "2";
-    case "3":
-    case "분노":
-    case "anger":
-      return "3";
-    case "4":
-    case "신남":
-    case "흥분":
-    case "excitement":
-    case "excited":
-      return "4";
-    case "5":
-    case "감동":
-    case "touched":
-    case "impressed":
-      return "5";
-    case "6":
-    case "공포":
-    case "fear":
-    case "scared":
-      return "6";
-    case "7":
-    case "미묘":
-    case "알 수 없음":
-    case "mixed":
-    case "ambiguous":
-      return "7";
-    default:
-      return "7";
-  }
-};
-
 const normalizeDream = (dream: any): CalendarDream | null => {
   const dreamId = extractDreamId(dream);
   const date = extractDreamDate(dream);
@@ -235,7 +192,7 @@ const normalizeDream = (dream: any): CalendarDream | null => {
     dreamId,
     date,
     title: extractDreamTitle(dream),
-    mood: normalizeMood(dream?.mood ?? dream?.emotion),
+    mood: normalizeMoodId(dream?.mood ?? dream?.emotion),
     dreamText,
     summary: summary || dreamText,
     interpretation: extractDreamInterpretation(dream),

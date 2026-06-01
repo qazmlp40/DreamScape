@@ -27,6 +27,7 @@ import {
   extractDreamVideoUrl,
   getDreamListFromResponse,
 } from '../../utils/dreamNormalize';
+import { normalizeMoodId } from '../../utils/mood';
 
 const colors = {
   text: '#1F2937',
@@ -78,7 +79,7 @@ const normalizeDream = (dream: any): HomeDream | null => {
     dreamId,
     date,
     title: extractDreamTitle(dream),
-    mood: String(dream?.mood ?? dream?.emotion ?? '').trim(),
+    mood: normalizeMoodId(dream?.mood ?? dream?.emotion),
     dreamText,
     summary: summary || dreamText,
     interpretation: extractDreamInterpretation(dream),

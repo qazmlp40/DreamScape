@@ -24,6 +24,7 @@ import {
     extractDreamText,
     extractDreamTitle,
 } from '../utils/dreamNormalize';
+import { moodIdToServerMood, normalizeMoodId } from '../utils/mood';
 import {
     ambiguous_icon,
     anger_icon,
@@ -109,42 +110,7 @@ export default function DreamEditScreen() {
                             foundDream.createdAt ??
                             '',
                         ).slice(0, 10),
-                        mood: (() => {
-                            const mood = String(foundDream.mood ?? foundDream.emotion ?? '7').trim();
-                            switch (mood) {
-                                case '1':
-                                case '행복':
-                                case '행복함':
-                                case 'happy':
-                                    return '1';
-                                case '2':
-                                case '슬픔':
-                                case 'sad':
-                                    return '2';
-                                case '3':
-                                case '분노':
-                                case 'anger':
-                                    return '3';
-                                case '4':
-                                case '신남':
-                                case '흥분':
-                                case 'excited':
-                                case 'excitement':
-                                    return '4';
-                                case '5':
-                                case '감동':
-                                case 'touched':
-                                case 'impressed':
-                                    return '5';
-                                case '6':
-                                case '공포':
-                                case 'fear':
-                                case 'scared':
-                                    return '6';
-                                default:
-                                    return '7';
-                            }
-                        })(),
+                        mood: normalizeMoodId(foundDream.mood ?? foundDream.emotion),
                         title: extractDreamTitle(foundDream),
                         dreamText: extractDreamText(foundDream),
                         analysis: {
@@ -245,7 +211,7 @@ export default function DreamEditScreen() {
             await dreamApi.updateDream(dreamData.dreamId, {
                 title: dreamData.title ?? '',
                 dreamText: dreamText.trim(),
-                mood: dreamData.mood,
+                mood: moodIdToServerMood(dreamData.mood),
                 summary: dreamData.analysis?.summary,
                 interpretation: dreamData.analysis?.interpretation,
             });

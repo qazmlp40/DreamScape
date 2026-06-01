@@ -37,6 +37,7 @@ const emotionThemeMusicByMood: Record<string, EmotionThemeMusicSource | null> =
 
     "6": scaredMusic,
     공포: scaredMusic,
+    proclamation: scaredMusic,
     scared: scaredMusic,
     fear: scaredMusic,
 

@@ -1081,6 +1081,7 @@ const Chart = () => {
     happy: "happy",
     sad: "sad",
     anger: "anger",
+    proclamation: "fear",
     scared: "fear",
     fear: "fear",
     ambiguous: "mixed",
