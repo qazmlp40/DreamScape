@@ -23,7 +23,7 @@ public class DreamChartService {
 
     // 고정된 감정 순서
     private static final String[] MOOD_ORDER = {
-            "행복", "슬픔", "분노", "공포", "미묘", "감동", "신남"
+            "happy", "sad", "angry", "proclamation", "ambiguous", "impressed", "excitement"
     };
 
     public DreamChartResponseDTO getChartData(DreamChartRequestDTO request) {
