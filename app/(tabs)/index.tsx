@@ -1,4 +1,5 @@
 import NoteIcon from '@/assets/images/icons/note.svg';
+import AlertOctagonIcon from '@/assets/images/icons/alert-octagon.svg';
 import DreamSymbolIcon from '@/components/app/DreamSymbolIcon';
 import { useFocusEffect } from '@react-navigation/native';
 import { Link, Stack } from 'expo-router';
@@ -159,7 +160,7 @@ export default function TabsIndex() {
             </View>
           ) : isError ? (
             <View style={styles.stateBox}>
-              <NoteIcon />
+              <AlertOctagonIcon width={32} height={32} />
               <Text style={styles.stateText}>꿈 기록을 불러오지 못했어요</Text>
               <Pressable
                 style={styles.retryButton}

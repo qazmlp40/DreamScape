@@ -1,4 +1,5 @@
 import NoteIcon from "@/assets/images/icons/note_mini.svg";
+import AlertOctagonIcon from "@/assets/images/icons/alert-octagon.svg";
 import EmptyStateCard from "@/components/app/EmptyStateCard";
 import { useFocusEffect } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
@@ -533,7 +534,7 @@ export default function CalendarScreen() {
                 </TouchableOpacity>
               }
             >
-              <NoteIcon />
+              <AlertOctagonIcon width={32} height={32} />
             </EmptyStateCard>
           ) : hasDreamRecord ? (
             // 기록이 있을 때
