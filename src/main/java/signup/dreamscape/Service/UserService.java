@@ -10,6 +10,7 @@ import signup.dreamscape.Entity.UserEntity;
 import signup.dreamscape.Repository.UserRepository;
 import signup.dreamscape.Security.JwtProvider;
 
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -355,4 +356,39 @@ public class UserService {
                 .message("임시 비밀번호가 발급되었습니다. 임시 비밀번호: " + tempPassword)
                 .build();
     }
+    @Transactional
+    public UserResponseDTO changePassword(String email, String currentPassword, String newPassword) {
+
+        Optional<UserEntity> optionalUser = userRepository.findByEmail(email);
+
+        if (optionalUser.isEmpty()) {
+            return UserResponseDTO.builder()
+                    .email(email)
+                    .message("사용자를 찾을 수 없습니다.")
+                    .build();
+        }
+
+        UserEntity user = optionalUser.get();
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            return UserResponseDTO.builder()
+                    .email(email)
+                    .message("현재 비밀번호가 일치하지 않습니다.")
+                    .build();
+        }
+
+        String encodedNewPassword = passwordEncoder.encode(newPassword);
+        user.setPassword(encodedNewPassword);
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+
+        return UserResponseDTO.builder()
+                .userId(user.getUserId())
+                .email(user.getEmail())
+                .name(user.getName())
+                .message("비밀번호 변경 성공")
+                .build();
+    }
+
 }

@@ -30,11 +30,17 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                                         Authentication authentication)
             throws IOException, ServletException {
 
+        System.out.println("========== OAuth2SuccessHandler 진입 ==========");
+
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
         String email = (String) oAuth2User.getAttributes().get("email");
         String name = (String) oAuth2User.getAttributes().get("name");
         String picture = (String) oAuth2User.getAttributes().get("picture");
+
+        System.out.println("OAuth email = " + email);
+        System.out.println("OAuth name = " + name);
+        System.out.println("OAuth picture = " + picture);
 
         if (email == null || email.isBlank()) {
             throw new RuntimeException("OAuth 이메일을 가져올 수 없습니다.");
@@ -49,6 +55,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         UserEntity user = userRepository.findByEmail(email)
                 .orElseGet(() -> {
+                    System.out.println("기존 회원 없음 → 신규 Google 회원 생성");
+
                     UserEntity newUser = UserEntity.builder()
                             .email(email)
                             .password(UUID.randomUUID().toString())
@@ -63,18 +71,29 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     return userRepository.save(newUser);
                 });
 
+        System.out.println("DB 사용자 조회/저장 완료");
+        System.out.println("userId = " + user.getUserId());
+        System.out.println("userEmail = " + user.getEmail());
+
         String accessToken = jwtProvider.createAccessToken(
                 user.getUserId(),
                 user.getEmail()
         );
 
+        System.out.println("JWT 발급 완료");
+        System.out.println("accessToken = " + accessToken);
+
         String encodedAccessToken = URLEncoder.encode(accessToken, StandardCharsets.UTF_8);
         String encodedEmail = URLEncoder.encode(user.getEmail(), StandardCharsets.UTF_8);
 
+        // PC 브라우저 테스트용 redirect
         String redirectUrl = "dreamscape://oauth"
                 + "?accessToken=" + encodedAccessToken
                 + "&userId=" + user.getUserId()
                 + "&email=" + encodedEmail;
+
+        System.out.println("redirectUrl = " + redirectUrl);
+        System.out.println("========== OAuth2SuccessHandler 종료 ==========");
 
         response.sendRedirect(redirectUrl);
     }
