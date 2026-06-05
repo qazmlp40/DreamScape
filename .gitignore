@@ -37,3 +37,7 @@ out/
 .vscode/
 env.properties
 env.properties
+src/main/resources/application.properties
+server.log
+env.properties
+*.pem
