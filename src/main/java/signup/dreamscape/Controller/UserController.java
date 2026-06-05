@@ -6,13 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import signup.dreamscape.DTO.UserLoginRequestDTO;
-import signup.dreamscape.DTO.UserRequestDTO;
-import signup.dreamscape.DTO.UserResponseDTO;
+import signup.dreamscape.DTO.*;
 import signup.dreamscape.Security.JwtProvider;
 import signup.dreamscape.Service.UserService;
-import signup.dreamscape.DTO.FindEmailRequestDTO;
-import signup.dreamscape.DTO.FindPasswordRequestDTO;
 
 import java.util.List;
 import java.util.Map;
@@ -111,7 +107,7 @@ public class UserController {
             );
         }
     }
-    // 아이디 찾기
+    //이메일 찾기
     @PostMapping("/find-email")
     public ResponseEntity<UserResponseDTO> findEmail(@RequestBody FindEmailRequestDTO requestDTO) {
         return ResponseEntity.ok(
@@ -124,6 +120,22 @@ public class UserController {
     public ResponseEntity<UserResponseDTO> findPassword(@RequestBody FindPasswordRequestDTO requestDTO) {
         return ResponseEntity.ok(
                 userService.resetPassword(requestDTO.getEmail(), requestDTO.getName())
+        );
+    }
+    // 패스워드 변경
+    @PostMapping("/change-password")
+    public ResponseEntity<UserResponseDTO> changePassword(
+            Authentication authentication,
+            @RequestBody ChangePasswordRequestDTO requestDTO
+    ) {
+        String email = authentication.getName();
+
+        return ResponseEntity.ok(
+                userService.changePassword(
+                        email,
+                        requestDTO.getCurrentPassword(),
+                        requestDTO.getNewPassword()
+                )
         );
     }
 }
