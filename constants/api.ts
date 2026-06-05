@@ -1,6 +1,8 @@
 import Constants from "expo-constants";
 
-const DEFAULT_API_BASE_URL = "https://bootleg-defiling-legume.ngrok-free.dev";
+// const DEFAULT_API_BASE_URL = "https://bootleg-defiling-legume.ngrok-free.dev";
+export const DEFAULT_API_BASE_URL = "http://52.87.76.168:8080";
+
 
 const expoScheme = Constants.expoConfig?.scheme;
 
